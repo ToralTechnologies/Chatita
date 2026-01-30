@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { MealType } from '@/types';
 
@@ -22,9 +22,22 @@ interface MealFormData {
 interface MealFormProps {
   onSubmit: (data: MealFormData) => void;
   loading?: boolean;
+  initialData?: {
+    detectedFoods: string[];
+    nutrition?: {
+      calories?: number;
+      carbs?: number;
+      protein?: number;
+      fat?: number;
+      fiber?: number;
+      sugar?: number;
+      sodium?: number;
+    };
+    portionSize?: string;
+  };
 }
 
-export default function MealForm({ onSubmit, loading }: MealFormProps) {
+export default function MealForm({ onSubmit, loading, initialData }: MealFormProps) {
   const [formData, setFormData] = useState<MealFormData>({
     description: '',
     detectedFoods: [],
@@ -33,6 +46,32 @@ export default function MealForm({ onSubmit, loading }: MealFormProps) {
 
   const [foodInput, setFoodInput] = useState('');
   const [showNutrition, setShowNutrition] = useState(false);
+
+  // Auto-fill form when AI provides suggestions
+  useEffect(() => {
+    if (initialData) {
+      const hasNutrition = initialData.nutrition && Object.keys(initialData.nutrition).length > 0;
+
+      setFormData(prev => ({
+        ...prev,
+        detectedFoods: initialData.detectedFoods || prev.detectedFoods,
+        description: initialData.detectedFoods?.join(', ') || prev.description,
+        calories: initialData.nutrition?.calories || prev.calories,
+        carbs: initialData.nutrition?.carbs || prev.carbs,
+        protein: initialData.nutrition?.protein || prev.protein,
+        fat: initialData.nutrition?.fat || prev.fat,
+        fiber: initialData.nutrition?.fiber || prev.fiber,
+        sugar: initialData.nutrition?.sugar || prev.sugar,
+        sodium: initialData.nutrition?.sodium || prev.sodium,
+        portionSize: initialData.portionSize || prev.portionSize,
+      }));
+
+      // Auto-expand nutrition section if AI provided nutrition data
+      if (hasNutrition) {
+        setShowNutrition(true);
+      }
+    }
+  }, [initialData]);
 
   const addFood = () => {
     if (foodInput.trim()) {

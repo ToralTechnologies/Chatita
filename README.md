@@ -83,10 +83,10 @@ See `.env.example` for all required variables.
 - Storage: Base64 in DB (for MVP)
 - AI Features: Disabled
 
-**Paid Tier (~$5/month):**
+**Paid Tier (~$5-9/month):**
 - All free tier features
-- GPT-4o-mini vision analysis: ~$1.35/month
-- Claude Haiku chat: ~$3.75/month
+- Claude 3.5 Sonnet vision analysis: ~$3-5/month
+- Claude 3.5 Sonnet chat: ~$2-4/month
 
 ## Project Structure
 

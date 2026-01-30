@@ -273,10 +273,10 @@ Create:
 ### Optional AI Features (Disabled by Default):
 
 If you enable AI features in `.env`:
-- `ENABLE_AI_ANALYSIS=true` - GPT-4o-mini vision (~$1.35/month)
-- `ENABLE_AI_CHAT=true` - Claude Haiku chat (~$3.75/month)
+- `ENABLE_AI_ANALYSIS=true` - Claude 3.5 Sonnet vision (~$3-5/month)
+- `ENABLE_AI_CHAT=true` - Claude 3.5 Sonnet chat (~$2-4/month)
 
-**With AI: ~$5/month**
+**With AI: ~$5-9/month**
 
 ---
 

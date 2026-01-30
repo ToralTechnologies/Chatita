@@ -144,9 +144,9 @@ Everything running on free tiers:
 
 ### Optional (AI features disabled):
 If you enable AI later:
-- GPT-4o-mini vision: ~$1.35/month
-- Claude Haiku chat: ~$3.75/month
-- **Total with AI: ~$5/month**
+- Claude 3.5 Sonnet vision: ~$3-5/month (meal photo analysis)
+- Claude 3.5 Sonnet chat: ~$2-4/month (conversational assistance)
+- **Total with AI: ~$5-9/month**
 
 ---
 

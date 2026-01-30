@@ -159,9 +159,9 @@ All planned features have been implemented and are working. The app is ready for
 - ✅ Chat: Template-based (no AI)
 - ✅ Insights: Heuristic patterns (no AI)
 
-**Optional AI Upgrade (~$5/month):**
-- GPT-4o-mini for meal photo analysis
-- Claude Haiku for chat conversations
+**Optional AI Upgrade (~$3-5/month):**
+- Claude 3.5 Sonnet for meal photo analysis (vision)
+- Claude for chat conversations
 - Both disabled by default via feature flags
 
 ---
@@ -213,16 +213,15 @@ NEXTAUTH_URL="https://your-domain.vercel.app"
 
 ### Want to Add AI Features?
 
-1. Get API keys:
-   - OpenAI (for meal analysis)
-   - Anthropic (for chat)
+1. Get Anthropic API key:
+   - Visit: https://console.anthropic.com/
+   - Create account and get API key
 
 2. Update `.env`:
    ```bash
    ENABLE_AI_ANALYSIS=true
    ENABLE_AI_CHAT=true
-   OPENAI_API_KEY="sk-..."
-   ANTHROPIC_API_KEY="sk-ant-..."
+   ANTHROPIC_API_KEY="[your-api-key-here]"
    ```
 
 3. Restart dev server:
@@ -230,7 +229,12 @@ NEXTAUTH_URL="https://your-domain.vercel.app"
    npm run dev
    ```
 
-Cost will go from $0 → ~$5/month
+**What You Get:**
+- Claude 3.5 Sonnet analyzes meal photos
+- Automatic food detection and nutrition estimates
+- Smart chat conversations with context awareness
+
+**Cost:** $0 → ~$3-5/month (Claude pricing)
 
 ---
 

@@ -10,8 +10,37 @@ export default function AddMealPage() {
   const router = useRouter();
   const [photoBase64, setPhotoBase64] = useState('');
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any>(null);
+
+  const handlePhotoCapture = async (base64: string) => {
+    setPhotoBase64(base64);
+    setAnalyzing(true);
+    setError('');
+    setAiSuggestions(null);
+
+    // Try AI analysis
+    try {
+      const response = await fetch('/api/analyze-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoBase64: base64 }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.mode === 'ai' && data.detectedFoods.length > 0) {
+          setAiSuggestions(data);
+        }
+      }
+    } catch (err) {
+      console.log('AI analysis not available, continuing with manual entry');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleSubmit = async (formData: any) => {
     setLoading(true);
@@ -84,13 +113,45 @@ export default function AddMealPage() {
         {/* Photo Upload */}
         <div className="bg-white rounded-card shadow-card p-6">
           <h2 className="text-lg font-semibold mb-4">Meal Photo (Optional)</h2>
-          <MealPhotoUpload onPhotoCapture={setPhotoBase64} />
+          <MealPhotoUpload onPhotoCapture={handlePhotoCapture} />
+
+          {analyzing && (
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center gap-2 text-primary">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm">Analyzing photo...</span>
+              </div>
+            </div>
+          )}
+
+          {aiSuggestions && (
+            <div className="mt-4 p-4 bg-blue-50 border border-primary/30 rounded-lg">
+              <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <span>🤖</span>
+                AI Detected ({aiSuggestions.confidence}% confident):
+              </h3>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {aiSuggestions.detectedFoods.map((food: string, i: number) => (
+                  <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                    {food}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600">
+                ✨ These will auto-fill in the form below. You can edit or add more.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Meal Form */}
         <div className="bg-white rounded-card shadow-card p-6">
           <h2 className="text-lg font-semibold mb-4">Meal Details</h2>
-          <MealForm onSubmit={handleSubmit} loading={loading} />
+          <MealForm
+            onSubmit={handleSubmit}
+            loading={loading}
+            initialData={aiSuggestions}
+          />
         </div>
 
         {/* Disclaimer */}
