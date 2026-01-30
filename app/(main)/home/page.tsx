@@ -8,14 +8,17 @@ import GlucoseWidget from '@/components/glucose-widget';
 import MoodSelector from '@/components/mood-selector';
 import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
+import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext } from '@/types';
-import { ScanLine, History } from 'lucide-react';
+import { ScanLine, History, MessageCircle, X } from 'lucide-react';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [userData, setUserData] = useState<any>(null);
   const [currentGlucose, setCurrentGlucose] = useState<number | undefined>(undefined);
+  const [showChat, setShowChat] = useState(false);
+  const [userContext, setUserContext] = useState<UserContext>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -70,6 +73,7 @@ export default function HomePage() {
   };
 
   const handleContextSave = async (context: UserContext) => {
+    setUserContext(context); // Save for chat context
     try {
       await fetch('/api/mood', {
         method: 'POST',
@@ -150,6 +154,25 @@ export default function HomePage() {
           </p>
         </div>
       </div>
+
+      {/* Floating Chat Button */}
+      {!showChat && (
+        <button
+          onClick={() => setShowChat(true)}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-dark transition-all hover:scale-110 z-20"
+        >
+          <MessageCircle className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Chat Interface */}
+      {showChat && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
+          <div className="w-full max-w-2xl h-[80vh] md:h-[600px] bg-white md:rounded-t-2xl flex flex-col">
+            <ChatInterface userContext={userContext} onClose={() => setShowChat(false)} />
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
