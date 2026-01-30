@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  name              String?
+  diabetesType      String?   // Type1, Type2, Gestational, PreDiabetes, Other
+  targetGlucoseMin  Int       @default(70)
+  targetGlucoseMax  Int       @default(180)
+  preferredLanguage String    @default("en") // en, es
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  meals             Meal[]
+  glucoseEntries    GlucoseEntry[]
+  moodEntries       MoodEntry[]
+  chatMessages      ChatMessage[]
+  badges            UserBadge[]
+}
+
+model Meal {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photoUrl      String?   // or base64 blob
+  photoBase64   String?   @db.Text
+  description   String?
+  detectedFoods String?   @db.Text // JSON array
+
+  calories      Float?
+  carbs         Float?
+  protein       Float?
+  fat           Float?
+  fiber         Float?
+  sugar         Float?
+  sodium        Float?
+  portionSize   String?
+
+  feeling       String?   @db.Text // How user felt after meal
+  mealType      String?   // breakfast, lunch, dinner, snack
+  eatenAt       DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, eatenAt])
+}
+
+model GlucoseEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  value     Float    // mg/dL
+  notes     String?
+  measuredAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId, measuredAt])
+}
+
+model MoodEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mood        String   // sad, neutral, happy
+  stressLevel Int      // 1-10
+
+  // Contextual flags
+  notFeelingWell    Boolean @default(false)
+  onPeriod          Boolean @default(false)
+  feelingOverwhelmed Boolean @default(false)
+  havingCravings    Boolean @default(false)
+
+  notes       String?  @db.Text
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId, recordedAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      String   // user, assistant
+  content   String   @db.Text
+
+  // Context at time of message
+  userContext String? @db.Text // JSON: {onPeriod, feelingOverwhelmed, etc}
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  nameEs      String      // Spanish translation
+  description String
+  descriptionEs String
+  icon        String      // emoji or icon name
+  daysRequired Int
+
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
