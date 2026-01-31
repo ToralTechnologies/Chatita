@@ -565,6 +565,102 @@ async function getRestaurantsFromGoogle(lat: number, lng: number): Promise<Resta
   }
 }
 
+// Google Places Text Search for dish queries
+async function getRestaurantsByDishFromGoogle(
+  lat: number,
+  lng: number,
+  dish: string
+): Promise<Restaurant[]> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('Google Maps API key not configured');
+  }
+
+  try {
+    // Get location name for better search results
+    const locationName = await getLocationName(lat, lng);
+
+    // Use Google Places Text Search
+    // Format: "grilled chicken restaurants near Ann Arbor, MI"
+    const query = encodeURIComponent(`${dish} restaurants near ${locationName}`);
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`
+    );
+
+    const data = await response.json();
+
+    if (data.status === 'ZERO_RESULTS') {
+      // No results found, return empty array (will fallback to simulated)
+      return [];
+    }
+
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      throw new Error(`Google Places API error: ${data.status}`);
+    }
+
+    // Get dish info for diabetes tips
+    const dishInfo = findCuisinesForDish(dish);
+
+    const restaurants: Restaurant[] = data.results.slice(0, 10).map((place: any) => {
+      // Determine cuisine type from place types or name
+      let cuisine = 'Restaurant';
+      const placeTypes = place.types || [];
+      const name = place.name.toLowerCase();
+
+      for (const type of diabetesFriendlyCuisines) {
+        if (placeTypes.includes(type.toLowerCase()) || name.includes(type.toLowerCase())) {
+          cuisine = type;
+          break;
+        }
+      }
+
+      // If still generic, try to infer from Google place types
+      if (cuisine === 'Restaurant') {
+        if (placeTypes.includes('italian_restaurant')) cuisine = 'Italian';
+        else if (placeTypes.includes('mexican_restaurant')) cuisine = 'Mexican';
+        else if (placeTypes.includes('chinese_restaurant')) cuisine = 'Chinese';
+        else if (placeTypes.includes('japanese_restaurant')) cuisine = 'Japanese';
+        else if (placeTypes.includes('american_restaurant')) cuisine = 'American';
+      }
+
+      const restaurant: Restaurant = {
+        id: place.place_id,
+        name: place.name,
+        cuisine,
+        rating: place.rating,
+        address: place.formatted_address || place.vicinity,
+        diabetesFriendly: true,
+        recommendations: mealRecommendationsByCuisine[cuisine] || [
+          'Grilled lean protein (chicken, fish, turkey)',
+          'Large salad with protein and vinaigrette dressing',
+          'Vegetable-based soup with a side salad',
+        ],
+        healthTips: getHealthTips(cuisine),
+      };
+
+      // Add dish-specific info if we have it
+      if (dishInfo) {
+        restaurant.hasDish = dishInfo.dishName;
+        // Replace first recommendation with the searched dish
+        restaurant.recommendations = [dishInfo.dishName, ...restaurant.recommendations.slice(0, 2)];
+        // Add dish-specific tips at the beginning
+        restaurant.healthTips = [...dishInfo.diabetesTips, ...restaurant.healthTips.slice(0, 3)];
+      } else {
+        // Generic dish search (not in our predefined list)
+        restaurant.hasDish = dish;
+        restaurant.recommendations = [dish, ...restaurant.recommendations.slice(0, 2)];
+      }
+
+      return restaurant;
+    });
+
+    return restaurants;
+  } catch (error) {
+    console.error('Google Places Text Search error:', error);
+    throw error;
+  }
+}
+
 // Main function
 export async function findNearbyRestaurants(params: SearchParams): Promise<{
   restaurants: Restaurant[];
@@ -579,17 +675,33 @@ export async function findNearbyRestaurants(params: SearchParams): Promise<{
   let restaurants: Restaurant[];
   let mode: '$0' | 'google';
 
-  if (useGoogleAPI && !dish) {
-    // Google Places API doesn't support dish search in $0 mode, so only use for general search
+  if (useGoogleAPI) {
     try {
-      restaurants = await getRestaurantsFromGoogle(lat, lng);
-      mode = 'google';
+      if (dish) {
+        // Use Google Places Text Search for dish queries
+        console.log(`Searching for "${dish}" restaurants using Google Places Text Search...`);
+        restaurants = await getRestaurantsByDishFromGoogle(lat, lng, dish);
+
+        // If no results from Google, fallback to simulated
+        if (restaurants.length === 0) {
+          console.log('No results from Google Places, falling back to simulated mode');
+          restaurants = getSimulatedRestaurants(lat, lng, dish);
+          mode = '$0';
+        } else {
+          mode = 'google';
+        }
+      } else {
+        // Use Google Places Nearby Search for general location search
+        restaurants = await getRestaurantsFromGoogle(lat, lng);
+        mode = 'google';
+      }
     } catch (error) {
       console.log('Google Places API failed, falling back to $0 mode');
       restaurants = getSimulatedRestaurants(lat, lng, dish);
       mode = '$0';
     }
   } else {
+    // Google Places disabled, use simulated mode
     restaurants = getSimulatedRestaurants(lat, lng, dish);
     mode = '$0';
   }
