@@ -59,6 +59,9 @@ export async function POST(request: Request) {
       portionSize,
       mealType,
       feeling,
+      restaurantName,
+      restaurantAddress,
+      restaurantPlaceId,
     } = body;
 
     // Validate required fields
@@ -85,6 +88,9 @@ export async function POST(request: Request) {
         portionSize: portionSize || null,
         mealType: mealType || 'snack',
         feeling: feeling || null,
+        restaurantName: restaurantName || null,
+        restaurantAddress: restaurantAddress || null,
+        restaurantPlaceId: restaurantPlaceId || null,
       },
     });
 

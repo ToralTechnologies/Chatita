@@ -17,6 +17,9 @@ interface MealFormData {
   portionSize?: string;
   mealType: MealType;
   feeling?: string;
+  restaurantName?: string;
+  restaurantAddress?: string;
+  restaurantPlaceId?: string;
 }
 
 interface MealFormProps {
@@ -46,6 +49,9 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
 
   const [foodInput, setFoodInput] = useState('');
   const [showNutrition, setShowNutrition] = useState(false);
+  const [showRestaurant, setShowRestaurant] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [aiEnhancement, setAiEnhancement] = useState<any>(null);
 
   // Auto-fill form when AI provides suggestions
   useEffect(() => {
@@ -88,6 +94,49 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
       ...formData,
       detectedFoods: formData.detectedFoods.filter((_, i) => i !== index),
     });
+  };
+
+  const handleAiEnhancement = async () => {
+    setEnhancing(true);
+    setAiEnhancement(null);
+
+    try {
+      const response = await fetch('/api/enhance-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: formData.description,
+          foods: formData.detectedFoods,
+          mealType: formData.mealType,
+          portionSize: formData.portionSize,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.mode === 'ai') {
+          setAiEnhancement(data);
+
+          // Auto-fill nutrition estimates if user wants
+          if (data.nutritionEstimate) {
+            setFormData((prev) => ({
+              ...prev,
+              calories: data.nutritionEstimate.calories || prev.calories,
+              carbs: data.nutritionEstimate.carbs || prev.carbs,
+              protein: data.nutritionEstimate.protein || prev.protein,
+              fat: data.nutritionEstimate.fat || prev.fat,
+              fiber: data.nutritionEstimate.fiber || prev.fiber,
+              sugar: data.nutritionEstimate.sugar || prev.sugar,
+            }));
+            setShowNutrition(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.log('AI enhancement failed:', err);
+    } finally {
+      setEnhancing(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -176,6 +225,135 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
                 </button>
               </span>
             ))}
+          </div>
+        )}
+
+        {/* AI Enhancement Button (only show if no photo was taken) */}
+        {formData.detectedFoods.length > 0 && !initialData && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleAiEnhancement}
+              disabled={enhancing}
+              className="w-full py-2 px-4 bg-blue-50 border border-primary/30 text-primary rounded-lg font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {enhancing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span>Enhancing with AI...</span>
+                </>
+              ) : (
+                <>
+                  <span>🤖</span>
+                  <span>Get AI Nutrition Estimates & Tips</span>
+                </>
+              )}
+            </button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              AI will estimate nutrition and ask clarifying questions for better accuracy
+            </p>
+          </div>
+        )}
+
+        {/* AI Enhancement Results */}
+        {aiEnhancement && (
+          <div className="mt-4 space-y-3">
+            {/* Questions */}
+            {aiEnhancement.questions && aiEnhancement.questions.length > 0 && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-2 text-purple-900">
+                  💭 To improve accuracy, mi amor:
+                </h4>
+                <ul className="space-y-1">
+                  {aiEnhancement.questions.map((q: string, i: number) => (
+                    <li key={i} className="text-sm text-purple-800 flex items-start gap-2">
+                      <span className="text-purple-400">•</span>
+                      <span>{q}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Nutrition Estimate */}
+            {aiEnhancement.nutritionEstimate && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-2 text-green-900">
+                  📊 Estimated Nutrition ({aiEnhancement.nutritionEstimate.confidence} confidence):
+                </h4>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-600">Calories:</span>{' '}
+                    <span className="font-medium">{aiEnhancement.nutritionEstimate.calories}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Carbs:</span>{' '}
+                    <span className="font-medium">{aiEnhancement.nutritionEstimate.carbs}g</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Protein:</span>{' '}
+                    <span className="font-medium">{aiEnhancement.nutritionEstimate.protein}g</span>
+                  </div>
+                </div>
+                <p className="text-xs text-green-700 mt-2 italic">
+                  {aiEnhancement.nutritionEstimate.note}
+                </p>
+              </div>
+            )}
+
+            {/* Diabetes Tips */}
+            {aiEnhancement.diabetesTips && aiEnhancement.diabetesTips.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-2 text-blue-900">💡 Diabetes-Friendly Tips:</h4>
+                <ul className="space-y-1">
+                  {aiEnhancement.diabetesTips.map((tip: string, i: number) => (
+                    <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
+                      <span className="text-blue-400">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Restaurant Location (Optional) */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowRestaurant(!showRestaurant)}
+          className="text-primary font-medium text-sm hover:underline"
+        >
+          {showRestaurant ? '− Hide' : '+ Add'} Restaurant Location (Optional)
+        </button>
+
+        {showRestaurant && (
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Restaurant Name</label>
+              <input
+                type="text"
+                value={formData.restaurantName || ''}
+                onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
+                placeholder="e.g., Chipotle, Panera Bread"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Address</label>
+              <input
+                type="text"
+                value={formData.restaurantAddress || ''}
+                onChange={(e) => setFormData({ ...formData, restaurantAddress: e.target.value })}
+                placeholder="e.g., 123 Main St, Ann Arbor, MI"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              💡 Track where you ate to identify patterns and favorite diabetes-friendly spots
+            </p>
           </div>
         )}
       </div>

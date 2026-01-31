@@ -91,6 +91,11 @@ model Meal {
   sodium        Float?
   portionSize   String?
 
+  // Restaurant location tracking
+  restaurantName    String? // Name of restaurant if meal was from restaurant
+  restaurantAddress String? // Address of restaurant
+  restaurantPlaceId String? // Google Place ID for reference
+
   feeling       String?   @db.Text // How user felt after meal
   mealType      String?   // breakfast, lunch, dinner, snack
   eatenAt       DateTime  @default(now())
