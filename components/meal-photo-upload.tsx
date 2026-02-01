@@ -54,22 +54,37 @@ export default function MealPhotoUpload({ onPhotoCapture, initialPhoto }: MealPh
           </button>
         </div>
       ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4 font-medium">Take or upload a photo of your meal</p>
-          <p className="text-sm text-gray-500 mb-6">Optional, but helps you remember what you ate</p>
+          <p className="text-gray-600 mb-2 font-medium">Take or upload a photo of your meal</p>
+          <p className="text-sm text-gray-500 mb-6">Optional, but helps with tracking and AI analysis</p>
 
-          <label className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-button cursor-pointer hover:bg-primary-dark transition-colors">
-            <Upload className="w-5 h-5" />
-            Choose Photo
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Camera Button */}
+            <label className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-button cursor-pointer hover:bg-primary-dark transition-colors">
+              <Camera className="w-5 h-5" />
+              Take Photo
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+
+            {/* Gallery Button */}
+            <label className="inline-flex items-center gap-2 bg-white border-2 border-primary text-primary px-6 py-3 rounded-button cursor-pointer hover:bg-primary/10 transition-colors">
+              <Upload className="w-5 h-5" />
+              Choose from Gallery
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
       )}
     </div>

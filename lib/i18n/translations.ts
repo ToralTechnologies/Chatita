@@ -8,10 +8,12 @@ export const translations = {
     nav: {
       home: 'Home',
       addMeal: 'Add Meal',
+      add: 'Add',
       history: 'History',
       insights: 'Insights',
       restaurants: 'Restaurants',
       rewards: 'Rewards',
+      settings: 'Settings',
     },
 
     // Authentication
@@ -36,8 +38,14 @@ export const translations = {
     // Home
     home: {
       welcome: 'Welcome back',
-      greeting: '',
-      quickActions: 'Quick Actions',
+      greeting: 'Hello {name}',
+      subtitle: 'How are you feeling today?',
+      disclaimer: 'Chatita provides general guidance only. Always consult your healthcare provider for medical decisions.',
+      quickActions: {
+        findRestaurants: 'Find Restaurants',
+        scanMenu: 'Scan Menu',
+        mealHistory: 'Meal History',
+      },
       logMeal: 'Log a Meal',
       checkGlucose: 'Check Glucose',
       findRestaurant: 'Find Restaurant',
@@ -49,13 +57,17 @@ export const translations = {
     addMeal: {
       title: 'Add Meal',
       photoOptional: 'Meal Photo (Optional)',
+      photoTitle: 'Meal Photo (Optional)',
       takePhoto: 'Take Photo',
       uploadPhoto: 'Upload Photo',
       analyzing: 'Analyzing photo...',
-      aiDetected: 'AI Detected',
+      analyzingPhoto: 'Analyzing photo...',
+      aiDetected: 'AI Detected ({confidence}% confident):',
       confident: 'confident',
       autoFillNotice: 'These will auto-fill in the form below. You can edit or add more.',
+      aiAutofill: 'These will auto-fill in the form below. You can edit or add more.',
       mealDetails: 'Meal Details',
+      detailsTitle: 'Meal Details',
       mealType: 'Meal Type',
       breakfast: 'Breakfast',
       lunch: 'Lunch',
@@ -82,6 +94,7 @@ export const translations = {
       saveMeal: 'Save Meal',
       saving: 'Saving...',
       mealSaved: 'Meal Saved!',
+      successMessage: 'Great job tracking your food',
       greatJob: 'Great job tracking your food!',
       getAiTips: 'Get AI Nutrition Estimates & Tips',
       gettingAiTips: 'Enhancing with AI...',
@@ -96,6 +109,7 @@ export const translations = {
       restaurantTip: 'Track where you ate to identify patterns and favorite diabetes-friendly spots',
       tip: 'Tip',
       tipMessage: 'Track what you eat to help identify patterns. Nutrition info is optional - even just listing the foods helps!',
+      trackingTip: 'Track what you eat to help identify patterns. Nutrition info is optional - even just listing the foods helps!',
     },
 
     // AI Enhancement
@@ -207,6 +221,7 @@ export const translations = {
       loading: 'Loading...',
       error: 'Error',
       success: 'Success',
+      tip: 'Tip',
     },
   },
 
@@ -215,10 +230,12 @@ export const translations = {
     nav: {
       home: 'Inicio',
       addMeal: 'Agregar Comida',
+      add: 'Agregar',
       history: 'Historial',
       insights: 'Análisis',
       restaurants: 'Restaurantes',
       rewards: 'Recompensas',
+      settings: 'Configuración',
     },
 
     // Autenticación
@@ -243,8 +260,14 @@ export const translations = {
     // Inicio
     home: {
       welcome: 'Bienvenida de nuevo',
-      greeting: '',
-      quickActions: 'Acciones Rápidas',
+      greeting: 'Hola {name}',
+      subtitle: '¿Cómo te sientes hoy?',
+      disclaimer: 'Chatita proporciona orientación general solamente. Siempre consulte a su proveedor de atención médica para decisiones médicas.',
+      quickActions: {
+        findRestaurants: 'Buscar Restaurantes',
+        scanMenu: 'Escanear Menú',
+        mealHistory: 'Historial de Comidas',
+      },
       logMeal: 'Registrar Comida',
       checkGlucose: 'Revisar Glucosa',
       findRestaurant: 'Buscar Restaurante',
@@ -256,13 +279,17 @@ export const translations = {
     addMeal: {
       title: 'Agregar Comida',
       photoOptional: 'Foto de la Comida (Opcional)',
+      photoTitle: 'Foto de la Comida (Opcional)',
       takePhoto: 'Tomar Foto',
       uploadPhoto: 'Subir Foto',
       analyzing: 'Analizando foto...',
-      aiDetected: 'IA Detectó',
+      analyzingPhoto: 'Analizando foto...',
+      aiDetected: 'IA Detectó ({confidence}% confianza):',
       confident: 'segura',
       autoFillNotice: 'Estos se completarán automáticamente en el formulario. Puedes editar o agregar más.',
+      aiAutofill: 'Estos se auto-completarán en el formulario a continuación. Puedes editar o agregar más.',
       mealDetails: 'Detalles de la Comida',
+      detailsTitle: 'Detalles de la Comida',
       mealType: 'Tipo de Comida',
       breakfast: 'Desayuno',
       lunch: 'Almuerzo',
@@ -279,7 +306,7 @@ export const translations = {
       hideNutrition: '− Ocultar',
       calories: 'Calorías',
       carbs: 'Carbohidratos (g)',
-      protein: 'Proteína (g)',
+      protein: 'Protein (g)',
       fat: 'Grasa (g)',
       fiber: 'Fibra (g)',
       portionSize: 'Tamaño de Porción',
@@ -289,6 +316,7 @@ export const translations = {
       saveMeal: 'Guardar Comida',
       saving: 'Guardando...',
       mealSaved: '¡Comida Guardada!',
+      successMessage: 'Buen trabajo rastreando tu comida',
       greatJob: '¡Excelente trabajo rastreando tu comida!',
       getAiTips: 'Obtener Estimaciones y Consejos de IA',
       gettingAiTips: 'Mejorando con IA...',
@@ -303,6 +331,7 @@ export const translations = {
       restaurantTip: 'Rastrea dónde comiste para identificar patrones y lugares favoritos para diabetes',
       tip: 'Consejo',
       tipMessage: '¡Rastrea lo que comes para ayudar a identificar patrones. La información nutricional es opcional - incluso solo listar los alimentos ayuda!',
+      trackingTip: 'Rastrea lo que comes para ayudar a identificar patrones. La información nutricional es opcional - ¡incluso solo listar los alimentos ayuda!',
     },
 
     // Mejora de IA
@@ -414,6 +443,7 @@ export const translations = {
       loading: 'Cargando...',
       error: 'Error',
       success: 'Éxito',
+      tip: 'Consejo',
     },
   },
 };

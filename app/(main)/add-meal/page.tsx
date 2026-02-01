@@ -16,6 +16,9 @@ export default function AddMealPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
+  const [showDishSelection, setShowDishSelection] = useState(false);
+  const [allDetectedDishes, setAllDetectedDishes] = useState<string[]>([]);
+  const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
 
   const handlePhotoCapture = async (base64: string) => {
     setPhotoBase64(base64);
@@ -34,7 +37,14 @@ export default function AddMealPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.mode === 'ai' && data.detectedFoods.length > 0) {
-          setAiSuggestions(data);
+          // Check if user needs to select which dishes are theirs
+          if (data.needsSelection && data.allDetectedDishes && data.allDetectedDishes.length > 1) {
+            setAllDetectedDishes(data.allDetectedDishes);
+            setSelectedDishes(data.detectedFoods); // Pre-select AI's best guess
+            setShowDishSelection(true);
+          } else {
+            setAiSuggestions(data);
+          }
         }
       }
     } catch (err) {
@@ -42,6 +52,25 @@ export default function AddMealPage() {
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const toggleDishSelection = (dish: string) => {
+    setSelectedDishes(prev =>
+      prev.includes(dish)
+        ? prev.filter(d => d !== dish)
+        : [...prev, dish]
+    );
+  };
+
+  const confirmDishSelection = () => {
+    // Create AI suggestions with only selected dishes
+    setAiSuggestions({
+      detectedFoods: selectedDishes,
+      nutrition: {},
+      confidence: 70,
+      mode: 'ai',
+    });
+    setShowDishSelection(false);
   };
 
   const handleSubmit = async (formData: any) => {
@@ -126,7 +155,44 @@ export default function AddMealPage() {
             </div>
           )}
 
-          {aiSuggestions && (
+          {showDishSelection && (
+            <div className="mt-4 p-4 bg-purple-50 border border-purple-300 rounded-lg">
+              <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <span>👥</span>
+                Multiple dishes detected! Which ones are yours?
+              </h3>
+              <p className="text-xs text-gray-600 mb-3">
+                Select all the items YOU ate (tap to toggle):
+              </p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {allDetectedDishes.map((dish, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleDishSelection(dish)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      selectedDishes.includes(dish)
+                        ? 'bg-primary text-white border-2 border-primary'
+                        : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-primary'
+                    }`}
+                  >
+                    {selectedDishes.includes(dish) && '✓ '}
+                    {dish}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={confirmDishSelection}
+                disabled={selectedDishes.length === 0}
+                className="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm Selection ({selectedDishes.length} item{selectedDishes.length !== 1 ? 's' : ''})
+              </button>
+            </div>
+          )}
+
+          {aiSuggestions && !showDishSelection && (
             <div className="mt-4 p-4 bg-blue-50 border border-primary/30 rounded-lg">
               <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
                 <span>🤖</span>

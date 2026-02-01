@@ -3,6 +3,8 @@
 
 interface MealAnalysisResult {
   detectedFoods: string[];
+  allDetectedDishes?: string[]; // All dishes visible in photo
+  needsSelection?: boolean; // True if user needs to select which dishes are theirs
   nutrition: {
     calories?: number;
     carbs?: number;
@@ -75,8 +77,15 @@ export async function analyzeMealPhoto(photoBase64: string): Promise<MealAnalysi
 
 Analyze this meal image and return ONLY a valid JSON object (no markdown, no code blocks, just the JSON) with:
 
-1. detectedFoods: Array of specific food items detected (e.g., "grilled chicken breast", "steamed broccoli", "brown rice")
-2. nutrition: Object with estimated nutritional values:
+1. allDetectedDishes: Array of ALL food items/dishes visible in the photo (not just what the user might eat)
+   - Include everything visible: their meal, other people's food, shared dishes, etc.
+   - Each item should be specific (e.g., "grilled chicken breast", "steamed broccoli", "brown rice")
+
+2. needsSelection: boolean - true if there are multiple distinct dishes/meals (likely not all for the user)
+
+3. detectedFoods: Array of most likely food items for the user (your best guess if it's clearly one meal)
+
+4. nutrition: Object with estimated nutritional values FOR THE DETECTED USER MEAL:
    - calories (number): total estimated calories
    - carbs (number): carbohydrates in grams
    - protein (number): protein in grams
@@ -84,17 +93,40 @@ Analyze this meal image and return ONLY a valid JSON object (no markdown, no cod
    - fiber (number): fiber in grams (important for diabetes)
    - sugar (number): sugar in grams
    - sodium (number): sodium in mg
-3. portionSize: Estimated total serving size (e.g., "1 cup", "6 oz", "1 medium plate")
-4. confidence: Your confidence level 0-100 in this analysis
+
+5. portionSize: Estimated serving size for the user's meal (e.g., "1 cup", "6 oz", "1 medium plate")
+
+6. confidence: Your confidence level 0-100 in this analysis
 
 IMPORTANT:
+- If you see multiple distinct meals/plates (e.g., dining with others), set needsSelection=true
+- If it's clearly one person's meal, set needsSelection=false
 - Be conservative with estimates
 - Focus on carbs and fiber (critical for blood sugar management)
-- If you can't see clearly, lower your confidence score
 - Return ONLY the JSON object, nothing else
 
-Example format:
+Example format (multiple dishes visible):
 {
+  "allDetectedDishes": ["grilled chicken breast with broccoli", "cheese pizza slice", "caesar salad", "french fries", "soda"],
+  "needsSelection": true,
+  "detectedFoods": ["grilled chicken breast", "steamed broccoli"],
+  "nutrition": {
+    "calories": 350,
+    "carbs": 15,
+    "protein": 40,
+    "fat": 12,
+    "fiber": 5,
+    "sugar": 3,
+    "sodium": 650
+  },
+  "portionSize": "1 medium plate",
+  "confidence": 70
+}
+
+Example format (single meal):
+{
+  "allDetectedDishes": ["grilled chicken breast", "steamed broccoli", "quinoa"],
+  "needsSelection": false,
   "detectedFoods": ["grilled chicken breast", "steamed broccoli", "quinoa"],
   "nutrition": {
     "calories": 450,
@@ -139,6 +171,8 @@ Example format:
 
     return {
       detectedFoods: result.detectedFoods || [],
+      allDetectedDishes: result.allDetectedDishes || [],
+      needsSelection: result.needsSelection || false,
       nutrition: result.nutrition || {},
       portionSize: result.portionSize,
       confidence: result.confidence || 0,

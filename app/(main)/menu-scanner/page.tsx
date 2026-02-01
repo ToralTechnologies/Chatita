@@ -14,16 +14,59 @@ export default function MenuScannerPage() {
   const [itemInput, setItemInput] = useState('');
   const [recommendations, setRecommendations] = useState<MenuRecommendation[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [overallAdvice, setOverallAdvice] = useState<string>('');
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setMenuPhoto(reader.result as string);
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      setMenuPhoto(base64);
+
+      // Automatically analyze the photo with AI
+      await analyzeMenuPhoto(base64);
     };
     reader.readAsDataURL(file);
+  };
+
+  const analyzeMenuPhoto = async (photoBase64: string) => {
+    setAnalyzingPhoto(true);
+    setRecommendations([]);
+    setOverallAdvice('');
+
+    try {
+      const response = await fetch('/api/analyze-menu-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoBase64 }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.mode === 'ai' && data.dishes) {
+          // Convert AI response to MenuRecommendation format
+          const aiRecommendations: MenuRecommendation[] = data.dishes.map((dish: any) => ({
+            name: dish.name,
+            score: dish.score,
+            reason: dish.reason,
+            estimatedCarbs: dish.estimatedCarbs,
+            estimatedCalories: dish.estimatedCalories,
+            tips: dish.tips || [],
+          }));
+
+          setRecommendations(aiRecommendations);
+          setOverallAdvice(data.overallAdvice || '');
+          setShowResults(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to analyze menu photo:', error);
+    } finally {
+      setAnalyzingPhoto(false);
+    }
   };
 
   const addMenuItem = () => {
@@ -102,9 +145,19 @@ export default function MenuScannerPage() {
 
         {/* Recommendations */}
         <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
+          {overallAdvice && (
+            <div className="bg-blue-50 border border-primary/30 rounded-lg p-4">
+              <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <span>🤖</span>
+                AI Menu Analysis
+              </h3>
+              <p className="text-sm text-gray-700">{overallAdvice}</p>
+            </div>
+          )}
+
           <div className="bg-blue-50 border border-primary/30 rounded-lg p-4">
             <p className="text-sm text-gray-700">
-              💙 Chatita analyzed {recommendations.length} menu items to find diabetes-friendly options for you
+              💙 Found {recommendations.length} menu item{recommendations.length !== 1 ? 's' : ''} - ranked from best to okay for diabetes
             </p>
           </div>
 
@@ -189,21 +242,48 @@ export default function MenuScannerPage() {
         {/* Info Card */}
         <div className="bg-primary/5 border border-primary/20 rounded-card p-6">
           <div className="text-4xl mb-3 text-center">🍽️</div>
-          <h2 className="font-semibold text-lg mb-2 text-center">Scan a Restaurant Menu</h2>
-          <p className="text-sm text-gray-600 text-center">
-            Chatita will analyze menu items and suggest diabetes-friendly options
+          <h2 className="font-semibold text-lg mb-2 text-center">AI-Powered Menu Scanner</h2>
+          <p className="text-sm text-gray-600 text-center mb-3">
+            Take a photo of any restaurant menu and AI will automatically:
           </p>
+          <ul className="text-sm text-gray-600 space-y-1 max-w-sm mx-auto">
+            <li className="flex items-start gap-2">
+              <span className="text-success">✓</span>
+              <span>Identify all menu items from the photo</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-success">✓</span>
+              <span>Rank dishes by diabetes-friendliness</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-success">✓</span>
+              <span>Provide ordering tips for each dish</span>
+            </li>
+          </ul>
         </div>
 
-        {/* Photo Upload (Optional) */}
+        {/* Photo Upload */}
         <div className="bg-white rounded-card shadow-card p-6">
-          <h3 className="font-semibold mb-4">Menu Photo (Optional)</h3>
-          {menuPhoto ? (
+          <h3 className="font-semibold mb-4">📸 Upload Menu Photo</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Take or upload a photo of the menu and AI will automatically suggest the best diabetes-friendly dishes!
+          </p>
+          {analyzingPhoto ? (
+            <div className="border-2 border-dashed border-primary rounded-lg p-8 text-center">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-primary font-medium">🤖 AI is analyzing the menu...</p>
+              <p className="text-sm text-gray-500 mt-1">Finding diabetes-friendly options for you</p>
+            </div>
+          ) : menuPhoto ? (
             <div className="relative">
               <img src={menuPhoto} alt="Menu" className="w-full rounded-lg" />
               <button
-                onClick={() => setMenuPhoto(null)}
-                className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg"
+                onClick={() => {
+                  setMenuPhoto(null);
+                  setRecommendations([]);
+                  setShowResults(false);
+                }}
+                className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -211,8 +291,12 @@ export default function MenuScannerPage() {
           ) : (
             <label className="block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
               <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">Take a photo of the menu</p>
-              <p className="text-sm text-gray-500">For reference only</p>
+              <p className="text-gray-600 mb-2 font-medium">Take or Upload Menu Photo</p>
+              <p className="text-sm text-gray-500 mb-3">AI will analyze and suggest best options</p>
+              <div className="inline-flex items-center gap-2 text-sm text-primary font-medium">
+                <Upload className="w-4 h-4" />
+                Choose Photo
+              </div>
               <input
                 type="file"
                 accept="image/*"
@@ -224,9 +308,12 @@ export default function MenuScannerPage() {
           )}
         </div>
 
-        {/* Menu Items Input */}
+        {/* Manual Menu Items Input (Optional) */}
         <div className="bg-white rounded-card shadow-card p-6">
-          <h3 className="font-semibold mb-4">Menu Items</h3>
+          <h3 className="font-semibold mb-2">✍️ Or Type Menu Items Manually</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            If you prefer, you can manually type menu items for comparison
+          </p>
           <div className="flex gap-2 mb-4">
             <input
               type="text"
@@ -280,7 +367,7 @@ export default function MenuScannerPage() {
 
           {menuItems.length === 0 && (
             <p className="text-sm text-gray-500 text-center py-4">
-              Add menu items to get personalized recommendations
+              Optional: Add items manually to compare with photo analysis
             </p>
           )}
         </div>
@@ -288,8 +375,7 @@ export default function MenuScannerPage() {
         {/* Disclaimer */}
         <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
           <p className="text-sm text-gray-700">
-            💡 <strong>Tip:</strong> Add multiple items to compare options.
-            Chatita uses simple rules to estimate which dishes are better for blood sugar control.
+            💡 <strong>Tip:</strong> Take a photo of the menu for instant AI analysis! AI will identify all dishes and rank them by diabetes-friendliness.
           </p>
         </div>
       </div>

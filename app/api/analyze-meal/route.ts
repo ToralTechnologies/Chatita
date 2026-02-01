@@ -35,6 +35,8 @@ export async function POST(request: Request) {
     // Return AI analysis
     return NextResponse.json({
       detectedFoods: analysis.detectedFoods,
+      allDetectedDishes: analysis.allDetectedDishes || [],
+      needsSelection: analysis.needsSelection || false,
       nutrition: analysis.nutrition,
       portionSize: analysis.portionSize,
       confidence: analysis.confidence,
