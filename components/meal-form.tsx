@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { MealType } from '@/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface MealFormData {
   description: string;
@@ -41,6 +42,7 @@ interface MealFormProps {
 }
 
 export default function MealForm({ onSubmit, loading, initialData }: MealFormProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<MealFormData>({
     description: '',
     detectedFoods: [],
@@ -148,7 +150,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Meal Type */}
       <div>
-        <label className="block text-sm font-medium mb-2">Meal Type</label>
+        <label className="block text-sm font-medium mb-2">{t.addMeal.mealType}</label>
         <div className="grid grid-cols-4 gap-2">
           {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => (
             <button
@@ -161,7 +163,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {type}
+              {t.addMeal[type]}
             </button>
           ))}
         </div>
@@ -170,20 +172,20 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
       {/* Description */}
       <div>
         <label className="block text-sm font-medium mb-2">
-          Meal Description
+          {t.addMeal.description}
         </label>
         <input
           type="text"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="e.g., Chicken salad with avocado"
+          placeholder={t.addMeal.descriptionPlaceholder}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       {/* Foods */}
       <div>
-        <label className="block text-sm font-medium mb-2">Foods in this meal</label>
+        <label className="block text-sm font-medium mb-2">{t.addMeal.foods}</label>
         <div className="flex gap-2 mb-3">
           <input
             type="text"
@@ -195,7 +197,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
                 addFood();
               }
             }}
-            placeholder="e.g., Grilled chicken"
+            placeholder={t.addMeal.foodPlaceholder}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
@@ -204,7 +206,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add
+            {t.addMeal.add}
           </button>
         </div>
 
@@ -240,17 +242,17 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               {enhancing ? (
                 <>
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span>Enhancing with AI...</span>
+                  <span>{t.addMeal.gettingAiTips}</span>
                 </>
               ) : (
                 <>
                   <span>🤖</span>
-                  <span>Get AI Nutrition Estimates & Tips</span>
+                  <span>{t.addMeal.getAiTips}</span>
                 </>
               )}
             </button>
             <p className="text-xs text-gray-500 mt-2 text-center">
-              AI will estimate nutrition and ask clarifying questions for better accuracy
+              {t.addMeal.aiTipsDescription}
             </p>
           </div>
         )}
@@ -262,7 +264,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
             {aiEnhancement.questions && aiEnhancement.questions.length > 0 && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h4 className="font-semibold text-sm mb-2 text-purple-900">
-                  💭 To improve accuracy, mi amor:
+                  💭 {t.aiEnhancement.toImproveAccuracy}
                 </h4>
                 <ul className="space-y-1">
                   {aiEnhancement.questions.map((q: string, i: number) => (
@@ -279,19 +281,19 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
             {aiEnhancement.nutritionEstimate && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-semibold text-sm mb-2 text-green-900">
-                  📊 Estimated Nutrition ({aiEnhancement.nutritionEstimate.confidence} confidence):
+                  📊 {t.aiEnhancement.estimatedNutrition} ({aiEnhancement.nutritionEstimate.confidence} {t.aiEnhancement.confidence}):
                 </h4>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <span className="text-gray-600">Calories:</span>{' '}
+                    <span className="text-gray-600">{t.addMeal.calories}:</span>{' '}
                     <span className="font-medium">{aiEnhancement.nutritionEstimate.calories}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Carbs:</span>{' '}
+                    <span className="text-gray-600">{t.addMeal.carbs}:</span>{' '}
                     <span className="font-medium">{aiEnhancement.nutritionEstimate.carbs}g</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Protein:</span>{' '}
+                    <span className="text-gray-600">{t.addMeal.protein}:</span>{' '}
                     <span className="font-medium">{aiEnhancement.nutritionEstimate.protein}g</span>
                   </div>
                 </div>
@@ -304,7 +306,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
             {/* Diabetes Tips */}
             {aiEnhancement.diabetesTips && aiEnhancement.diabetesTips.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-sm mb-2 text-blue-900">💡 Diabetes-Friendly Tips:</h4>
+                <h4 className="font-semibold text-sm mb-2 text-blue-900">💡 {t.aiEnhancement.diabetesTips}</h4>
                 <ul className="space-y-1">
                   {aiEnhancement.diabetesTips.map((tip: string, i: number) => (
                     <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
@@ -326,33 +328,33 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
           onClick={() => setShowRestaurant(!showRestaurant)}
           className="text-primary font-medium text-sm hover:underline"
         >
-          {showRestaurant ? '− Hide' : '+ Add'} Restaurant Location (Optional)
+          {showRestaurant ? t.addMeal.hideRestaurant : t.addMeal.addRestaurant} {t.addMeal.restaurantLocation}
         </button>
 
         {showRestaurant && (
           <div className="mt-4 space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Restaurant Name</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.restaurantName}</label>
               <input
                 type="text"
                 value={formData.restaurantName || ''}
                 onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
-                placeholder="e.g., Chipotle, Panera Bread"
+                placeholder={t.addMeal.restaurantNamePlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Address</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.address}</label>
               <input
                 type="text"
                 value={formData.restaurantAddress || ''}
                 onChange={(e) => setFormData({ ...formData, restaurantAddress: e.target.value })}
-                placeholder="e.g., 123 Main St, Ann Arbor, MI"
+                placeholder={t.addMeal.addressPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <p className="text-xs text-gray-500">
-              💡 Track where you ate to identify patterns and favorite diabetes-friendly spots
+              💡 {t.addMeal.restaurantTip}
             </p>
           </div>
         )}
@@ -365,13 +367,13 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
           onClick={() => setShowNutrition(!showNutrition)}
           className="text-primary font-medium text-sm hover:underline"
         >
-          {showNutrition ? '− Hide' : '+ Add'} Nutrition Information (Optional)
+          {showNutrition ? t.addMeal.hideNutrition : t.addMeal.addNutrition} {t.addMeal.nutritionOptional}
         </button>
 
         {showNutrition && (
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Calories</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.calories}</label>
               <input
                 type="number"
                 value={formData.calories || ''}
@@ -381,7 +383,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Carbs (g)</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.carbs}</label>
               <input
                 type="number"
                 value={formData.carbs || ''}
@@ -391,7 +393,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Protein (g)</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.protein}</label>
               <input
                 type="number"
                 value={formData.protein || ''}
@@ -401,7 +403,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Fat (g)</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.fat}</label>
               <input
                 type="number"
                 value={formData.fat || ''}
@@ -411,7 +413,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Fiber (g)</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.fiber}</label>
               <input
                 type="number"
                 value={formData.fiber || ''}
@@ -421,12 +423,12 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Portion Size</label>
+              <label className="block text-sm font-medium mb-1">{t.addMeal.portionSize}</label>
               <input
                 type="text"
                 value={formData.portionSize || ''}
                 onChange={(e) => setFormData({ ...formData, portionSize: e.target.value })}
-                placeholder="e.g., 1 cup"
+                placeholder={t.addMeal.portionPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -437,12 +439,12 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
       {/* Feeling */}
       <div>
         <label className="block text-sm font-medium mb-2">
-          How did you feel after eating? (Optional)
+          {t.addMeal.feeling}
         </label>
         <textarea
           value={formData.feeling || ''}
           onChange={(e) => setFormData({ ...formData, feeling: e.target.value })}
-          placeholder="e.g., Felt satisfied and energized..."
+          placeholder={t.addMeal.feelingPlaceholder}
           rows={3}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
@@ -454,12 +456,12 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         disabled={loading || formData.detectedFoods.length === 0}
         className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Saving...' : 'Save Meal'}
+        {loading ? t.addMeal.saving : t.addMeal.saveMeal}
       </button>
 
       {formData.detectedFoods.length === 0 && (
         <p className="text-sm text-gray-500 text-center -mt-2">
-          Add at least one food to save your meal
+          {t.addMeal.addAtLeastOne}
         </p>
       )}
     </form>

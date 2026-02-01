@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import MealPhotoUpload from '@/components/meal-photo-upload';
 import MealForm from '@/components/meal-form';
+import { useTranslation } from '@/lib/i18n/context';
 
 export default function AddMealPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [photoBase64, setPhotoBase64] = useState('');
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -79,8 +81,8 @@ export default function AddMealPage() {
       <div className="min-h-screen bg-gray-background flex items-center justify-center pb-24">
         <div className="text-center px-6">
           <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold mb-2">Meal Saved!</h2>
-          <p className="text-gray-600">Great job tracking your food, mi amor</p>
+          <h2 className="text-2xl font-bold mb-2">{t.addMeal.mealSaved}</h2>
+          <p className="text-gray-600">{t.addMeal.successMessage}</p>
         </div>
         <BottomNav />
       </div>
@@ -96,9 +98,9 @@ export default function AddMealPage() {
             onClick={() => router.back()}
             className="text-primary hover:underline mr-4"
           >
-            ← Back
+            ← {t.common.back}
           </button>
-          <h1 className="text-2xl font-bold">Add Meal</h1>
+          <h1 className="text-2xl font-bold">{t.addMeal.title}</h1>
         </div>
       </div>
 
@@ -112,14 +114,14 @@ export default function AddMealPage() {
 
         {/* Photo Upload */}
         <div className="bg-white rounded-card shadow-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Meal Photo (Optional)</h2>
+          <h2 className="text-lg font-semibold mb-4">{t.addMeal.photoTitle}</h2>
           <MealPhotoUpload onPhotoCapture={handlePhotoCapture} />
 
           {analyzing && (
             <div className="mt-4 text-center">
               <div className="inline-flex items-center gap-2 text-primary">
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">Analyzing photo...</span>
+                <span className="text-sm">{t.addMeal.analyzingPhoto}</span>
               </div>
             </div>
           )}
@@ -128,7 +130,7 @@ export default function AddMealPage() {
             <div className="mt-4 p-4 bg-blue-50 border border-primary/30 rounded-lg">
               <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
                 <span>🤖</span>
-                AI Detected ({aiSuggestions.confidence}% confident):
+                {t.addMeal.aiDetected.replace('{confidence}', aiSuggestions.confidence)}
               </h3>
               <div className="flex flex-wrap gap-2 mb-2">
                 {aiSuggestions.detectedFoods.map((food: string, i: number) => (
@@ -138,7 +140,7 @@ export default function AddMealPage() {
                 ))}
               </div>
               <p className="text-xs text-gray-600">
-                ✨ These will auto-fill in the form below. You can edit or add more.
+                ✨ {t.addMeal.aiAutofill}
               </p>
             </div>
           )}
@@ -146,7 +148,7 @@ export default function AddMealPage() {
 
         {/* Meal Form */}
         <div className="bg-white rounded-card shadow-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Meal Details</h2>
+          <h2 className="text-lg font-semibold mb-4">{t.addMeal.detailsTitle}</h2>
           <MealForm
             onSubmit={handleSubmit}
             loading={loading}
@@ -157,8 +159,7 @@ export default function AddMealPage() {
         {/* Disclaimer */}
         <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
           <p className="text-sm text-gray-700">
-            💡 <strong>Tip:</strong> Track what you eat to help identify patterns.
-            Nutrition info is optional - even just listing the foods helps!
+            💡 <strong>{t.common.tip}:</strong> {t.addMeal.trackingTip}
           </p>
         </div>
       </div>

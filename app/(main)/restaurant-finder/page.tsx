@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import { MapPin, Loader2, Utensils, Star, Navigation } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface Restaurant {
   id: string;
@@ -19,6 +20,7 @@ interface Restaurant {
 }
 
 export default function RestaurantFinderPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,12 +46,12 @@ export default function RestaurantFinderPage() {
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error('Failed to fetch restaurants');
+          throw new Error(t.restaurants.noRestaurantsMessage);
         }
         const data = await response.json();
 
         if (data.restaurants.length === 0 && dish) {
-          setError(`No restaurants found serving "${dish}". Try searching for a different dish.`);
+          setError(t.restaurants.noRestaurantsMessage);
         } else {
           setRestaurants(data.restaurants);
           setLocationName(data.locationName || 'your location');
@@ -57,7 +59,7 @@ export default function RestaurantFinderPage() {
         }
       })
       .catch((err: any) => {
-        setError(err.message || 'Failed to fetch nearby restaurants');
+        setError(err.message || t.restaurants.noRestaurantsMessage);
       })
       .finally(() => {
         setLoading(false);
@@ -97,7 +99,7 @@ export default function RestaurantFinderPage() {
 
   const handleDishSearch = () => {
     if (!dishQuery.trim()) {
-      setError('Please enter a dish name');
+      setError(t.restaurants.enterDishName);
       return;
     }
     getCurrentLocation();
@@ -157,9 +159,9 @@ export default function RestaurantFinderPage() {
             onClick={() => router.back()}
             className="text-primary hover:underline mr-4"
           >
-            ← Back
+            ← {t.common.back}
           </button>
-          <h1 className="text-2xl font-bold">Restaurant Finder</h1>
+          <h1 className="text-2xl font-bold">{t.restaurants.title}</h1>
         </div>
       </div>
 
@@ -170,11 +172,11 @@ export default function RestaurantFinderPage() {
           <div className="flex items-start gap-3 mb-4">
             <MapPin className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
             <div>
-              <h2 className="text-lg font-semibold mb-2">Find Diabetes-Friendly Options</h2>
+              <h2 className="text-lg font-semibold mb-2">{t.restaurants.findDiabetesFriendly}</h2>
               <p className="text-gray-600 text-sm">
                 {searchMode === 'location'
-                  ? "We'll find nearby restaurants and suggest the best meal choices for managing your blood sugar, mi amor."
-                  : "Tell me what you're craving, and I'll find nearby restaurants that serve it!"}
+                  ? t.restaurants.descriptionLocation
+                  : t.restaurants.descriptionDish}
               </p>
             </div>
           </div>
@@ -191,7 +193,7 @@ export default function RestaurantFinderPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Browse Nearby
+                  {t.restaurants.browseNearby}
                 </button>
                 <button
                   onClick={() => setSearchMode('dish')}
@@ -201,7 +203,7 @@ export default function RestaurantFinderPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Search by Dish
+                  {t.restaurants.searchByDish}
                 </button>
               </div>
 
@@ -217,11 +219,11 @@ export default function RestaurantFinderPage() {
                         handleDishSearch();
                       }
                     }}
-                    placeholder="e.g., grilled chicken, salmon, tacos..."
+                    placeholder={t.restaurants.dishPlaceholder}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <p className="text-xs text-gray-500">
-                    💡 Try: grilled chicken, salmon, salad, tacos, sushi, soup, stir fry, eggs
+                    💡 {t.restaurants.tryThese}
                   </p>
                 </div>
               )}
@@ -234,14 +236,14 @@ export default function RestaurantFinderPage() {
               className="w-full bg-primary text-white py-3 px-4 rounded-button font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
             >
               <Navigation className="w-5 h-5" />
-              {searchMode === 'dish' ? 'Find This Dish Near Me' : 'Find Restaurants Near Me'}
+              {searchMode === 'dish' ? t.restaurants.findThisDish : t.restaurants.findNearMe}
             </button>
           )}
 
           {loading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <span className="ml-3 text-gray-600">Finding restaurants nearby...</span>
+              <span className="ml-3 text-gray-600">{t.restaurants.findingRestaurants}</span>
             </div>
           )}
 
@@ -259,8 +261,8 @@ export default function RestaurantFinderPage() {
               <MapPin className="w-5 h-5 text-primary" />
               <p className="text-sm font-medium">
                 {searchedDish
-                  ? `Found restaurants serving "${searchedDish}" near ${locationName}`
-                  : `Showing results near ${locationName}`}
+                  ? t.restaurants.foundNear.replace('{dish}', searchedDish).replace('{location}', locationName)
+                  : t.restaurants.showingNear.replace('{location}', locationName)}
               </p>
             </div>
           </div>
@@ -270,7 +272,7 @@ export default function RestaurantFinderPage() {
         {restaurants.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {searchedDish ? `Restaurants Serving ${searchedDish}` : 'Recommended Restaurants'}
+              {searchedDish ? t.restaurants.servingDish.replace('{dish}', searchedDish) : t.restaurants.recommended}
             </h3>
             {restaurants.map((restaurant) => (
               <div
@@ -304,12 +306,12 @@ export default function RestaurantFinderPage() {
                 <div className="flex flex-wrap gap-2">
                   {restaurant.hasDish && (
                     <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                      🍽️ Serves {restaurant.hasDish}
+                      🍽️ {t.restaurants.serves} {restaurant.hasDish}
                     </div>
                   )}
                   {restaurant.diabetesFriendly && (
                     <div className="inline-flex items-center gap-2 bg-success/10 text-success px-3 py-1 rounded-full text-sm font-medium">
-                      ✓ Diabetes-Friendly
+                      ✓ {t.restaurants.diabetesFriendly}
                     </div>
                   )}
                 </div>
@@ -317,7 +319,7 @@ export default function RestaurantFinderPage() {
                 {/* Meal Recommendations */}
                 {restaurant.recommendations.length > 0 && (
                   <div>
-                    <h5 className="font-semibold text-sm mb-2">What to Order:</h5>
+                    <h5 className="font-semibold text-sm mb-2">{t.restaurants.whatToOrder}</h5>
                     <div className="space-y-2">
                       {restaurant.recommendations.map((rec, idx) => (
                         <div
@@ -341,7 +343,7 @@ export default function RestaurantFinderPage() {
                 {/* Health Tips */}
                 {restaurant.healthTips.length > 0 && (
                   <div>
-                    <h5 className="font-semibold text-sm mb-2">💡 Ordering Tips:</h5>
+                    <h5 className="font-semibold text-sm mb-2">💡 {t.restaurants.orderingTips}</h5>
                     <ul className="space-y-1">
                       {restaurant.healthTips.map((tip, idx) => (
                         <li key={idx} className="text-xs text-gray-700 flex items-start gap-2">
@@ -361,7 +363,7 @@ export default function RestaurantFinderPage() {
                     )}
                     className="w-full text-left text-sm font-medium text-primary hover:underline flex items-center justify-between"
                   >
-                    <span>🎯 Select dishes for personalized tips</span>
+                    <span>🎯 {t.restaurants.selectDishes}</span>
                     <span className="text-xs">
                       {selectedRestaurant === restaurant.id ? '▼' : '▶'}
                     </span>
@@ -372,7 +374,7 @@ export default function RestaurantFinderPage() {
                       {/* Common Dishes */}
                       <div>
                         <p className="text-xs text-gray-600 mb-2">
-                          Select what you're considering ordering:
+                          {t.restaurants.selectWhatYouConsidering}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {restaurant.recommendations.map((dish, idx) => {
@@ -405,12 +407,12 @@ export default function RestaurantFinderPage() {
                           {gettingTips ? (
                             <>
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Getting personalized tips...</span>
+                              <span>{t.restaurants.gettingTips}</span>
                             </>
                           ) : (
                             <>
                               <span>🤖</span>
-                              <span>Get Diabetes-Friendly Tips for Selected Dishes</span>
+                              <span>{t.restaurants.getPersonalizedTips}</span>
                             </>
                           )}
                         </button>
@@ -421,7 +423,7 @@ export default function RestaurantFinderPage() {
                         <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 space-y-3">
                           <h5 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
                             <span>✨</span>
-                            <span>Personalized Tips for Your Selection</span>
+                            <span>{t.restaurants.personalizedTips}</span>
                           </h5>
 
                           {customTips[restaurant.id].dishTips?.map((tipSet: any, idx: number) => (
@@ -443,7 +445,7 @@ export default function RestaurantFinderPage() {
                           {customTips[restaurant.id].overallAdvice && (
                             <div className="bg-blue-100 rounded-lg p-3">
                               <p className="text-xs text-blue-900 font-medium mb-1">
-                                💡 Overall Advice:
+                                💡 {t.restaurants.overallAdvice}
                               </p>
                               <p className="text-xs text-blue-800">
                                 {customTips[restaurant.id].overallAdvice}
@@ -464,15 +466,15 @@ export default function RestaurantFinderPage() {
         {!loading && location && restaurants.length === 0 && (
           <div className="bg-white rounded-card shadow-card p-8 text-center">
             <Utensils className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold mb-2">No restaurants found</h3>
+            <h3 className="text-lg font-semibold mb-2">{t.restaurants.noRestaurantsFound}</h3>
             <p className="text-gray-600 text-sm mb-4">
-              We couldn't find any restaurants in your area. Try again in a different location.
+              {t.restaurants.noRestaurantsMessage}
             </p>
             <button
               onClick={getCurrentLocation}
               className="text-primary font-medium hover:underline"
             >
-              Try Again
+              {t.restaurants.tryAgain}
             </button>
           </div>
         )}
@@ -480,9 +482,7 @@ export default function RestaurantFinderPage() {
         {/* Disclaimer */}
         <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
           <p className="text-sm text-gray-700">
-            ⚠️ Restaurant suggestions are general guidance. Always check with the
-            restaurant about ingredients and portion sizes, and consult your healthcare
-            provider for personalized dietary advice.
+            ⚠️ {t.restaurants.disclaimer}
           </p>
         </div>
       </div>

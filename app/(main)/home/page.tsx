@@ -11,10 +11,12 @@ import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext } from '@/types';
 import { ScanLine, History, MessageCircle, X, MapPin } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
   const [userData, setUserData] = useState<any>(null);
   const [currentGlucose, setCurrentGlucose] = useState<number | undefined>(undefined);
   const [showChat, setShowChat] = useState(false);
@@ -88,7 +90,7 @@ export default function HomePage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <div className="text-lg text-gray-600">{t.common.loading}</div>
       </div>
     );
   }
@@ -105,9 +107,9 @@ export default function HomePage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-6">
           <h1 className="text-3xl font-bold">
-            Hello {userName} 👋
+            {t.home.greeting.replace('{name}', userName)} 👋
           </h1>
-          <p className="text-gray-600 mt-1">How are you feeling today?</p>
+          <p className="text-gray-600 mt-1">{t.home.subtitle}</p>
         </div>
       </div>
 
@@ -128,7 +130,7 @@ export default function HomePage() {
             className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <MapPin className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium text-center">Find Restaurants</span>
+            <span className="font-medium text-center">{t.home.quickActions.findRestaurants}</span>
           </Link>
 
           <Link
@@ -136,7 +138,7 @@ export default function HomePage() {
             className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <ScanLine className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium">Scan Menu</span>
+            <span className="font-medium">{t.home.quickActions.scanMenu}</span>
           </Link>
         </div>
 
@@ -146,7 +148,7 @@ export default function HomePage() {
             className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <History className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium">Meal History</span>
+            <span className="font-medium">{t.home.quickActions.mealHistory}</span>
           </Link>
 
           <Link
@@ -154,7 +156,7 @@ export default function HomePage() {
             className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <span className="text-3xl mb-2">📊</span>
-            <span className="font-medium">Insights</span>
+            <span className="font-medium">{t.nav.insights}</span>
           </Link>
         </div>
 
@@ -167,8 +169,7 @@ export default function HomePage() {
         {/* Disclaimer */}
         <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
           <p className="text-sm text-gray-700">
-            ⚠️ Chatita provides general guidance only. Always consult your
-            healthcare provider for medical decisions.
+            ⚠️ {t.home.disclaimer}
           </p>
         </div>
       </div>

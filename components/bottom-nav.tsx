@@ -3,16 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Camera, TrendingUp, Award, Settings } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const navItems = [
-    { href: '/home', icon: Home, label: 'Home' },
-    { href: '/add-meal', icon: Camera, label: 'Add', isPrimary: true },
-    { href: '/insights', icon: TrendingUp, label: 'Insights' },
-    { href: '/rewards', icon: Award, label: 'Rewards' },
-    { href: '/settings', icon: Settings, label: 'Settings' },
+    { href: '/home', icon: Home, label: t.nav.home },
+    { href: '/add-meal', icon: Camera, label: t.nav.add, isPrimary: true },
+    { href: '/insights', icon: TrendingUp, label: t.nav.insights },
+    { href: '/rewards', icon: Award, label: t.nav.rewards },
+    { href: '/settings', icon: Settings, label: t.nav.settings },
   ];
 
   return (
