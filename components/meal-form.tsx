@@ -6,7 +6,6 @@ import { MealType } from '@/types';
 import { useTranslation } from '@/lib/i18n/context';
 
 interface MealFormData {
-  description: string;
   detectedFoods: string[];
   calories?: number;
   carbs?: number;
@@ -44,7 +43,6 @@ interface MealFormProps {
 export default function MealForm({ onSubmit, loading, initialData }: MealFormProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<MealFormData>({
-    description: '',
     detectedFoods: [],
     mealType: 'lunch',
   });
@@ -63,7 +61,6 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
       setFormData(prev => ({
         ...prev,
         detectedFoods: initialData.detectedFoods || prev.detectedFoods,
-        description: initialData.detectedFoods?.join(', ') || prev.description,
         calories: initialData.nutrition?.calories || prev.calories,
         carbs: initialData.nutrition?.carbs || prev.carbs,
         protein: initialData.nutrition?.protein || prev.protein,
@@ -74,10 +71,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         portionSize: initialData.portionSize || prev.portionSize,
       }));
 
-      // Auto-expand nutrition section if AI provided nutrition data
-      if (hasNutrition) {
-        setShowNutrition(true);
-      }
+      // Don't auto-expand nutrition section - use progressive disclosure
     }
   }, [initialData]);
 
@@ -107,7 +101,6 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description: formData.description,
           foods: formData.detectedFoods,
           mealType: formData.mealType,
           portionSize: formData.portionSize,
@@ -167,20 +160,6 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          {t.addMeal.description}
-        </label>
-        <input
-          type="text"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder={t.addMeal.descriptionPlaceholder}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
       </div>
 
       {/* Foods */}
@@ -453,17 +432,11 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading || formData.detectedFoods.length === 0}
+        disabled={loading}
         className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? t.addMeal.saving : t.addMeal.saveMeal}
       </button>
-
-      {formData.detectedFoods.length === 0 && (
-        <p className="text-sm text-gray-500 text-center -mt-2">
-          {t.addMeal.addAtLeastOne}
-        </p>
-      )}
     </form>
   );
 }

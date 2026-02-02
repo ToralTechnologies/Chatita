@@ -5,6 +5,8 @@ interface MealAnalysisResult {
   detectedFoods: string[];
   allDetectedDishes?: string[]; // All dishes visible in photo
   needsSelection?: boolean; // True if user needs to select which dishes are theirs
+  aiSummary?: string; // Human-readable summary: "chicken tacos with salsa"
+  mealType?: string; // Auto-detected: breakfast, lunch, dinner, snack
   nutrition: {
     calories?: number;
     carbs?: number;
@@ -14,9 +16,22 @@ interface MealAnalysisResult {
     sugar?: number;
     sodium?: number;
   };
+  nutritionSummary?: string; // "~35g carbs • 420 cal"
   portionSize?: string;
   confidence: number;
   mode: 'ai' | '$0';
+}
+
+// Helper function to auto-detect meal type based on timestamp
+function detectMealType(timestamp: Date = new Date()): string {
+  const hour = timestamp.getHours();
+
+  if (hour >= 5 && hour < 11) return 'breakfast';
+  if (hour >= 11 && hour < 15) return 'lunch';
+  if (hour >= 15 && hour < 18) return 'snack';
+  if (hour >= 18 || hour < 5) return 'dinner';
+
+  return 'snack'; // fallback
 }
 
 export async function analyzeMealPhoto(photoBase64: string): Promise<MealAnalysisResult> {
@@ -85,7 +100,11 @@ Analyze this meal image and return ONLY a valid JSON object (no markdown, no cod
 
 3. detectedFoods: Array of most likely food items for the user (your best guess if it's clearly one meal)
 
-4. nutrition: Object with estimated nutritional values FOR THE DETECTED USER MEAL:
+4. aiSummary: Short, friendly human-readable summary of the meal (e.g., "chicken tacos with salsa", "grilled salmon salad")
+   - Keep it natural and conversational
+   - 3-6 words maximum
+
+5. nutrition: Object with estimated nutritional values FOR THE DETECTED USER MEAL:
    - calories (number): total estimated calories
    - carbs (number): carbohydrates in grams
    - protein (number): protein in grams
@@ -94,9 +113,9 @@ Analyze this meal image and return ONLY a valid JSON object (no markdown, no cod
    - sugar (number): sugar in grams
    - sodium (number): sodium in mg
 
-5. portionSize: Estimated serving size for the user's meal (e.g., "1 cup", "6 oz", "1 medium plate")
+6. portionSize: Estimated serving size for the user's meal (e.g., "1 cup", "6 oz", "1 medium plate")
 
-6. confidence: Your confidence level 0-100 in this analysis
+7. confidence: Your confidence level 0-100 in this analysis
 
 IMPORTANT:
 - If you see multiple distinct meals/plates (e.g., dining with others), set needsSelection=true
@@ -110,6 +129,7 @@ Example format (multiple dishes visible):
   "allDetectedDishes": ["grilled chicken breast with broccoli", "cheese pizza slice", "caesar salad", "french fries", "soda"],
   "needsSelection": true,
   "detectedFoods": ["grilled chicken breast", "steamed broccoli"],
+  "aiSummary": "grilled chicken with broccoli",
   "nutrition": {
     "calories": 350,
     "carbs": 15,
@@ -128,6 +148,7 @@ Example format (single meal):
   "allDetectedDishes": ["grilled chicken breast", "steamed broccoli", "quinoa"],
   "needsSelection": false,
   "detectedFoods": ["grilled chicken breast", "steamed broccoli", "quinoa"],
+  "aiSummary": "chicken bowl with quinoa",
   "nutrition": {
     "calories": 450,
     "carbs": 35,
@@ -169,11 +190,29 @@ Example format (single meal):
 
     const result = JSON.parse(jsonStr);
 
+    // Auto-detect meal type based on current time
+    const mealType = detectMealType();
+
+    // Generate nutrition summary
+    const carbs = result.nutrition?.carbs;
+    const calories = result.nutrition?.calories;
+    let nutritionSummary = '';
+    if (carbs && calories) {
+      nutritionSummary = `~${Math.round(carbs)}g carbs • ${Math.round(calories)} cal`;
+    } else if (carbs) {
+      nutritionSummary = `~${Math.round(carbs)}g carbs`;
+    } else if (calories) {
+      nutritionSummary = `~${Math.round(calories)} cal`;
+    }
+
     return {
       detectedFoods: result.detectedFoods || [],
       allDetectedDishes: result.allDetectedDishes || [],
       needsSelection: result.needsSelection || false,
+      aiSummary: result.aiSummary,
+      mealType,
       nutrition: result.nutrition || {},
+      nutritionSummary,
       portionSize: result.portionSize,
       confidence: result.confidence || 0,
       mode: 'ai',

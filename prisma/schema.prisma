@@ -79,8 +79,13 @@ model Meal {
 
   photoUrl      String?   // or base64 blob
   photoBase64   String?   @db.Text
-  description   String?
   detectedFoods String?   @db.Text // JSON array
+
+  // AI-first fields
+  aiSummary     String?   // "chicken tacos with salsa"
+  aiConfidence  Int?      // 0-100
+  aiMode        String?   // 'ai' | '$0'
+  nutritionSource String? @default("manual") // 'ai' | 'manual' | 'user-edited'
 
   calories      Float?
   carbs         Float?
