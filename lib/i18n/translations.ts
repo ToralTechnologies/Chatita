@@ -178,6 +178,14 @@ export const translations = {
       patterns: 'Patterns & Trends',
       noInsights: 'Not enough data yet',
       noInsightsMessage: 'Log more meals and glucose readings to see personalized insights',
+      loadingInsights: 'Loading insights...',
+      unableToLoad: 'Unable to load insights',
+      weeklySummary: 'Weekly Summary',
+      timeInRange: 'Time in Range',
+      patternsTips: 'Patterns & Tips',
+      keepTracking: 'Keep Tracking!',
+      keepTrackingMessage: 'Log more meals and glucose readings this week to see personalized patterns and insights.',
+      disclaimer: 'These insights are based on your recent data and are meant to help you identify patterns. Always consult your healthcare provider for medical guidance.',
     },
 
     // Rewards
@@ -400,6 +408,14 @@ export const translations = {
       patterns: 'Patrones y Tendencias',
       noInsights: 'Aún no hay suficientes datos',
       noInsightsMessage: 'Registra más comidas y lecturas de glucosa para ver análisis personalizados',
+      loadingInsights: 'Cargando perspectivas...',
+      unableToLoad: 'No se pueden cargar las perspectivas',
+      weeklySummary: 'Resumen Semanal',
+      timeInRange: 'Tiempo en Rango',
+      patternsTips: 'Patrones y Consejos',
+      keepTracking: '¡Sigue Rastreando!',
+      keepTrackingMessage: 'Registra más comidas y lecturas de glucosa esta semana para ver patrones y perspectivas personalizadas.',
+      disclaimer: 'Estas perspectivas se basan en tus datos recientes y están destinadas a ayudarte a identificar patrones. Siempre consulta a tu proveedor de atención médica para obtener orientación médica.',
     },
 
     // Recompensas
