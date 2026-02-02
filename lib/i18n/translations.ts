@@ -188,6 +188,27 @@ export const translations = {
       disclaimer: 'These insights are based on your recent data and are meant to help you identify patterns. Always consult your healthcare provider for medical guidance.',
     },
 
+    // Meal History
+    mealHistory: {
+      title: 'Meal History',
+      searchPlaceholder: 'Search meals...',
+      filter: 'Filter',
+      filterByType: 'Filter by type',
+      all: 'All',
+      today: 'Today',
+      yesterday: 'Yesterday',
+      loadingMeals: 'Loading meals...',
+      noMealsYet: 'No meals logged yet',
+      logFirstMeal: 'Log Your First Meal',
+      noMatchingMeals: 'No meals match your search',
+      types: {
+        breakfast: 'Breakfast',
+        lunch: 'Lunch',
+        dinner: 'Dinner',
+        snack: 'Snack',
+      },
+    },
+
     // Rewards
     rewards: {
       title: 'Your Rewards',
@@ -416,6 +437,27 @@ export const translations = {
       keepTracking: '¡Sigue Rastreando!',
       keepTrackingMessage: 'Registra más comidas y lecturas de glucosa esta semana para ver patrones y perspectivas personalizadas.',
       disclaimer: 'Estas perspectivas se basan en tus datos recientes y están destinadas a ayudarte a identificar patrones. Siempre consulta a tu proveedor de atención médica para obtener orientación médica.',
+    },
+
+    // Historial de Comidas
+    mealHistory: {
+      title: 'Historial de Comidas',
+      searchPlaceholder: 'Buscar comidas...',
+      filter: 'Filtro',
+      filterByType: 'Filtrar por tipo',
+      all: 'Todas',
+      today: 'Hoy',
+      yesterday: 'Ayer',
+      loadingMeals: 'Cargando comidas...',
+      noMealsYet: 'No hay comidas registradas',
+      logFirstMeal: 'Registra Tu Primera Comida',
+      noMatchingMeals: 'No hay comidas que coincidan con tu búsqueda',
+      types: {
+        breakfast: 'Desayuno',
+        lunch: 'Almuerzo',
+        dinner: 'Cena',
+        snack: 'Merienda',
+      },
     },
 
     // Recompensas
