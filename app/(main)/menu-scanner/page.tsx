@@ -6,6 +6,7 @@ import { Camera, Upload, Plus, X, CheckCircle } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
 import { analyzeMenu } from '@/lib/menu-scanner';
 import { MenuRecommendation } from '@/types';
+import { compressImage } from '@/lib/compress-image';
 
 export default function MenuScannerPage() {
   const router = useRouter();
@@ -21,15 +22,15 @@ export default function MenuScannerPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
+    try {
+      const base64 = await compressImage(file);
       setMenuPhoto(base64);
 
       // Automatically analyze the photo with AI
       await analyzeMenuPhoto(base64);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image compression failed:', err);
+    }
   };
 
   const analyzeMenuPhoto = async (photoBase64: string) => {

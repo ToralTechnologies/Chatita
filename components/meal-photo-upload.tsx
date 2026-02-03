@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
+import { compressImage } from '@/lib/compress-image';
 
 interface MealPhotoUploadProps {
   onPhotoCapture: (base64: string) => void;
@@ -11,23 +12,18 @@ interface MealPhotoUploadProps {
 export default function MealPhotoUpload({ onPhotoCapture, initialPhoto }: MealPhotoUploadProps) {
   const [preview, setPreview] = useState<string | null>(initialPhoto || null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 5MB for base64 storage)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Photo is too large. Please choose a photo under 5MB.');
-      return;
+    try {
+      const compressed = await compressImage(file);
+      setPreview(compressed);
+      onPhotoCapture(compressed);
+    } catch (err) {
+      console.error('Image compression failed:', err);
+      alert('Failed to process photo. Please try again.');
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setPreview(base64);
-      onPhotoCapture(base64);
-    };
-    reader.readAsDataURL(file);
   };
 
   const clearPhoto = () => {
