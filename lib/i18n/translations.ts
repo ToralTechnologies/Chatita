@@ -170,6 +170,8 @@ export const translations = {
       areYouAtDescription: 'We found these restaurants near you. Tap the one you\'re at:',
       noneOfThese: 'None of these',
       noneOfTheseDescription: 'Let me search by name or dish instead',
+      orTypeDish: 'Or type a dish you\'re thinking about:',
+      typeDishPlaceholder: 'e.g. enchiladas, pasta...',
     },
 
     // Meal History
@@ -437,6 +439,8 @@ export const translations = {
       areYouAtDescription: 'Encontramos estos restaurantes cerca de ti. Toca el que estés visitando:',
       noneOfThese: 'Ninguno de estos',
       noneOfTheseDescription: 'Déjame buscar por nombre o platillo',
+      orTypeDish: 'O escribe un platillo que te interese:',
+      typeDishPlaceholder: 'ej. enchiladas, pasta...',
     },
 
     // Historial de Comidas

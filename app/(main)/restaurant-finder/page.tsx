@@ -3,8 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { MapPin, Loader2, Utensils, Star, Navigation, Search, X } from 'lucide-react';
+import { MapPin, Loader2, Utensils, Star, Navigation, Search, X, Plus } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
+
+interface MenuItem {
+  name: string;
+  category: string;
+  score: 'great' | 'moderate' | 'caution';
+  carbEstimate: string;
+  tip: string;
+}
 
 interface Restaurant {
   id: string;
@@ -14,8 +22,6 @@ interface Restaurant {
   distance?: string;
   address?: string;
   diabetesFriendly: boolean;
-  recommendations: string[];
-  healthTips: string[];
   hasDish?: string;
 }
 
@@ -59,6 +65,12 @@ export default function RestaurantFinderPage() {
   // ── detect-location state ────────────────────────────────────────────────
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [nearbyPlaces, setNearbyPlaces] = useState<Suggestion[]>([]);
+
+  // ── dynamic menu state (keyed by restaurant id) ──────────────────────────
+  const [menuItems, setMenuItems] = useState<Record<string, MenuItem[]>>({});
+  const [loadingMenu, setLoadingMenu] = useState<Record<string, boolean>>({});
+  // free-text dish the user typed in (keyed by restaurant id)
+  const [customDishInput, setCustomDishInput] = useState<Record<string, string>>({});
 
   // ── close suggestions on outside click ───────────────────────────────────
   useEffect(() => {
@@ -170,26 +182,24 @@ export default function RestaurantFinderPage() {
     debounceRef.current = setTimeout(() => fetchSuggestions(value), 350);
   };
 
-  // When user taps a suggestion, build a single-item restaurant list with tips
-  // and show it the same way the existing results are shown.
+  // When user taps a suggestion, build a single-item restaurant list and kick
+  // off the AI menu fetch simultaneously.
   const selectSuggestion = (suggestion: Suggestion) => {
     setShowSuggestions(false);
     setNameQuery(suggestion.name);
 
-    // Build a restaurant card from the suggestion (reuses the same card UI)
     const restaurant: Restaurant = {
       id: suggestion.id,
       name: suggestion.name,
       cuisine: suggestion.cuisine,
       address: suggestion.address,
       diabetesFriendly: true,
-      recommendations: getRecommendationsForCuisine(suggestion.cuisine),
-      healthTips: getTipsForCuisine(suggestion.cuisine),
     };
     setRestaurants([restaurant]);
     setLocation({ lat: 0, lng: 0 }); // truthy so results render
     setLocationName('your selection');
     setSearchedDish('');
+    fetchMenu(suggestion.id, suggestion.name, suggestion.cuisine);
   };
 
   // ── new: detect-location helpers ──────────────────────────────────────────
@@ -231,7 +241,7 @@ export default function RestaurantFinderPage() {
     );
   };
 
-  // User confirmed a nearby place → same as selectSuggestion
+  // User confirmed a nearby place → same pattern as selectSuggestion
   const confirmNearbyPlace = (place: Suggestion) => {
     setNearbyPlaces([]);
     const restaurant: Restaurant = {
@@ -240,16 +250,35 @@ export default function RestaurantFinderPage() {
       cuisine: place.cuisine,
       address: place.address,
       diabetesFriendly: true,
-      recommendations: getRecommendationsForCuisine(place.cuisine),
-      healthTips: getTipsForCuisine(place.cuisine),
     };
     setRestaurants([restaurant]);
     setLocation({ lat: 0, lng: 0 });
     setLocationName('your location');
     setSearchedDish('');
+    fetchMenu(place.id, place.name, place.cuisine);
   };
 
-  // ── personalized-tips helpers (unchanged) ─────────────────────────────────
+  // ── fetch AI menu for a restaurant ─────────────────────────────────────────
+  const fetchMenu = async (restaurantId: string, restaurantName: string, cuisine: string) => {
+    setLoadingMenu((prev) => ({ ...prev, [restaurantId]: true }));
+    try {
+      const res = await fetch('/api/restaurants/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantName, cuisine }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMenuItems((prev) => ({ ...prev, [restaurantId]: data.dishes || [] }));
+      }
+    } catch {
+      console.error('Failed to fetch menu');
+    } finally {
+      setLoadingMenu((prev) => ({ ...prev, [restaurantId]: false }));
+    }
+  };
+
+  // ── personalized-tips helpers ─────────────────────────────────────────────
   const toggleDishSelection = (restaurantId: string, dish: string) => {
     setSelectedDishes((prev) => {
       const current = prev[restaurantId] || [];
@@ -596,128 +625,194 @@ export default function RestaurantFinderPage() {
                   )}
                 </div>
 
-                {/* Meal Recommendations */}
-                {restaurant.recommendations.length > 0 && (
-                  <div>
-                    <h5 className="font-semibold text-sm mb-2">{t.restaurants.whatToOrder}</h5>
-                    <div className="space-y-2">
-                      {restaurant.recommendations.map((rec, idx) => (
-                        <div
-                          key={idx}
-                          className={`rounded-lg p-3 text-sm ${
-                            idx === 0 && restaurant.hasDish ? 'bg-primary/10 border border-primary/30' : 'bg-gray-50'
-                          }`}
-                        >
-                          <p className="text-gray-800">
-                            {idx === 0 && restaurant.hasDish && '⭐ '}
-                            {rec}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Health Tips */}
-                {restaurant.healthTips.length > 0 && (
-                  <div>
-                    <h5 className="font-semibold text-sm mb-2">💡 {t.restaurants.orderingTips}</h5>
-                    <ul className="space-y-1">
-                      {restaurant.healthTips.map((tip, idx) => (
-                        <li key={idx} className="text-xs text-gray-700 flex items-start gap-2">
-                          <span className="text-primary mt-0.5">•</span>
-                          <span>{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Dish Selector - Get Personalized Tips */}
-                <div className="border-t border-gray-200 pt-4">
-                  <button
-                    onClick={() => setSelectedRestaurant(selectedRestaurant === restaurant.id ? null : restaurant.id)}
-                    className="w-full text-left text-sm font-medium text-primary hover:underline flex items-center justify-between"
-                  >
-                    <span>🎯 {t.restaurants.selectDishes}</span>
-                    <span className="text-xs">{selectedRestaurant === restaurant.id ? '▼' : '▶'}</span>
-                  </button>
-
-                  {selectedRestaurant === restaurant.id && (
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <p className="text-xs text-gray-600 mb-2">{t.restaurants.selectWhatYouConsidering}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {restaurant.recommendations.map((dish, idx) => {
-                            const isSelected = selectedDishes[restaurant.id]?.includes(dish) || false;
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => toggleDishSelection(restaurant.id, dish)}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                                  isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                              >
-                                {isSelected && '✓ '}
-                                {dish}
-                              </button>
-                            );
-                          })}
-                        </div>
+                {/* ── Dynamic Menu (AI-generated or $0 fallback) ──────── */}
+                {loadingMenu[restaurant.id] ? (
+                  /* skeleton while menu loads */
+                  <div className="space-y-3">
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                    {[1, 2, 3].map((n) => (
+                      <div key={n} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                        <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-3 w-56 bg-gray-100 rounded animate-pulse" />
                       </div>
+                    ))}
+                  </div>
+                ) : menuItems[restaurant.id]?.length ? (
+                  <div className="space-y-4">
+                    {/* group by category */}
+                    {(() => {
+                      const items = menuItems[restaurant.id];
+                      const categories = [...new Set(items.map((i) => i.category))];
+                      return categories.map((cat) => (
+                        <div key={cat}>
+                          <h5 className="font-semibold text-sm mb-2 text-gray-700">{cat}</h5>
+                          <div className="space-y-2">
+                            {items
+                              .filter((i) => i.category === cat)
+                              .map((item, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`rounded-lg p-3 border ${
+                                    item.score === 'great'
+                                      ? 'bg-success/5 border-success/20'
+                                      : item.score === 'moderate'
+                                      ? 'bg-warning/5 border-warning/20'
+                                      : 'bg-danger/5 border-danger/20'
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <span className="text-xs text-gray-500">{item.carbEstimate} carbs</span>
+                                      <span
+                                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                          item.score === 'great'
+                                            ? 'bg-success/10 text-success'
+                                            : item.score === 'moderate'
+                                            ? 'bg-warning/10 text-warning'
+                                            : 'bg-danger/10 text-danger'
+                                        }`}
+                                      >
+                                        {item.score === 'great' ? '✓ Great' : item.score === 'moderate' ? '⚠ Moderate' : '⚡ Caution'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-600 mt-1">💡 {item.tip}</p>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
 
-                      {(selectedDishes[restaurant.id]?.length || 0) > 0 && (
-                        <button
-                          onClick={() => getCustomTips(restaurant.id, restaurant.name, restaurant.cuisine)}
-                          disabled={gettingTips}
-                          className="w-full py-2 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {gettingTips ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>{t.restaurants.gettingTips}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>🤖</span>
-                              <span>{t.restaurants.getPersonalizedTips}</span>
-                            </>
-                          )}
-                        </button>
-                      )}
+                    {/* ── Personalised tips section ─────────────────── */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <button
+                        onClick={() => setSelectedRestaurant(selectedRestaurant === restaurant.id ? null : restaurant.id)}
+                        className="w-full text-left text-sm font-medium text-primary hover:underline flex items-center justify-between"
+                      >
+                        <span>🎯 {t.restaurants.selectDishes}</span>
+                        <span className="text-xs">{selectedRestaurant === restaurant.id ? '▼' : '▶'}</span>
+                      </button>
 
-                      {customTips[restaurant.id] && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                          <h5 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
-                            <span>✨</span>
-                            <span>{t.restaurants.personalizedTips}</span>
-                          </h5>
-
-                          {customTips[restaurant.id].dishTips?.map((tipSet: any, idx: number) => (
-                            <div key={idx} className="bg-white rounded-lg p-3 space-y-2">
-                              <p className="font-medium text-sm text-gray-900">🍽️ {tipSet.dish}</p>
-                              <ul className="space-y-1">
-                                {tipSet.tips.map((tip: string, i: number) => (
-                                  <li key={i} className="text-xs text-gray-700 flex items-start gap-2">
-                                    <span className="text-blue-500">•</span>
-                                    <span>{tip}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                      {selectedRestaurant === restaurant.id && (
+                        <div className="mt-4 space-y-4">
+                          {/* chips from menu */}
+                          <div>
+                            <p className="text-xs text-gray-600 mb-2">{t.restaurants.selectWhatYouConsidering}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {menuItems[restaurant.id].map((item, idx) => {
+                                const isSelected = selectedDishes[restaurant.id]?.includes(item.name) || false;
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => toggleDishSelection(restaurant.id, item.name)}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                                      isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    {isSelected && '✓ '}
+                                    {item.name}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          ))}
+                          </div>
 
-                          {customTips[restaurant.id].overallAdvice && (
-                            <div className="bg-blue-100 rounded-lg p-3">
-                              <p className="text-xs text-blue-900 font-medium mb-1">💡 {t.restaurants.overallAdvice}</p>
-                              <p className="text-xs text-blue-800">{customTips[restaurant.id].overallAdvice}</p>
+                          {/* free-text: "I want the …" */}
+                          <div>
+                            <p className="text-xs text-gray-600 mb-2">{t.restaurants.orTypeDish}</p>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={customDishInput[restaurant.id] || ''}
+                                onChange={(e) =>
+                                  setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: e.target.value }))
+                                }
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const val = (customDishInput[restaurant.id] || '').trim();
+                                    if (val) {
+                                      toggleDishSelection(restaurant.id, val);
+                                      setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: '' }));
+                                    }
+                                  }
+                                }}
+                                placeholder={t.restaurants.typeDishPlaceholder}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                              <button
+                                onClick={() => {
+                                  const val = (customDishInput[restaurant.id] || '').trim();
+                                  if (val) {
+                                    toggleDishSelection(restaurant.id, val);
+                                    setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: '' }));
+                                  }
+                                }}
+                                className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Get tips button */}
+                          {(selectedDishes[restaurant.id]?.length || 0) > 0 && (
+                            <button
+                              onClick={() => getCustomTips(restaurant.id, restaurant.name, restaurant.cuisine)}
+                              disabled={gettingTips}
+                              className="w-full py-2 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {gettingTips ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>{t.restaurants.gettingTips}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>🤖</span>
+                                  <span>{t.restaurants.getPersonalizedTips}</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+
+                          {/* AI tips result */}
+                          {customTips[restaurant.id] && (
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                              <h5 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
+                                <span>✨</span>
+                                <span>{t.restaurants.personalizedTips}</span>
+                              </h5>
+
+                              {customTips[restaurant.id].dishTips?.map((tipSet: any, idx: number) => (
+                                <div key={idx} className="bg-white rounded-lg p-3 space-y-2">
+                                  <p className="font-medium text-sm text-gray-900">🍽️ {tipSet.dish}</p>
+                                  <ul className="space-y-1">
+                                    {tipSet.tips.map((tip: string, i: number) => (
+                                      <li key={i} className="text-xs text-gray-700 flex items-start gap-2">
+                                        <span className="text-blue-500">•</span>
+                                        <span>{tip}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+
+                              {customTips[restaurant.id].overallAdvice && (
+                                <div className="bg-blue-100 rounded-lg p-3">
+                                  <p className="text-xs text-blue-900 font-medium mb-1">💡 {t.restaurants.overallAdvice}</p>
+                                  <p className="text-xs text-blue-800">{customTips[restaurant.id].overallAdvice}</p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -746,77 +841,3 @@ export default function RestaurantFinderPage() {
   );
 }
 
-// ── static recommendation / tip maps (mirrors restaurant-finder.ts) ────────
-function getRecommendationsForCuisine(cuisine: string): string[] {
-  const map: Record<string, string[]> = {
-    Mediterranean: [
-      'Grilled fish with vegetables (ADA best choice)',
-      'Greek salad with grilled chicken, dressing on side',
-      'Lentil soup with side salad',
-    ],
-    Japanese: [
-      'Sashimi platter (lean protein, no rice)',
-      'Grilled salmon with steamed vegetables',
-      'Chicken yakitori with edamame',
-    ],
-    Greek: [
-      'Grilled chicken or fish with Greek salad',
-      'Souvlaki skewers with tzatziki and vegetables',
-    ],
-    Vietnamese: [
-      'Pho: ask for less noodles, extra vegetables',
-      'Grilled lemongrass chicken with side salad',
-      'Fresh spring rolls (not fried)',
-    ],
-    Thai: [
-      'Tom yum soup with shrimp (no noodles)',
-      'Grilled chicken satay with cucumber salad',
-    ],
-    Indian: [
-      'Tandoori chicken (grilled, no breading)',
-      'Chana masala with side salad (skip rice/naan)',
-    ],
-    Mexican: [
-      'Grilled chicken or steak with fajita vegetables',
-      'Fish tacos: 1-2 corn tortillas or lettuce wraps',
-      'Burrito bowl (no tortilla, light on rice/beans)',
-    ],
-    American: [
-      'Grilled chicken breast, no skin, with vegetables',
-      'Salmon with asparagus (omega-3)',
-      'Small burger: no bun or whole wheat, side salad',
-    ],
-    Italian: [
-      'Grilled chicken or fish with marinara and vegetables',
-      'Caprese salad with added lean protein',
-      'Minestrone soup (skip pasta inside)',
-    ],
-    Chinese: [
-      'Steamed fish with ginger (not fried)',
-      'Stir-fried vegetables with chicken (sauce on side)',
-    ],
-  };
-  return map[cuisine] || ['Grilled protein with vegetables', 'Salad with lean protein'];
-}
-
-function getTipsForCuisine(cuisine: string): string[] {
-  const common = [
-    'Order the smallest size available',
-    'Ask for sauces and dressings on the side',
-    'Choose grilled, baked, or steamed over fried',
-    'Drink water or sugar-free beverages only',
-  ];
-  const specific: Record<string, string[]> = {
-    Mexican: ['Limit tortillas to 1-2 small corn tortillas', 'Skip chips or split a small portion'],
-    Italian: ['Limit pasta to 1/2 cup if having any', 'Choose marinara over cream-based sauces'],
-    Japanese: ['Avoid tempura – choose grilled', 'Sashimi is excellent (lean protein, no carbs)'],
-    Chinese: ['Ask for steamed instead of fried', 'Skip or limit rice to 1/3 cup'],
-    Indian: ['Avoid naan or limit to 1/2 piece', 'Choose tandoori (grilled) over curry'],
-    Thai: ['Ask for less sugar in sauces', 'Coconut milk in moderation'],
-    American: ['Remove bun or scoop out extra bread', 'Use mustard or salsa instead of mayo'],
-    Mediterranean: ['Olive oil is a good fat', 'Focus on fish and lean proteins'],
-    Greek: ['Greek yogurt is a great choice', 'Load up on salad vegetables'],
-    Vietnamese: ['Pho: ask for less noodles, extra vegetables', 'Choose grilled spring rolls'],
-  };
-  return [...common, ...(specific[cuisine] || [])];
-}
