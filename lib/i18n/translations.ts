@@ -136,6 +136,13 @@ export const translations = {
       savedSuccess: 'Changes saved!',
     },
 
+    // EXIF photo metadata hints
+    exifHints: {
+      timeFromPhoto: 'Time from photo:',
+      restaurantFromPhoto: 'Nearby restaurants detected from photo location:',
+      tapToTag: 'Tap one to tag this meal with that restaurant',
+    },
+
     // Restaurant Finder
     restaurants: {
       title: 'Restaurant Finder',
@@ -415,6 +422,13 @@ export const translations = {
       mealNotFound: 'Comida no encontrada',
       backToHistory: 'Volver al Historial',
       savedSuccess: '¡Cambios guardados!',
+    },
+
+    // Consejos de metadatos EXIF de la foto
+    exifHints: {
+      timeFromPhoto: 'Hora de la foto:',
+      restaurantFromPhoto: 'Restaurantes cercanos detectados desde la ubicación de la foto:',
+      tapToTag: 'Toca uno para etiquetar esta comida con ese restaurante',
     },
 
     // Buscador de Restaurantes

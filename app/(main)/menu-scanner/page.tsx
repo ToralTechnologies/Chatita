@@ -23,7 +23,7 @@ export default function MenuScannerPage() {
     if (!file) return;
 
     try {
-      const base64 = await compressImage(file);
+      const { base64 } = await compressImage(file);
       setMenuPhoto(base64);
 
       // Automatically analyze the photo with AI

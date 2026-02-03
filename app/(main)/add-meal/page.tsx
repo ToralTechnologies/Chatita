@@ -2,14 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Clock, MapPin } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
 import MealPhotoUpload from '@/components/meal-photo-upload';
 import MealConfirmation from '@/components/meal-confirmation';
 import EditDrawer from '@/components/edit-drawer';
 import SuccessScreen from '@/components/success-screen';
 import { useTranslation } from '@/lib/i18n/context';
+import { ExifData } from '@/lib/exif';
 
 type FlowState = 'photo' | 'confirmation' | 'editing' | 'success';
+
+/** Restaurant suggestion returned by /api/restaurants/search nearby mode */
+interface NearbyRestaurant {
+  id: string;
+  name: string;
+  address: string;
+  cuisine: string;
+}
 
 export default function AddMealPage() {
   const router = useRouter();
@@ -28,11 +38,42 @@ export default function AddMealPage() {
   const [allDetectedDishes, setAllDetectedDishes] = useState<string[]>([]);
   const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
 
-  const handlePhotoCapture = async (base64: string) => {
+  // EXIF-derived state
+  const [exifDate, setExifDate] = useState<Date | null>(null);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurant[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<NearbyRestaurant | null>(null);
+
+  /** Fetch nearby restaurants using GPS from EXIF */
+  const fetchNearbyFromGps = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch('/api/restaurants/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'nearby', lat, lng }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.suggestions && data.suggestions.length > 0) {
+          setNearbyRestaurants(data.suggestions);
+        }
+      }
+    } catch {
+      // GPS restaurant lookup is best-effort — fail silently
+    }
+  };
+
+  const handlePhotoCapture = async (base64: string, exif: ExifData) => {
     setPhotoBase64(base64);
     setAnalyzing(true);
     setError('');
     setAnalysis(null);
+    setExifDate(null);
+    setNearbyRestaurants([]);
+    setSelectedRestaurant(null);
+
+    // Store EXIF date and kick off GPS restaurant lookup (both non-blocking)
+    if (exif.date) setExifDate(exif.date);
+    if (exif.gps) fetchNearbyFromGps(exif.gps.lat, exif.gps.lng);
 
     try {
       const response = await fetch('/api/analyze-meal', {
@@ -100,7 +141,15 @@ export default function AddMealPage() {
       const response = await fetch('/api/meals/quick-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoBase64 }),
+        body: JSON.stringify({
+          photoBase64,
+          ...(exifDate && { eatenAt: exifDate.toISOString() }),
+          ...(selectedRestaurant && {
+            restaurantName: selectedRestaurant.name,
+            restaurantAddress: selectedRestaurant.address,
+            restaurantPlaceId: selectedRestaurant.id,
+          }),
+        }),
       });
 
       if (!response.ok) {
@@ -133,6 +182,13 @@ export default function AddMealPage() {
           aiConfidence: analysis?.confidence,
           aiMode: analysis?.mode,
           nutritionSource: 'user-edited',
+          // Pre-fill restaurant from EXIF GPS if the user didn't type one in the form
+          ...(selectedRestaurant && !formData.restaurantName && {
+            restaurantName: selectedRestaurant.name,
+            restaurantAddress: selectedRestaurant.address,
+            restaurantPlaceId: selectedRestaurant.id,
+          }),
+          ...(exifDate && { eatenAt: exifDate.toISOString() }),
         }),
       });
 
@@ -236,13 +292,59 @@ export default function AddMealPage() {
 
         {/* Confirmation State (Fast Path) */}
         {flowState === 'confirmation' && analysis && (
-          <MealConfirmation
-            photo={photoBase64}
-            analysis={analysis}
-            onSave={handleQuickSave}
-            onEdit={() => setFlowState('editing')}
-            loading={saving}
-          />
+          <>
+            {/* EXIF hints — shown as small badges above the confirmation card */}
+            {(exifDate || nearbyRestaurants.length > 0) && (
+              <div className="bg-white rounded-card shadow-card p-4 space-y-3">
+                {exifDate && (
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span>
+                      {t.exifHints.timeFromPhoto}{' '}
+                      <span className="font-semibold text-primary">
+                        {exifDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                        {exifDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {nearbyRestaurants.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span>{t.exifHints.restaurantFromPhoto}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {nearbyRestaurants.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setSelectedRestaurant(selectedRestaurant?.id === r.id ? null : r)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium transition-all border ${
+                            selectedRestaurant?.id === r.id
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-primary'
+                          }`}
+                        >
+                          {r.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{t.exifHints.tapToTag}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <MealConfirmation
+              photo={photoBase64}
+              analysis={analysis}
+              onSave={handleQuickSave}
+              onEdit={() => setFlowState('editing')}
+              loading={saving}
+            />
+          </>
         )}
 
         {/* Manual Entry Option */}

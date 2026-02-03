@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
 import { compressImage } from '@/lib/compress-image';
+import { ExifData } from '@/lib/exif';
 
 interface MealPhotoUploadProps {
-  onPhotoCapture: (base64: string) => void;
+  /** Called after the photo is compressed. Includes any EXIF metadata extracted before compression. */
+  onPhotoCapture: (base64: string, exif: ExifData) => void;
   initialPhoto?: string;
 }
 
@@ -17,9 +19,9 @@ export default function MealPhotoUpload({ onPhotoCapture, initialPhoto }: MealPh
     if (!file) return;
 
     try {
-      const compressed = await compressImage(file);
-      setPreview(compressed);
-      onPhotoCapture(compressed);
+      const { base64, exif } = await compressImage(file);
+      setPreview(base64);
+      onPhotoCapture(base64, exif);
     } catch (err) {
       console.error('Image compression failed:', err);
       alert('Failed to process photo. Please try again.');
@@ -28,7 +30,7 @@ export default function MealPhotoUpload({ onPhotoCapture, initialPhoto }: MealPh
 
   const clearPhoto = () => {
     setPreview(null);
-    onPhotoCapture('');
+    onPhotoCapture('', { date: null, gps: null });
   };
 
   return (

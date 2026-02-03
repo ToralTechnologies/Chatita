@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       restaurantName,
       restaurantAddress,
       restaurantPlaceId,
+      eatenAt,
     } = body;
 
     // Auto-detect meal type if not provided
@@ -107,6 +108,7 @@ export async function POST(request: Request) {
         restaurantName: restaurantName || null,
         restaurantAddress: restaurantAddress || null,
         restaurantPlaceId: restaurantPlaceId || null,
+        ...(eatenAt && { eatenAt: new Date(eatenAt) }),
       },
     });
 

@@ -2,12 +2,26 @@
 // payload limit.  Mobile camera photos routinely exceed 10MB; resizing to
 // 800px on the long edge and re-encoding as JPEG at 0.8 quality keeps the
 // base64 payload well under 1MB while retaining enough detail for AI vision.
+//
+// EXIF metadata (date, GPS) is extracted from the raw File BEFORE compression
+// because the canvas re-encode strips it.  The caller receives both the
+// compressed base64 and any extracted EXIF data in a single call.
+
+import { extractExif, ExifData } from './exif';
 
 const MAX_DIMENSION = 800;
 const JPEG_QUALITY = 0.8;
 
-export function compressImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+export interface CompressedImage {
+  base64: string;
+  exif: ExifData;
+}
+
+export async function compressImage(file: File): Promise<CompressedImage> {
+  // Extract EXIF first — before any canvas round-trip destroys it
+  const exif = await extractExif(file);
+
+  const base64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const img = new Image();
@@ -40,4 +54,6 @@ export function compressImage(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+  return { base64, exif };
 }

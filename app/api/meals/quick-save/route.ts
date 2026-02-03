@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { photoBase64 } = await request.json();
+    const { photoBase64, eatenAt, restaurantName, restaurantAddress, restaurantPlaceId } = await request.json();
 
     if (!photoBase64) {
       return NextResponse.json(
@@ -43,6 +43,11 @@ export async function POST(request: Request) {
       sugar: analysis.nutrition.sugar,
       sodium: analysis.nutrition.sodium,
       portionSize: analysis.portionSize,
+      // EXIF-derived fields (optional)
+      ...(eatenAt && { eatenAt: new Date(eatenAt) }),
+      ...(restaurantName && { restaurantName }),
+      ...(restaurantAddress && { restaurantAddress }),
+      ...(restaurantPlaceId && { restaurantPlaceId }),
     };
 
     // Save to database
