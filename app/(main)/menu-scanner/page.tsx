@@ -290,22 +290,38 @@ export default function MenuScannerPage() {
               </button>
             </div>
           ) : (
-            <label className="block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-600 mb-2 font-medium">Take or Upload Menu Photo</p>
-              <p className="text-sm text-gray-500 mb-3">AI will analyze and suggest best options</p>
-              <div className="inline-flex items-center gap-2 text-sm text-primary font-medium">
-                <Upload className="w-4 h-4" />
-                Choose Photo
+              <p className="text-sm text-gray-500 mb-4">AI will analyze and suggest best options</p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {/* Camera Button */}
+                <label className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-button cursor-pointer hover:bg-primary-dark transition-colors">
+                  <Camera className="w-5 h-5" />
+                  Take Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* Gallery Button */}
+                <label className="inline-flex items-center gap-2 bg-white border-2 border-primary text-primary px-6 py-3 rounded-button cursor-pointer hover:bg-primary/10 transition-colors">
+                  <Upload className="w-5 h-5" />
+                  Choose from Gallery
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
               </div>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
-            </label>
+            </div>
           )}
         </div>
 

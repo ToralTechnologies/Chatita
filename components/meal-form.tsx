@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, X, Search, Loader2 } from 'lucide-react';
 import { MealType } from '@/types';
 import { useTranslation } from '@/lib/i18n/context';
 
@@ -37,10 +37,18 @@ interface MealFormProps {
       sodium?: number;
     };
     portionSize?: string;
+    // Full-meal fields used in edit mode
+    mealType?: MealType;
+    feeling?: string;
+    restaurantName?: string;
+    restaurantAddress?: string;
+    restaurantPlaceId?: string;
   };
+  /** When true the form is in "edit" mode: pre-expands sections that have data, submit button says "Save Changes" */
+  editMode?: boolean;
 }
 
-export default function MealForm({ onSubmit, loading, initialData }: MealFormProps) {
+export default function MealForm({ onSubmit, loading, initialData, editMode }: MealFormProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<MealFormData>({
     detectedFoods: [],
@@ -53,11 +61,17 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
   const [enhancing, setEnhancing] = useState(false);
   const [aiEnhancement, setAiEnhancement] = useState<any>(null);
 
-  // Auto-fill form when AI provides suggestions
+  // Restaurant search state
+  const [restaurantQuery, setRestaurantQuery] = useState(formData.restaurantName || '');
+  const [restaurantSuggestions, setRestaurantSuggestions] = useState<{ id: string; name: string; cuisine: string; address: string }[]>([]);
+  const [searchingRestaurant, setSearchingRestaurant] = useState(false);
+  const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false);
+  const restaurantDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restaurantWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Auto-fill form when AI provides suggestions or edit-mode pre-populates
   useEffect(() => {
     if (initialData) {
-      const hasNutrition = initialData.nutrition && Object.keys(initialData.nutrition).length > 0;
-
       setFormData(prev => ({
         ...prev,
         detectedFoods: initialData.detectedFoods || prev.detectedFoods,
@@ -69,11 +83,81 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         sugar: initialData.nutrition?.sugar || prev.sugar,
         sodium: initialData.nutrition?.sodium || prev.sodium,
         portionSize: initialData.portionSize || prev.portionSize,
+        // Full-meal fields (edit mode)
+        ...(initialData.mealType && { mealType: initialData.mealType }),
+        ...(initialData.feeling !== undefined && { feeling: initialData.feeling }),
+        ...(initialData.restaurantName !== undefined && { restaurantName: initialData.restaurantName }),
+        ...(initialData.restaurantAddress !== undefined && { restaurantAddress: initialData.restaurantAddress }),
+        ...(initialData.restaurantPlaceId !== undefined && { restaurantPlaceId: initialData.restaurantPlaceId }),
       }));
 
-      // Don't auto-expand nutrition section - use progressive disclosure
+      // In edit mode, pre-expand sections that have data
+      if (editMode) {
+        if (initialData.nutrition && Object.keys(initialData.nutrition).length > 0) {
+          setShowNutrition(true);
+        }
+        if (initialData.restaurantName) {
+          setShowRestaurant(true);
+          setRestaurantQuery(initialData.restaurantName);
+        }
+      }
     }
-  }, [initialData]);
+  }, [initialData, editMode]);
+
+  // Close restaurant suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (restaurantWrapperRef.current && !restaurantWrapperRef.current.contains(e.target as Node)) {
+        setShowRestaurantSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const fetchRestaurantSuggestions = async (query: string) => {
+    if (query.trim().length < 1) {
+      setRestaurantSuggestions([]);
+      setShowRestaurantSuggestions(false);
+      return;
+    }
+    setSearchingRestaurant(true);
+    try {
+      const res = await fetch('/api/restaurants/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'name', query: query.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRestaurantSuggestions(data.suggestions || []);
+        setShowRestaurantSuggestions(true);
+      }
+    } catch {
+      setRestaurantSuggestions([]);
+    } finally {
+      setSearchingRestaurant(false);
+    }
+  };
+
+  const handleRestaurantQueryChange = (value: string) => {
+    setRestaurantQuery(value);
+    // also keep the raw name in formData so manual entry still works
+    setFormData((prev) => ({ ...prev, restaurantName: value }));
+    if (restaurantDebounceRef.current) clearTimeout(restaurantDebounceRef.current);
+    restaurantDebounceRef.current = setTimeout(() => fetchRestaurantSuggestions(value), 350);
+  };
+
+  const selectRestaurantSuggestion = (s: { id: string; name: string; cuisine: string; address: string }) => {
+    setShowRestaurantSuggestions(false);
+    setRestaurantQuery(s.name);
+    setFormData((prev) => ({
+      ...prev,
+      restaurantName: s.name,
+      restaurantAddress: s.address,
+      restaurantPlaceId: s.id,
+    }));
+  };
 
   const addFood = () => {
     if (foodInput.trim()) {
@@ -311,17 +395,64 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         </button>
 
         {showRestaurant && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3" ref={restaurantWrapperRef}>
+            {/* Search input with suggestions */}
             <div>
               <label className="block text-sm font-medium mb-1">{t.addMeal.restaurantName}</label>
-              <input
-                type="text"
-                value={formData.restaurantName || ''}
-                onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
-                placeholder={t.addMeal.restaurantNamePlaceholder}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={restaurantQuery}
+                  onChange={(e) => handleRestaurantQueryChange(e.target.value)}
+                  onFocus={() => { if (restaurantSuggestions.length > 0) setShowRestaurantSuggestions(true); }}
+                  placeholder={t.addMeal.restaurantNamePlaceholder}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {restaurantQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRestaurantQuery('');
+                      setFormData((prev) => ({ ...prev, restaurantName: '', restaurantAddress: '', restaurantPlaceId: '' }));
+                      setRestaurantSuggestions([]);
+                      setShowRestaurantSuggestions(false);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Suggestions dropdown */}
+              {showRestaurantSuggestions && (
+                <div className="mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {searchingRestaurant ? (
+                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      {t.restaurants.searchingRestaurants}
+                    </div>
+                  ) : restaurantSuggestions.length > 0 ? (
+                    restaurantSuggestions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => selectRestaurantSuggestion(s)}
+                        className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0"
+                      >
+                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                        <p className="text-xs text-gray-500">{s.cuisine}{s.address ? ` · ${s.address}` : ''}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-3 py-2 text-sm text-gray-500">{t.restaurants.noSuggestionsFound}</p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Address – auto-filled from suggestion, but still editable */}
             <div>
               <label className="block text-sm font-medium mb-1">{t.addMeal.address}</label>
               <input
@@ -332,6 +463,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+
             <p className="text-xs text-gray-500">
               💡 {t.addMeal.restaurantTip}
             </p>
@@ -435,7 +567,7 @@ export default function MealForm({ onSubmit, loading, initialData }: MealFormPro
         disabled={loading}
         className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? t.addMeal.saving : t.addMeal.saveMeal}
+        {loading ? t.addMeal.saving : (editMode ? t.editMeal.saveChanges : t.addMeal.saveMeal)}
       </button>
     </form>
   );

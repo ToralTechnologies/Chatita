@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, Clock, MessageSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Trash2, Pencil, Clock, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface MealCardProps {
@@ -22,6 +23,7 @@ interface MealCardProps {
 }
 
 export default function MealCard({ meal, onDelete }: MealCardProps) {
+  const router = useRouter();
   const [showFeeling, setShowFeeling] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -85,14 +87,23 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
               <h3 className="font-semibold text-lg">{meal.description}</h3>
             )}
           </div>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="p-2 text-gray-400 hover:text-danger transition-colors"
-            aria-label="Delete meal"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => router.push(`/meals/${meal.id}/edit`)}
+              className="p-2 text-gray-400 hover:text-primary transition-colors"
+              aria-label="Edit meal"
+            >
+              <Pencil className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-2 text-gray-400 hover:text-danger transition-colors"
+              aria-label="Delete meal"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Foods */}

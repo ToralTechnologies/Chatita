@@ -124,6 +124,18 @@ export const translations = {
       diabetesTips: 'Diabetes-Friendly Tips:',
     },
 
+    // Edit Meal
+    editMeal: {
+      title: 'Edit Meal',
+      saveChanges: 'Save Changes',
+      saving: 'Saving...',
+      dateTimeLabel: 'When did you eat this?',
+      loadingMeal: 'Loading meal...',
+      mealNotFound: 'Meal not found',
+      backToHistory: 'Back to History',
+      savedSuccess: 'Changes saved!',
+    },
+
     // Restaurant Finder
     restaurants: {
       title: 'Restaurant Finder',
@@ -391,6 +403,18 @@ export const translations = {
       estimatedNutrition: 'Nutrición Estimada',
       confidence: 'confianza',
       diabetesTips: 'Consejos para Diabetes:',
+    },
+
+    // Editar Comida
+    editMeal: {
+      title: 'Editar Comida',
+      saveChanges: 'Guardar Cambios',
+      saving: 'Guardando...',
+      dateTimeLabel: '¿Cuándo comiste esto?',
+      loadingMeal: 'Cargando comida...',
+      mealNotFound: 'Comida no encontrada',
+      backToHistory: 'Volver al Historial',
+      savedSuccess: '¡Cambios guardados!',
     },
 
     // Buscador de Restaurantes

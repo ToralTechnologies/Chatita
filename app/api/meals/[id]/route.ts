@@ -58,27 +58,41 @@ export async function PATCH(
 
     const body = await request.json();
     const {
-      description,
       detectedFoods,
       calories,
       carbs,
       protein,
       fat,
+      fiber,
+      sugar,
+      sodium,
+      portionSize,
       mealType,
       feeling,
+      restaurantName,
+      restaurantAddress,
+      restaurantPlaceId,
+      eatenAt,
     } = body;
 
     const updatedMeal = await prisma.meal.update({
       where: { id },
       data: {
-        ...(description !== undefined && { description }),
         ...(detectedFoods !== undefined && { detectedFoods: JSON.stringify(detectedFoods) }),
         ...(calories !== undefined && { calories }),
         ...(carbs !== undefined && { carbs }),
         ...(protein !== undefined && { protein }),
         ...(fat !== undefined && { fat }),
+        ...(fiber !== undefined && { fiber }),
+        ...(sugar !== undefined && { sugar }),
+        ...(sodium !== undefined && { sodium }),
+        ...(portionSize !== undefined && { portionSize }),
         ...(mealType !== undefined && { mealType }),
         ...(feeling !== undefined && { feeling }),
+        ...(restaurantName !== undefined && { restaurantName }),
+        ...(restaurantAddress !== undefined && { restaurantAddress }),
+        ...(restaurantPlaceId !== undefined && { restaurantPlaceId }),
+        ...(eatenAt !== undefined && { eatenAt: new Date(eatenAt) }),
       },
     });
 
