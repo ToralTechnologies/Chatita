@@ -110,6 +110,10 @@ export const translations = {
       tip: 'Tip',
       tipMessage: 'Track what you eat to help identify patterns. Nutrition info is optional - even just listing the foods helps!',
       trackingTip: 'Track what you eat to help identify patterns. Nutrition info is optional - even just listing the foods helps!',
+      editDetails: 'Edit Details',
+      addAnother: 'Add Another Meal',
+      viewHistory: 'View Meal History',
+      keepTracking: 'Great job tracking your meals! Keep it up! 💪',
     },
 
     // AI Enhancement
@@ -251,6 +255,7 @@ export const translations = {
       error: 'Error',
       success: 'Success',
       tip: 'Tip',
+      backToHome: 'Back to Home',
     },
   },
 
@@ -361,6 +366,10 @@ export const translations = {
       tip: 'Consejo',
       tipMessage: '¡Rastrea lo que comes para ayudar a identificar patrones. La información nutricional es opcional - incluso solo listar los alimentos ayuda!',
       trackingTip: 'Rastrea lo que comes para ayudar a identificar patrones. La información nutricional es opcional - ¡incluso solo listar los alimentos ayuda!',
+      editDetails: 'Editar Detalles',
+      addAnother: 'Agregar Otra Comida',
+      viewHistory: 'Ver Historial de Comidas',
+      keepTracking: '¡Excelente trabajo rastreando tus comidas! ¡Sigue así! 💪',
     },
 
     // Mejora de IA
@@ -502,6 +511,7 @@ export const translations = {
       error: 'Error',
       success: 'Éxito',
       tip: 'Consejo',
+      backToHome: 'Volver al Inicio',
     },
   },
 };
