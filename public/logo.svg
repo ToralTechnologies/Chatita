@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+  <!-- Blue heart -->
+  <path d="M100,180 C60,150 20,120 20,80 C20,50 40,30 65,30 C80,30 93,40 100,52 C107,40 120,30 135,30 C160,30 180,50 180,80 C180,120 140,150 100,180 Z" fill="#4A8FC2"/>
+
+  <!-- White outline ring around blood drop -->
+  <ellipse cx="100" cy="105" rx="22" ry="28" fill="white"/>
+
+  <!-- Red blood drop -->
+  <path d="M100,82 C88,95 82,105 82,113 C82,122 90,128 100,128 C110,128 118,122 118,113 C118,105 112,95 100,82 Z" fill="#C4384B"/>
+
+  <!-- Chatita text -->
+  <text x="100" y="210" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="bold" font-size="38" fill="#4A8FC2">Chatita</text>
+
+  <!-- Tagline -->
+  <text x="100" y="233" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="16" fill="#4A8FC2">Your health companion</text>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Blue heart -->
+  <path d="M50,90 C30,75 10,60 10,40 C10,25 20,15 33,15 C40,15 47,20 50,26 C53,20 60,15 67,15 C80,15 90,25 90,40 C90,60 70,75 50,90 Z" fill="#4A8FC2"/>
+
+  <!-- White outline ring around blood drop -->
+  <ellipse cx="50" cy="52" rx="11" ry="14" fill="white"/>
+
+  <!-- Red blood drop -->
+  <path d="M50,41 C44,48 41,52.5 41,56.5 C41,61 45,64 50,64 C55,64 59,61 59,56.5 C59,52.5 56,48 50,41 Z" fill="#C4384B"/>
+</svg>
