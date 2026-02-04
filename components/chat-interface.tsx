@@ -16,8 +16,26 @@ function getGreeting(ctx?: UserContext): string {
   if (ctx?.notFeelingWell) {
     return "Hey there, mi amor. I see you're not feeling well today. 🤒 I'm here to help — just take things easy. What do you need?";
   }
+  if (ctx?.mood === 'anxious') {
+    return "Hi mi amor, I can see you're feeling anxious today. 💛 That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to chat with?";
+  }
+  if (ctx?.mood === 'sad') {
+    return "Hey there, mi amor. I'm sorry you're feeling down today. 💙 I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
+  }
+  if (ctx?.mood === 'tired') {
+    return "Hi sweetheart! I see you're feeling tired today. 😴 Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
+  }
   if (ctx?.onPeriod || ctx?.havingCravings) {
     return "Hi sweetheart! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
+  }
+  if (ctx?.mood === 'grateful') {
+    return "Hi mi amor! Love that you're feeling grateful today! 🥰 That positive energy helps everything. What can I help you with?";
+  }
+  if (ctx?.mood === 'calm') {
+    return "Hey there! Glad you're feeling calm today. 😌 Let's keep that good energy going. What can I help you with?";
+  }
+  if (ctx?.mood === 'happy') {
+    return "Hi mi amor! So happy to see you're in a great mood today! 😊 Let's keep it going — what can I help you with?";
   }
   return "Hello, mi amor! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
 }
@@ -35,6 +53,9 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
   const getInitialSuggestions = (): string[] => {
     if (userContext?.feelingOverwhelmed) return ['Something quick at home', 'Find a restaurant', 'I need encouragement'];
     if (userContext?.notFeelingWell) return ['Yes, please', 'I need something warm', 'Just water for now'];
+    if (userContext?.mood === 'anxious') return ['Something calm to eat', 'I need encouragement', 'What should I eat?'];
+    if (userContext?.mood === 'sad') return ['Comfort food', 'I need encouragement', 'What should I eat?'];
+    if (userContext?.mood === 'tired') return ['Something quick', 'Need something quick', 'What should I eat?'];
     if (userContext?.onPeriod || userContext?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
     return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
   };
@@ -123,6 +144,12 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
       {/* Active context tags banner */}
       {userContext && Object.values(userContext).some(Boolean) && (
         <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex flex-wrap gap-1.5">
+          {userContext.mood === 'happy' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😊 Feeling great</span>}
+          {userContext.mood === 'grateful' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🥰 Grateful</span>}
+          {userContext.mood === 'calm' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😌 Feeling calm</span>}
+          {userContext.mood === 'tired' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😴 Feeling tired</span>}
+          {userContext.mood === 'anxious' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😟 Feeling anxious</span>}
+          {userContext.mood === 'sad' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😞 Feeling down</span>}
           {userContext.notFeelingWell && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🤒 Not feeling well</span>}
           {userContext.onPeriod && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🩸 On my period</span>}
           {userContext.feelingOverwhelmed && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😰 Feeling overwhelmed</span>}

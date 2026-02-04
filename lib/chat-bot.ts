@@ -309,6 +309,14 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
     };
   }
 
+  // --- "something calm to eat" suggestion chip ---
+  if (message === 'something calm to eat') {
+    return {
+      message: "Let's find something peaceful and nourishing for you. 🌿\n\nThese are calming, easy meals:\n• A warm bowl of miso soup\n• Greek yogurt with honey and walnuts\n• Simple grilled fish with steamed veggies\n• A gentle veggie soup\n\nNothing rushed, nothing complicated. Which sounds nice?",
+      suggestions: ['Something warm', 'Something light', 'What should I eat?'],
+    };
+  }
+
   // --- CONTEXT-AWARE fallback (only when no specific topic matched above) ---
   if (context?.feelingOverwhelmed || message.includes('overwhelmed') || message.includes("don't know")) {
     return {
@@ -335,6 +343,28 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
     return {
       message: "That's totally fine, mi amor. Water is the best thing right now. 💧\n\nWhen you're ready to eat, start with something gentle like:\n• Clear broth\n• Plain crackers\n• A small banana\n• Some plain rice\n\nListen to your body. I'm here whenever you need me. 💛",
       suggestions: ['Thank you', 'What should I eat later?'],
+    };
+  }
+
+  // --- MOOD-AWARE fallbacks (only fire when no topic matched and mood is set) ---
+  if (context?.mood === 'anxious') {
+    return {
+      message: "I hear you, mi amor. When you're feeling anxious, it's good to focus on one small thing at a time. 💛\n\nLet's start simple — are you hungry right now? I can suggest something easy and calming to eat, or we can just chat.",
+      suggestions: ['Something calm to eat', 'I need encouragement', 'What should I eat?'],
+    };
+  }
+
+  if (context?.mood === 'sad') {
+    return {
+      message: "I'm here for you, mi amor. 💙 It's okay to have a tough day. Sometimes a warm, comforting meal can help a little bit.\n\nWould you like me to suggest something cozy to eat, or just talk?",
+      suggestions: ['Comfort food', 'I need encouragement', 'What should I eat?'],
+    };
+  }
+
+  if (context?.mood === 'tired') {
+    return {
+      message: "Sounds like you need some rest, sweetheart. 😴 Let's keep things super easy — no complicated meals today.\n\nWant me to find you something quick and simple to eat?",
+      suggestions: ['Need something quick', 'Something warm', 'What should I eat?'],
     };
   }
 

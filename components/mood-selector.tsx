@@ -12,9 +12,13 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
   const [stressLevel, setStressLevel] = useState(5);
 
   const moods: { value: Mood; emoji: string; label: string }[] = [
-    { value: 'sad', emoji: '😞', label: 'Sad' },
+    { value: 'happy', emoji: '😊', label: 'Great' },
+    { value: 'grateful', emoji: '🥰', label: 'Grateful' },
+    { value: 'calm', emoji: '😌', label: 'Calm' },
     { value: 'neutral', emoji: '😐', label: 'Okay' },
-    { value: 'happy', emoji: '😊', label: 'Happy' },
+    { value: 'tired', emoji: '😴', label: 'Tired' },
+    { value: 'anxious', emoji: '😟', label: 'Anxious' },
+    { value: 'sad', emoji: '😞', label: 'Down' },
   ];
 
   const handleSave = () => {
@@ -31,19 +35,19 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
       <h3 className="text-lg font-semibold mb-4">How do you feel?</h3>
 
       {/* Mood selection */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {moods.map((mood) => (
           <button
             key={mood.value}
             onClick={() => setSelectedMood(mood.value)}
-            className={`flex-1 py-4 rounded-lg border-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 transition-all ${
               selectedMood === mood.value
                 ? 'border-primary bg-primary/5'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-gray-300 bg-white'
             }`}
           >
-            <div className="text-3xl mb-1">{mood.emoji}</div>
-            <div className="text-sm font-medium">{mood.label}</div>
+            <span className="text-xl">{mood.emoji}</span>
+            <span className="text-sm font-medium">{mood.label}</span>
           </button>
         ))}
       </div>

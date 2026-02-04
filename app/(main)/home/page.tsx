@@ -63,6 +63,7 @@ export default function HomePage() {
   };
 
   const handleMoodSave = async (mood: Mood, stressLevel: number) => {
+    setUserContext((prev) => ({ ...prev, mood }));
     try {
       await fetch('/api/mood', {
         method: 'POST',

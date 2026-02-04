@@ -2,7 +2,7 @@
 export type DiabetesType = 'Type1' | 'Type2' | 'Gestational' | 'PreDiabetes' | 'Other';
 export type Language = 'en' | 'es';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-export type Mood = 'sad' | 'neutral' | 'happy';
+export type Mood = 'happy' | 'grateful' | 'calm' | 'neutral' | 'tired' | 'anxious' | 'sad';
 export type ChatRole = 'user' | 'assistant';
 
 // Nutrition data
@@ -37,6 +37,7 @@ export interface MenuRecommendation {
 
 // Context flags for mood and chat
 export interface UserContext {
+  mood?: Mood;
   onPeriod?: boolean;
   feelingOverwhelmed?: boolean;
   notFeelingWell?: boolean;
