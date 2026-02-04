@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock, MapPin, Navigation } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
@@ -30,6 +30,14 @@ interface MenuItem {
 }
 
 export default function AddMealPage() {
+  return (
+    <Suspense fallback={null}>
+      <AddMealPageInner />
+    </Suspense>
+  );
+}
+
+function AddMealPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
