@@ -57,7 +57,6 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
 
   const [foodInput, setFoodInput] = useState('');
   const [showNutrition, setShowNutrition] = useState(false);
-  const [showRestaurant, setShowRestaurant] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [aiEnhancement, setAiEnhancement] = useState<any>(null);
 
@@ -97,7 +96,6 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
           setShowNutrition(true);
         }
         if (initialData.restaurantName) {
-          setShowRestaurant(true);
           setRestaurantQuery(initialData.restaurantName);
         }
       }
@@ -384,91 +382,73 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
         )}
       </div>
 
-      {/* Restaurant Location (Optional) */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowRestaurant(!showRestaurant)}
-          className="text-primary font-medium text-sm hover:underline"
-        >
-          {showRestaurant ? t.addMeal.hideRestaurant : t.addMeal.addRestaurant} {t.addMeal.restaurantLocation}
-        </button>
+      {/* Restaurant Location — always visible, single seamless input */}
+      <div ref={restaurantWrapperRef}>
+        <label className="block text-sm font-medium mb-1">{t.addMeal.restaurantLocation}</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={restaurantQuery}
+            onChange={(e) => handleRestaurantQueryChange(e.target.value)}
+            onFocus={() => { if (restaurantSuggestions.length > 0) setShowRestaurantSuggestions(true); }}
+            placeholder={t.addMeal.restaurantNamePlaceholder}
+            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {restaurantQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setRestaurantQuery('');
+                setFormData((prev) => ({ ...prev, restaurantName: '', restaurantAddress: '', restaurantPlaceId: '' }));
+                setRestaurantSuggestions([]);
+                setShowRestaurantSuggestions(false);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-        {showRestaurant && (
-          <div className="mt-4 space-y-3" ref={restaurantWrapperRef}>
-            {/* Search input with suggestions */}
-            <div>
-              <label className="block text-sm font-medium mb-1">{t.addMeal.restaurantName}</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={restaurantQuery}
-                  onChange={(e) => handleRestaurantQueryChange(e.target.value)}
-                  onFocus={() => { if (restaurantSuggestions.length > 0) setShowRestaurantSuggestions(true); }}
-                  placeholder={t.addMeal.restaurantNamePlaceholder}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                {restaurantQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRestaurantQuery('');
-                      setFormData((prev) => ({ ...prev, restaurantName: '', restaurantAddress: '', restaurantPlaceId: '' }));
-                      setRestaurantSuggestions([]);
-                      setShowRestaurantSuggestions(false);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+        {/* Suggestions dropdown — only shown while searching or when matches exist */}
+        {(searchingRestaurant || (showRestaurantSuggestions && restaurantSuggestions.length > 0)) && (
+          <div className="mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            {searchingRestaurant ? (
+              <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                {t.restaurants.searchingRestaurants}
               </div>
-
-              {/* Suggestions dropdown */}
-              {showRestaurantSuggestions && (
-                <div className="mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {searchingRestaurant ? (
-                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      {t.restaurants.searchingRestaurants}
-                    </div>
-                  ) : restaurantSuggestions.length > 0 ? (
-                    restaurantSuggestions.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => selectRestaurantSuggestion(s)}
-                        className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0"
-                      >
-                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                        <p className="text-xs text-gray-500">{s.cuisine}{s.address ? ` · ${s.address}` : ''}</p>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="px-3 py-2 text-sm text-gray-500">{t.restaurants.noSuggestionsFound}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Address – auto-filled from suggestion, but still editable */}
-            <div>
-              <label className="block text-sm font-medium mb-1">{t.addMeal.address}</label>
-              <input
-                type="text"
-                value={formData.restaurantAddress || ''}
-                onChange={(e) => setFormData({ ...formData, restaurantAddress: e.target.value })}
-                placeholder={t.addMeal.addressPlaceholder}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <p className="text-xs text-gray-500">
-              💡 {t.addMeal.restaurantTip}
-            </p>
+            ) : (
+              restaurantSuggestions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => selectRestaurantSuggestion(s)}
+                  className="w-full text-left px-3 py-2 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0"
+                >
+                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                  <p className="text-xs text-gray-500">{s.cuisine}{s.address ? ` · ${s.address}` : ''}</p>
+                </button>
+              ))
+            )}
           </div>
         )}
+
+        {/* Address field — appears only after a restaurant name has been typed, and is optional */}
+        {restaurantQuery.trim().length > 0 && (
+          <input
+            type="text"
+            value={formData.restaurantAddress || ''}
+            onChange={(e) => setFormData({ ...formData, restaurantAddress: e.target.value })}
+            placeholder={t.addMeal.addressPlaceholder}
+            className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+        )}
+
+        <p className="text-xs text-gray-500 mt-1.5">
+          💡 {t.addMeal.restaurantTip}
+        </p>
       </div>
 
       {/* Nutrition (Optional) */}
