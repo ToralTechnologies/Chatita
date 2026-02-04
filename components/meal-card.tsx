@@ -26,18 +26,17 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
   const router = useRouter();
   const [showFeeling, setShowFeeling] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const foods = meal.detectedFoods ? JSON.parse(meal.detectedFoods) : [];
   const eatenAt = typeof meal.eatenAt === 'string' ? new Date(meal.eatenAt) : meal.eatenAt;
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this meal?')) return;
-
     setDeleting(true);
+    setConfirmingDelete(false);
     try {
       await onDelete?.(meal.id);
-    } catch (error) {
-      alert('Failed to delete meal');
+    } catch {
       setDeleting(false);
     }
   };
@@ -88,21 +87,40 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
             )}
           </div>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => router.push(`/meals/${meal.id}/edit`)}
-              className="p-2 text-gray-400 hover:text-primary transition-colors"
-              aria-label="Edit meal"
-            >
-              <Pencil className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="p-2 text-gray-400 hover:text-danger transition-colors"
-              aria-label="Delete meal"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+            {confirmingDelete ? (
+              <>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-3 py-1 text-xs font-semibold bg-danger text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  className="px-3 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push(`/meals/${meal.id}/edit`)}
+                  className="p-2 text-gray-400 hover:text-primary transition-colors"
+                  aria-label="Edit meal"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="p-2 text-gray-400 hover:text-danger transition-colors"
+                  aria-label="Delete meal"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 

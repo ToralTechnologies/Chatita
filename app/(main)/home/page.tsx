@@ -10,7 +10,7 @@ import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext } from '@/types';
-import { ScanLine, History, MessageCircle, X, MapPin } from 'lucide-react';
+import { ScanLine, History, MessageCircle, X, MapPin, ChefHat } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
 
 export default function HomePage() {
@@ -142,21 +142,29 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <Link
             href="/meal-history"
-            className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
-            <History className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium">{t.home.quickActions.mealHistory}</span>
+            <History className="w-7 h-7 text-primary mb-2" />
+            <span className="font-medium text-sm text-center">{t.home.quickActions.mealHistory}</span>
+          </Link>
+
+          <Link
+            href="/recipes"
+            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+          >
+            <ChefHat className="w-7 h-7 text-primary mb-2" />
+            <span className="font-medium text-sm text-center">{t.home.quickActions.recipes}</span>
           </Link>
 
           <Link
             href="/insights"
-            className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
           >
-            <span className="text-3xl mb-2">📊</span>
-            <span className="font-medium">{t.nav.insights}</span>
+            <span className="text-2xl mb-2">📊</span>
+            <span className="font-medium text-sm text-center">{t.nav.insights}</span>
           </Link>
         </div>
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Clock, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Clock, MapPin, Navigation } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
 import MealPhotoUpload from '@/components/meal-photo-upload';
 import MealConfirmation from '@/components/meal-confirmation';
@@ -21,8 +21,17 @@ interface NearbyRestaurant {
   cuisine: string;
 }
 
+interface MenuItem {
+  name: string;
+  category: string;
+  score: 'great' | 'moderate' | 'caution';
+  carbEstimate: string;
+  tip: string;
+}
+
 export default function AddMealPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
   const [flowState, setFlowState] = useState<FlowState>('photo');
@@ -43,7 +52,43 @@ export default function AddMealPage() {
   const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<NearbyRestaurant | null>(null);
 
-  /** Fetch nearby restaurants using GPS from EXIF */
+  // Menu items for the selected restaurant (for "What did you order?" selector)
+  const [restaurantMenu, setRestaurantMenu] = useState<MenuItem[]>([]);
+  const [menuSelectedDishes, setMenuSelectedDishes] = useState<string[]>([]);
+  const [loadingMenu, setLoadingMenu] = useState(false);
+
+  // ── Read query params from restaurant-finder "Save as Meal" ────
+  useEffect(() => {
+    const restaurantName = searchParams.get('restaurant');
+    const restaurantAddress = searchParams.get('restaurantAddress');
+    const restaurantPlaceId = searchParams.get('restaurantPlaceId');
+    const foods = searchParams.get('foods');
+
+    if (restaurantName && restaurantPlaceId) {
+      const restaurant: NearbyRestaurant = {
+        id: restaurantPlaceId,
+        name: restaurantName,
+        address: restaurantAddress || '',
+        cuisine: '',
+      };
+      setSelectedRestaurant(restaurant);
+      // Pre-populate foods from query params
+      if (foods) {
+        setMenuSelectedDishes(foods.split(',').filter(Boolean));
+      }
+      // Fetch the menu so user can adjust their selection
+      fetchRestaurantMenu(restaurant);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch menu when restaurant is picked from nearby chips ────
+  useEffect(() => {
+    if (selectedRestaurant && restaurantMenu.length === 0 && !loadingMenu) {
+      fetchRestaurantMenu(selectedRestaurant);
+    }
+  }, [selectedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Fetch nearby restaurants using GPS from EXIF or live geolocation */
   const fetchNearbyFromGps = async (lat: number, lng: number) => {
     try {
       const res = await fetch('/api/restaurants/search', {
@@ -60,6 +105,49 @@ export default function AddMealPage() {
     } catch {
       // GPS restaurant lookup is best-effort — fail silently
     }
+  };
+
+  /** Share current device location (used when EXIF GPS is not available) */
+  const handleShareLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        fetchNearbyFromGps(latitude, longitude);
+      },
+      () => {
+        setError('Unable to retrieve your location. Please enable location services.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  /** Fetch the menu for a restaurant so the user can pick what they ordered */
+  const fetchRestaurantMenu = async (restaurant: NearbyRestaurant) => {
+    setLoadingMenu(true);
+    try {
+      // Derive cuisine from the restaurant object; if empty, pass a generic hint
+      const res = await fetch('/api/restaurants/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantName: restaurant.name, cuisine: restaurant.cuisine || 'general' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRestaurantMenu(data.dishes || []);
+      }
+    } catch {
+      console.error('Failed to fetch restaurant menu');
+    } finally {
+      setLoadingMenu(false);
+    }
+  };
+
+  /** Toggle a dish in the "What did you order?" selector */
+  const toggleMenuDish = (dish: string) => {
+    setMenuSelectedDishes((prev) =>
+      prev.includes(dish) ? prev.filter((d) => d !== dish) : [...prev, dish]
+    );
   };
 
   const handlePhotoCapture = async (base64: string, exif: ExifData) => {
@@ -149,6 +237,7 @@ export default function AddMealPage() {
             restaurantAddress: selectedRestaurant.address,
             restaurantPlaceId: selectedRestaurant.id,
           }),
+          ...(menuSelectedDishes.length > 0 && { detectedFoods: menuSelectedDishes }),
         }),
       });
 
@@ -320,7 +409,17 @@ export default function AddMealPage() {
                         <button
                           key={r.id}
                           type="button"
-                          onClick={() => setSelectedRestaurant(selectedRestaurant?.id === r.id ? null : r)}
+                          onClick={() => {
+                            if (selectedRestaurant?.id === r.id) {
+                              setSelectedRestaurant(null);
+                              setRestaurantMenu([]);
+                              setMenuSelectedDishes([]);
+                            } else {
+                              setSelectedRestaurant(r);
+                              setRestaurantMenu([]);
+                              setMenuSelectedDishes([]);
+                            }
+                          }}
                           className={`px-3 py-1 rounded-full text-sm font-medium transition-all border ${
                             selectedRestaurant?.id === r.id
                               ? 'bg-primary text-white border-primary'
@@ -333,6 +432,66 @@ export default function AddMealPage() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{t.exifHints.tapToTag}</p>
                   </div>
+                )}
+
+                {/* ── Share location button (when no GPS available) ── */}
+                {nearbyRestaurants.length === 0 && !selectedRestaurant && (
+                  <button
+                    type="button"
+                    onClick={handleShareLocation}
+                    className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark transition-colors"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>{t.addMeal.shareLocation}</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ── What did you order? (menu chip selector) ──── */}
+            {selectedRestaurant && (
+              <div className="mt-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-purple-900 flex items-center gap-2">
+                    <span>🍽️</span>
+                    <span>{t.addMeal.whatDidYouOrder}</span>
+                  </h4>
+                  <span className="text-xs text-purple-600">{selectedRestaurant.name}</span>
+                </div>
+
+                {loadingMenu ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span>{t.common.loading}</span>
+                  </div>
+                ) : restaurantMenu.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {restaurantMenu.map((item, idx) => {
+                      const isSelected = menuSelectedDishes.includes(item.name);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleMenuDish(item.name)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                            isSelected
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
+                          }`}
+                        >
+                          {isSelected && '✓ '}{item.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">{t.addMeal.noMenuAvailable}</p>
+                )}
+
+                {menuSelectedDishes.length > 0 && (
+                  <p className="text-xs text-purple-700 mt-2">
+                    {t.addMeal.selectedCount.replace('{count}', String(menuSelectedDishes.length))}
+                  </p>
                 )}
               </div>
             )}

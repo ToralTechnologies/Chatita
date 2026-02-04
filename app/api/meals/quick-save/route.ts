@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { photoBase64, eatenAt, restaurantName, restaurantAddress, restaurantPlaceId } = await request.json();
+    const { photoBase64, eatenAt, restaurantName, restaurantAddress, restaurantPlaceId, detectedFoods: clientDetectedFoods } = await request.json();
 
     if (!photoBase64) {
       return NextResponse.json(
@@ -31,9 +31,12 @@ export async function POST(request: Request) {
       aiConfidence: analysis.confidence,
       aiMode: analysis.mode,
       nutritionSource: analysis.mode === 'ai' ? 'ai' : 'manual',
-      detectedFoods: analysis.detectedFoods.length > 0
-        ? JSON.stringify(analysis.detectedFoods)
-        : null,
+      // Client-selected dishes (from restaurant menu) take priority over AI detection
+      detectedFoods: (clientDetectedFoods && clientDetectedFoods.length > 0)
+        ? JSON.stringify(clientDetectedFoods)
+        : analysis.detectedFoods.length > 0
+          ? JSON.stringify(analysis.detectedFoods)
+          : null,
       mealType: analysis.mealType || 'snack',
       calories: analysis.nutrition.calories,
       carbs: analysis.nutrition.carbs,

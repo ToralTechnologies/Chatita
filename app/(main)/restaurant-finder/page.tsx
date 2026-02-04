@@ -639,6 +639,24 @@ export default function RestaurantFinderPage() {
                   </div>
                 ) : menuItems[restaurant.id]?.length ? (
                   <div className="space-y-4">
+                    {/* ── Top Picks (top 3 "great" dishes) ──── */}
+                    {(() => {
+                      const greatDishes = menuItems[restaurant.id].filter((i) => i.score === 'great').slice(0, 3);
+                      return greatDishes.length > 0 ? (
+                        <div className="bg-success/5 border border-success/20 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-success mb-2">{t.restaurants.topPicks}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {greatDishes.map((dish, idx) => (
+                              <span key={idx} className="inline-flex items-center gap-1 bg-white border border-success/30 text-gray-800 text-sm px-3 py-1 rounded-full">
+                                <span className="text-success">✓</span> {dish.name}
+                                <span className="text-xs text-gray-500 ml-1">({dish.carbEstimate})</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+
                     {/* group by category */}
                     {(() => {
                       const items = menuItems[restaurant.id];
@@ -807,6 +825,26 @@ export default function RestaurantFinderPage() {
                                 </div>
                               )}
                             </div>
+                          )}
+
+                          {/* ── Save as Meal button ─────────────── */}
+                          {customTips[restaurant.id] && (
+                            <button
+                              onClick={() => {
+                                const dishes = selectedDishes[restaurant.id] || [];
+                                const params = new URLSearchParams({
+                                  restaurant: restaurant.name,
+                                  restaurantAddress: restaurant.address || '',
+                                  restaurantPlaceId: restaurant.id,
+                                  ...(dishes.length > 0 && { foods: dishes.join(',') }),
+                                });
+                                router.push(`/add-meal?${params.toString()}`);
+                              }}
+                              className="w-full py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                            >
+                              <span>📝</span>
+                              <span>{t.restaurants.saveAsMeal}</span>
+                            </button>
                           )}
                         </div>
                       )}
