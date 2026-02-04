@@ -69,24 +69,36 @@ export async function extractExif(file: File): Promise<ExifData> {
     const ifd0Offset = u32(4);
 
     // ---------- helpers ----------
-    /** Read an IFD and return a map of tag → { type, count, valueOffset } */
-    function readIfd(ifdOffset: number): Map<number, { type: number; count: number; valOff: number }> {
-      const map = new Map<number, { type: number; count: number; valOff: number }>();
+
+    /**
+     * IFD entry.
+     * valOff: for data > 4 bytes this is the TIFF-relative offset to the data.
+     *         for data ≤ 4 bytes it is the endian-interpreted uint32 (not useful for ASCII).
+     * valByteOffset: the absolute file offset of the 4-byte value/offset field in the IFD entry.
+     *                Use this to read inline values (≤ 4 bytes) directly from the buffer.
+     */
+    interface IfdEntry { type: number; count: number; valOff: number; valByteOffset: number; }
+
+    /** Read an IFD and return a map of tag → IfdEntry */
+    function readIfd(ifdOffset: number): Map<number, IfdEntry> {
+      const map = new Map<number, IfdEntry>();
       if (ifdOffset + 2 > view.byteLength) return map;
       const count = u16(ifdOffset);
       for (let i = 0; i < count; i++) {
         const base = ifdOffset + 2 + i * 12;
         if (base + 12 > view.byteLength) break;
-        const tag = u16(base);
-        const type = u16(base + 2);
-        const cnt = u32(base + 4);
-        const valOff = u32(base + 8); // raw 4 bytes; interpreted as offset if data > 4 bytes
-        map.set(tag, { type, count: cnt, valOff });
+        const tag   = u16(base);
+        const type  = u16(base + 2);
+        const cnt   = u32(base + 4);
+        const valOff = u32(base + 8);
+        // Absolute file position of the value/offset field
+        const valByteOffset = tiffBase + base + 8;
+        map.set(tag, { type, count: cnt, valOff, valByteOffset });
       }
       return map;
     }
 
-    /** Read a null-terminated ASCII string from the TIFF data area */
+    /** Read a null-terminated ASCII string from the TIFF data area (TIFF-relative offset) */
     function readAscii(offset: number, count: number): string {
       let s = '';
       for (let i = 0; i < count - 1; i++) {
@@ -95,10 +107,13 @@ export async function extractExif(file: File): Promise<ExifData> {
       return s;
     }
 
-    /** Read a RATIONAL (two UInt32s) at the given offset, returns numerator/denominator */
-    function readRational(offset: number): number {
-      const num = u32(offset);
-      const den = u32(offset + 4);
+    /**
+     * Read a single RATIONAL at a TIFF-relative offset.
+     * A RATIONAL is two consecutive UInt32s: numerator then denominator.
+     */
+    function readRational(tiffRelOffset: number): number {
+      const num = u32(tiffRelOffset);
+      const den = u32(tiffRelOffset + 4);
       return den === 0 ? 0 : num / den;
     }
 
@@ -144,23 +159,21 @@ export async function extractExif(file: File): Promise<ExifData> {
       const lngTag     = gpsIfd.get(0x0004);
 
       if (latTag && lngTag && latRefTag && lngRefTag) {
-        // ref is 2-byte ASCII ("N\0") — count ≤ 4 so value is inline at valOff bytes
-        // But valOff is stored as a uint32 at base+8; for ≤4 byte values it IS the value
-        // For single-char ASCII the char is the first byte of the 4-byte value field.
-        const latRef = String.fromCharCode(latRefTag.valOff & 0xff);  // first byte
-        const lngRef = String.fromCharCode(lngRefTag.valOff & 0xff);
+        // Ref tags are 2-byte inline ASCII ("N\0").  Read the first raw byte directly
+        // from the value field — do NOT use the endian-swapped valOff, because on
+        // big-endian TIFFs (iOS default) u32 byte-swaps the char into the high byte.
+        const latRef = String.fromCharCode(view.getUint8(latRefTag.valByteOffset));
+        const lngRef = String.fromCharCode(view.getUint8(lngRefTag.valByteOffset));
 
-        // Each coordinate is 3 RATIONALs (8 bytes each = 24 bytes), so offset-based
-        const latOff = latTag.valOff;
-        const lngOff = lngTag.valOff;
+        // Each coordinate is 3 RATIONALs (8 bytes each = 24 bytes total).
+        // valOff is a TIFF-relative offset; readRational expects the same.
+        const latDeg = readRational(latTag.valOff);
+        const latMin = readRational(latTag.valOff + 8);
+        const latSec = readRational(latTag.valOff + 16);
 
-        const latDeg = readRational(latOff);
-        const latMin = readRational(latOff + 8);
-        const latSec = readRational(latOff + 16);
-
-        const lngDeg = readRational(lngOff);
-        const lngMin = readRational(lngOff + 8);
-        const lngSec = readRational(lngOff + 16);
+        const lngDeg = readRational(lngTag.valOff);
+        const lngMin = readRational(lngTag.valOff + 8);
+        const lngSec = readRational(lngTag.valOff + 16);
 
         let lat = latDeg + latMin / 60 + latSec / 3600;
         let lng = lngDeg + lngMin / 60 + lngSec / 3600;
