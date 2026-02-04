@@ -9,21 +9,36 @@ interface ChatInterfaceProps {
   onClose?: () => void;
 }
 
+function getGreeting(ctx?: UserContext): string {
+  if (ctx?.feelingOverwhelmed) {
+    return "Hi mi amor, I see you're feeling a bit overwhelmed. 💙 That's okay — let's take it one step at a time. How can I help you right now?";
+  }
+  if (ctx?.notFeelingWell) {
+    return "Hey there, mi amor. I see you're not feeling well today. 🤒 I'm here to help — just take things easy. What do you need?";
+  }
+  if (ctx?.onPeriod || ctx?.havingCravings) {
+    return "Hi sweetheart! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
+  }
+  return "Hello, mi amor! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
+}
+
 export default function ChatInterface({ userContext, onClose }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<any[]>([
     {
       role: 'assistant',
-      content: "Hello, mi amor! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?",
+      content: getGreeting(userContext),
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([
-    'What should I eat?',
-    'I feel overwhelmed',
-    'Restaurant tips',
-  ]);
+  const getInitialSuggestions = (): string[] => {
+    if (userContext?.feelingOverwhelmed) return ['Something quick at home', 'Find a restaurant', 'I need encouragement'];
+    if (userContext?.notFeelingWell) return ['Yes, please', 'I need something warm', 'Just water for now'];
+    if (userContext?.onPeriod || userContext?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
+    return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
+  };
+  const [suggestions, setSuggestions] = useState<string[]>(getInitialSuggestions);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -89,7 +104,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary/5">
         <div className="flex items-center gap-3">
-          <div className="text-3xl">❤️</div>
+          <img src="/logo-icon.svg" alt="Chatita" className="w-10 h-10" />
           <div>
             <h3 className="font-semibold">Chatita</h3>
             <p className="text-xs text-gray-600">Your caring companion</p>
@@ -104,6 +119,16 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           </button>
         )}
       </div>
+
+      {/* Active context tags banner */}
+      {userContext && Object.values(userContext).some(Boolean) && (
+        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex flex-wrap gap-1.5">
+          {userContext.notFeelingWell && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🤒 Not feeling well</span>}
+          {userContext.onPeriod && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🩸 On my period</span>}
+          {userContext.feelingOverwhelmed && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😰 Feeling overwhelmed</span>}
+          {userContext.havingCravings && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🍫 Having cravings</span>}
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

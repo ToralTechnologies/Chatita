@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <!-- Blue heart -->
-  <path d="M50,90 C30,75 10,60 10,40 C10,25 20,15 33,15 C40,15 47,20 50,26 C53,20 60,15 67,15 C80,15 90,25 90,40 C90,60 70,75 50,90 Z" fill="#4A8FC2"/>
+  <!-- Blue heart - rounder, fatter shape -->
+  <path d="M50,92 C50,92 9,65 9,41 C9,24 19,14 31,14 C39,14 46,19 50,27 C54,19 61,14 69,14 C81,14 91,24 91,41 C91,65 50,92 50,92 Z" fill="#4A8FC2"/>
 
   <!-- White outline ring around blood drop -->
-  <ellipse cx="50" cy="52" rx="11" ry="14" fill="white"/>
+  <path d="M50,34 C42,43 38,49 38,54 C38,60 43,64.5 50,64.5 C57,64.5 62,60 62,54 C62,49 58,43 50,34 Z" fill="none" stroke="white" stroke-width="3"/>
 
   <!-- Red blood drop -->
-  <path d="M50,41 C44,48 41,52.5 41,56.5 C41,61 45,64 50,64 C55,64 59,61 59,56.5 C59,52.5 56,48 50,41 Z" fill="#C4384B"/>
+  <path d="M50,37 C43,45 39,50 39,54 C39,59.5 44,63 50,63 C56,63 61,59.5 61,54 C61,50 57,45 50,37 Z" fill="#C4384B"/>
 </svg>

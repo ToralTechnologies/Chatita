@@ -5,6 +5,11 @@ import { I18nProvider } from "@/lib/i18n/context";
 export const metadata: Metadata = {
   title: "Chatita - Your Diabetes Companion",
   description: "A warm, caring companion to help you manage diabetes with simplicity and encouragement",
+  icons: {
+    icon: "/logo-icon.svg",
+    shortcut: "/logo-icon.svg",
+    apple: "/logo-icon.svg",
+  },
 };
 
 export default function RootLayout({

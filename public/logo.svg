@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
-  <!-- Blue heart -->
-  <path d="M100,180 C60,150 20,120 20,80 C20,50 40,30 65,30 C80,30 93,40 100,52 C107,40 120,30 135,30 C160,30 180,50 180,80 C180,120 140,150 100,180 Z" fill="#4A8FC2"/>
+  <!-- Blue heart - rounder, fatter shape matching the PNG -->
+  <path d="M100,185 C100,185 18,130 18,82 C18,48 38,28 62,28 C78,28 92,38 100,54 C108,38 122,28 138,28 C162,28 182,48 182,82 C182,130 100,185 100,185 Z" fill="#4A8FC2"/>
 
-  <!-- White outline ring around blood drop -->
-  <ellipse cx="100" cy="105" rx="22" ry="28" fill="white"/>
+  <!-- White outline ring around blood drop (stroke ring, not filled ellipse) -->
+  <path d="M100,68 C85,86 76,98 76,108 C76,120 87,129 100,129 C113,129 124,120 124,108 C124,98 115,86 100,68 Z" fill="none" stroke="white" stroke-width="5"/>
 
   <!-- Red blood drop -->
-  <path d="M100,82 C88,95 82,105 82,113 C82,122 90,128 100,128 C110,128 118,122 118,113 C118,105 112,95 100,82 Z" fill="#C4384B"/>
+  <path d="M100,74 C88,90 81,100 81,108 C81,118 89,125 100,125 C111,125 119,118 119,108 C119,100 112,90 100,74 Z" fill="#C4384B"/>
 
-  <!-- Chatita text -->
-  <text x="100" y="210" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="bold" font-size="38" fill="#4A8FC2">Chatita</text>
+  <!-- Chatita text - bold, rounded -->
+  <text x="100" y="213" text-anchor="middle" font-family="Arial Rounded MT Bold, Nunito, Arial, sans-serif" font-weight="bold" font-size="42" fill="#4A8FC2">Chatita</text>
 
   <!-- Tagline -->
-  <text x="100" y="233" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="16" fill="#4A8FC2">Your health companion</text>
+  <text x="100" y="236" text-anchor="middle" font-family="Arial Rounded MT Bold, Nunito, Arial, sans-serif" font-weight="600" font-size="17" fill="#4A8FC2">Your health companion</text>
 </svg>

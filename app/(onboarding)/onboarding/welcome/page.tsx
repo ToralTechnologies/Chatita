@@ -9,7 +9,7 @@ export default function WelcomePage() {
     <div className="min-h-screen flex flex-col items-center justify-between bg-gray-background p-6">
       <div className="flex-1 flex flex-col items-center justify-center max-w-md w-full">
         <div className="text-center space-y-6">
-          <div className="text-8xl mb-4">❤️</div>
+          <img src="/logo.svg" alt="Chatita" className="w-48 h-auto mx-auto mb-4" />
 
           <h1 className="text-4xl font-bold">Welcome to Chatita</h1>
 
