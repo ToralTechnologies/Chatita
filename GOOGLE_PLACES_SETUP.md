@@ -93,7 +93,6 @@ The Google Places API enables the restaurant finder to show **real restaurants**
    - Click **"Add an item"**
    - Add these referrers:
      ```
-     http://localhost:3000/*
      https://localhost:3000/*
      https://your-domain.vercel.app/*
      ```
