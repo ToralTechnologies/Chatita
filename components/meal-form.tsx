@@ -4,9 +4,30 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Search, Loader2 } from 'lucide-react';
 import { MealType } from '@/types';
 import { useTranslation } from '@/lib/i18n/context';
+import FoodSearchInput from './food-search-input';
+
+interface FoodEntry {
+  id?: string;
+  fdcId?: string;
+  barcode?: string;
+  foodName: string;
+  foodNameEs?: string;
+  brand?: string;
+  servingSize: string;
+  servingsEaten: number;
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  source: 'usda' | 'barcode' | 'custom' | 'manual';
+}
 
 interface MealFormData {
   detectedFoods: string[];
+  foodEntries: FoodEntry[]; // NEW: Individual food items
   calories?: number;
   carbs?: number;
   protein?: number;
@@ -52,11 +73,13 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
   const { t } = useTranslation();
   const [formData, setFormData] = useState<MealFormData>({
     detectedFoods: [],
+    foodEntries: [], // NEW
     mealType: 'lunch',
   });
 
   const [foodInput, setFoodInput] = useState('');
   const [showNutrition, setShowNutrition] = useState(false);
+  const [showEnhancedSearch, setShowEnhancedSearch] = useState(false); // NEW: Toggle between simple/enhanced
   const [enhancing, setEnhancing] = useState(false);
   const [aiEnhancement, setAiEnhancement] = useState<any>(null);
 
@@ -174,6 +197,61 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
     });
   };
 
+  // NEW: Enhanced food entry handlers
+  const handleAddFoodEntry = (food: FoodEntry) => {
+    const newFoodEntries = [...formData.foodEntries, food];
+    updateFormWithFoodEntries(newFoodEntries);
+  };
+
+  const handleRemoveFoodEntry = (index: number) => {
+    const newFoodEntries = formData.foodEntries.filter((_, i) => i !== index);
+    updateFormWithFoodEntries(newFoodEntries);
+  };
+
+  const handleUpdateServings = (index: number, servings: number) => {
+    const newFoodEntries = formData.foodEntries.map((food, i) =>
+      i === index ? { ...food, servingsEaten: servings } : food
+    );
+    updateFormWithFoodEntries(newFoodEntries);
+  };
+
+  // Auto-calculate total nutrition from food entries
+  const updateFormWithFoodEntries = (foodEntries: FoodEntry[]) => {
+    const totals = foodEntries.reduce(
+      (acc, food) => {
+        const multiplier = food.servingsEaten;
+        return {
+          calories: acc.calories + food.calories * multiplier,
+          carbs: acc.carbs + food.carbs * multiplier,
+          protein: acc.protein + food.protein * multiplier,
+          fat: acc.fat + food.fat * multiplier,
+          fiber: acc.fiber + (food.fiber || 0) * multiplier,
+          sugar: acc.sugar + (food.sugar || 0) * multiplier,
+          sodium: acc.sodium + (food.sodium || 0) * multiplier,
+        };
+      },
+      { calories: 0, carbs: 0, protein: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 }
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      foodEntries,
+      calories: totals.calories,
+      carbs: totals.carbs,
+      protein: totals.protein,
+      fat: totals.fat,
+      fiber: totals.fiber,
+      sugar: totals.sugar,
+      sodium: totals.sodium,
+      detectedFoods: foodEntries.map((f) => f.foodName), // Keep detectedFoods in sync
+    }));
+
+    // Auto-show nutrition section when food entries exist
+    if (foodEntries.length > 0) {
+      setShowNutrition(true);
+    }
+  };
+
   const handleAiEnhancement = async () => {
     setEnhancing(true);
     setAiEnhancement(null);
@@ -246,49 +324,72 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
 
       {/* Foods */}
       <div>
-        <label className="block text-sm font-medium mb-2">{t.addMeal.foods}</label>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={foodInput}
-            onChange={(e) => setFoodInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addFood();
-              }
-            }}
-            placeholder={t.addMeal.foodPlaceholder}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+        <div className="flex items-center justify-between mb-3">
+          <label className="block text-sm font-medium">{t.addMeal.foods}</label>
           <button
             type="button"
-            onClick={addFood}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2"
+            onClick={() => setShowEnhancedSearch(!showEnhancedSearch)}
+            className="text-xs text-primary hover:text-primary-dark font-medium underline"
           >
-            <Plus className="w-4 h-4" />
-            {t.addMeal.add}
+            {showEnhancedSearch ? '← Simple mode' : '🔍 Search nutrition database'}
           </button>
         </div>
 
-        {formData.detectedFoods.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {formData.detectedFoods.map((food, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+        {/* Enhanced Food Search (USDA + Barcode) */}
+        {showEnhancedSearch ? (
+          <FoodSearchInput
+            onAddFood={handleAddFoodEntry}
+            foodEntries={formData.foodEntries}
+            onRemoveFood={handleRemoveFoodEntry}
+            onUpdateServings={handleUpdateServings}
+          />
+        ) : (
+          <>
+            {/* Simple Food Input (legacy) */}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={foodInput}
+                onChange={(e) => setFoodInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addFood();
+                  }
+                }}
+                placeholder={t.addMeal.foodPlaceholder}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button
+                type="button"
+                onClick={addFood}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2"
               >
-                {food}
-                <button
-                  type="button"
-                  onClick={() => removeFood(index)}
-                  className="hover:text-danger transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </span>
-            ))}
-          </div>
+                <Plus className="w-4 h-4" />
+                {t.addMeal.add}
+              </button>
+            </div>
+
+            {formData.detectedFoods.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.detectedFoods.map((food, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+                  >
+                    {food}
+                    <button
+                      type="button"
+                      onClick={() => removeFood(index)}
+                      className="hover:text-danger transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* AI Enhancement Button (only show if no photo was taken) */}

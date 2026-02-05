@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { value, notes } = await request.json();
+    const { value, context, relatedMealId, notes } = await request.json();
 
     if (!value || value <= 0) {
       return NextResponse.json(
@@ -47,10 +47,38 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate context if provided
+    const validContexts = ['fasting', 'pre-meal', 'post-meal', 'bedtime', 'random'];
+    if (context && !validContexts.includes(context)) {
+      return NextResponse.json(
+        { error: 'Invalid context value' },
+        { status: 400 }
+      );
+    }
+
+    // Validate related meal exists if provided
+    if (relatedMealId) {
+      const meal = await prisma.meal.findFirst({
+        where: {
+          id: relatedMealId,
+          userId: session.user.id, // Security: ensure meal belongs to user
+        },
+      });
+
+      if (!meal) {
+        return NextResponse.json(
+          { error: 'Related meal not found' },
+          { status: 404 }
+        );
+      }
+    }
+
     const entry = await prisma.glucoseEntry.create({
       data: {
         userId: session.user.id,
         value: parseFloat(value),
+        context: context || null,
+        relatedMealId: relatedMealId || null,
         notes: notes || null,
       },
     });

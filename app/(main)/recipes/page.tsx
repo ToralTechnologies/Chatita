@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, X, ChevronDown, ChevronUp, Camera, Upload } from 'lucide-react';
+import { Plus, X, ChevronDown, ChevronUp, Camera, Upload, Bookmark, BookmarkCheck } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
 import { useTranslation } from '@/lib/i18n/context';
 import { compressImage } from '@/lib/compress-image';
@@ -35,6 +35,8 @@ export default function RecipesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedRecipe, setExpandedRecipe] = useState<number | null>(null);
+  const [savingRecipe, setSavingRecipe] = useState<number | null>(null);
+  const [savedRecipes, setSavedRecipes] = useState<Set<number>>(new Set());
 
   const addIngredient = () => {
     const trimmed = ingredientInput.trim();
@@ -109,6 +111,54 @@ export default function RecipesPage() {
       case 'moderate': return t.recipes.impactModerate;
       case 'high': return t.recipes.impactHigh;
       default: return impact;
+    }
+  };
+
+  const saveRecipe = async (recipe: Recipe, index: number) => {
+    setSavingRecipe(index);
+    try {
+      // Parse carbs and calories from estimates (e.g., "15-20g" -> 17.5)
+      const parseNutrient = (estimate: string): number => {
+        const numbers = estimate.match(/\d+/g);
+        if (!numbers || numbers.length === 0) return 0;
+        if (numbers.length === 1) return parseFloat(numbers[0]);
+        // Average if range
+        return (parseFloat(numbers[0]) + parseFloat(numbers[1])) / 2;
+      };
+
+      const carbsValue = parseNutrient(recipe.carbEstimate);
+      const caloriesValue = parseNutrient(recipe.calorieEstimate);
+
+      const response = await fetch('/api/recipes/saved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: recipe.title,
+          description: recipe.description,
+          servings: recipe.servings,
+          prepTime: parseInt(recipe.prepTime) || null,
+          ingredients: recipe.ingredients,
+          instructions: recipe.steps,
+          calories: caloriesValue,
+          carbs: carbsValue,
+          protein: 0, // Not provided in generated recipes
+          fat: 0,
+          diabetesTips: recipe.tips.join('\n'),
+          tags: [recipe.bloodSugarImpact],
+          isPublic: false,
+        }),
+      });
+
+      if (response.ok) {
+        setSavedRecipes(new Set([...savedRecipes, index]));
+      } else {
+        setError('Failed to save recipe');
+      }
+    } catch (err) {
+      console.error('Failed to save recipe:', err);
+      setError('Failed to save recipe');
+    } finally {
+      setSavingRecipe(null);
     }
   };
 
@@ -393,6 +443,37 @@ export default function RecipesPage() {
                         </ul>
                       </div>
                     )}
+
+                    {/* Save button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        saveRecipe(recipe, idx);
+                      }}
+                      disabled={savingRecipe === idx || savedRecipes.has(idx)}
+                      className={`w-full py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                        savedRecipes.has(idx)
+                          ? 'bg-success/10 text-success border-2 border-success'
+                          : 'bg-primary text-white hover:bg-primary-dark'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {savingRecipe === idx ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : savedRecipes.has(idx) ? (
+                        <>
+                          <BookmarkCheck className="w-4 h-4" />
+                          <span>Saved to Library</span>
+                        </>
+                      ) : (
+                        <>
+                          <Bookmark className="w-4 h-4" />
+                          <span>Save Recipe</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>

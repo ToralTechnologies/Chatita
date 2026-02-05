@@ -46,12 +46,17 @@ export default function HomePage() {
     }
   }, [session]);
 
-  const handleGlucoseUpdate = async (value: number) => {
+  const handleGlucoseUpdate = async (
+    value: number,
+    context?: string,
+    relatedMealId?: string,
+    notes?: string
+  ) => {
     try {
       const response = await fetch('/api/glucose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value }),
+        body: JSON.stringify({ value, context, relatedMealId, notes }),
       });
 
       if (response.ok) {

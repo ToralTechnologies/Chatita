@@ -31,6 +31,9 @@ model User {
   badges            UserBadge[]
   accounts          Account[] // OAuth accounts
   sessions          Session[] // NextAuth sessions
+  customFoods       CustomFood[]
+  recipes           Recipe[]
+  mealPlans         MealPlan[]
 }
 
 // NextAuth models for OAuth and session management
@@ -80,12 +83,13 @@ model Meal {
   photoUrl      String?   // or base64 blob
   photoBase64   String?   @db.Text
   detectedFoods String?   @db.Text // JSON array
+  foodEntries   FoodEntry[] // NEW: Detailed individual foods in this meal
 
   // AI-first fields
   aiSummary     String?   // "chicken tacos with salsa"
   aiConfidence  Int?      // 0-100
   aiMode        String?   // 'ai' | '$0'
-  nutritionSource String? @default("manual") // 'ai' | 'manual' | 'user-edited'
+  nutritionSource String? @default("manual") // 'ai' | 'manual' | 'user-edited' | 'usda' | 'barcode'
 
   calories      Float?
   carbs         Float?
@@ -107,7 +111,169 @@ model Meal {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // NEW: Link to glucose readings for correlation
+  relatedGlucoseReadings GlucoseEntry[]
+
   @@index([userId, eatenAt])
+}
+
+// NEW: Individual food items within a meal
+model FoodEntry {
+  id          String @id @default(cuid())
+  mealId      String
+  meal        Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  foodName    String
+  brand       String?
+  barcode     String? // UPC/EAN for barcode-scanned items
+
+  // Nutrition per serving
+  servingSize     String  // "1 cup", "100g", etc
+  servingsEaten   Float   @default(1)
+
+  calories    Float
+  carbs       Float
+  protein     Float
+  fat         Float
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+
+  // Data source tracking
+  source      String  @default("manual") // 'usda' | 'barcode' | 'custom' | 'manual' | 'ai'
+  fdcId       String? // USDA FoodData Central ID
+  upcCode     String? // Barcode UPC code
+
+  createdAt   DateTime @default(now())
+
+  @@index([mealId])
+  @@index([barcode])
+}
+
+// NEW: USDA and barcode-scanned food database cache
+model FoodDatabase {
+  id          String @id @default(cuid())
+
+  foodName    String
+  foodNameEs  String? // Spanish translation
+  brand       String?
+  barcode     String? @unique // UPC/EAN
+
+  // Nutrition per 100g or standard serving
+  servingSize     String  // "100g", "1 cup", etc
+  calories    Float
+  carbs       Float
+  protein     Float
+  fat         Float
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+
+  // Additional micronutrients (optional)
+  vitaminA    Float?
+  vitaminC    Float?
+  calcium     Float?
+  iron        Float?
+
+  // Source tracking
+  source      String  // 'usda' | 'openfoodfacts' | 'custom'
+  fdcId       String? // USDA FoodData Central ID
+  lastFetched DateTime @default(now())
+
+  // Diabetes-specific flags
+  isLowCarb   Boolean @default(false)
+  isLowGI     Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([foodName])
+  @@index([barcode])
+  @@index([fdcId])
+}
+
+// NEW: User's custom foods
+model CustomFood {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  foodName    String
+  brand       String?
+
+  servingSize     String
+  calories    Float
+  carbs       Float
+  protein     Float
+  fat         Float
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+
+  notes       String? @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+// NEW: User's custom recipes
+model Recipe {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  nameEs      String?
+  description String? @db.Text
+  photoUrl    String?
+
+  servings    Int     @default(1)
+  prepTime    Int?    // minutes
+  cookTime    Int?    // minutes
+
+  ingredients String  @db.Text // JSON array of {foodName, amount, unit}
+  instructions String @db.Text // JSON array of steps
+
+  // Total nutrition per serving
+  calories    Float
+  carbs       Float
+  protein     Float
+  fat         Float
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+
+  tags        String? @db.Text // JSON array: ["breakfast", "low-carb", "mexican"]
+
+  // Diabetes-specific
+  carbCount   String? // "15g per serving"
+  diabetesTips String? @db.Text
+
+  isPublic    Boolean @default(false) // Share with community?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// NEW: Meal planning
+model MealPlan {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String  // "Week 1" or "Budget Friendly February"
+  startDate   DateTime
+  endDate     DateTime
+
+  meals       String  @db.Text // JSON: {day: date, meals: [{type, recipeId, notes}]}
+
+  groceryList String? @db.Text // JSON array of items
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model GlucoseEntry {
@@ -116,11 +282,18 @@ model GlucoseEntry {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   value     Float    // mg/dL
+
+  // NEW: Context fields
+  context   String?  // 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random'
+  relatedMealId String? // Link to the meal if post-meal reading
+  relatedMeal   Meal?   @relation(fields: [relatedMealId], references: [id], onDelete: SetNull)
+
   notes     String?
   measuredAt DateTime @default(now())
   createdAt DateTime @default(now())
 
   @@index([userId, measuredAt])
+  @@index([relatedMealId])
 }
 
 model MoodEntry {
@@ -128,7 +301,7 @@ model MoodEntry {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  mood        String   // sad, neutral, happy
+  mood        String   // happy, grateful, calm, neutral, tired, anxious, sad
   stressLevel Int      // 1-10
 
   // Contextual flags
@@ -153,7 +326,7 @@ model ChatMessage {
   content   String   @db.Text
 
   // Context at time of message
-  userContext String? @db.Text // JSON: {onPeriod, feelingOverwhelmed, etc}
+  userContext String? @db.Text // JSON: {mood, onPeriod, feelingOverwhelmed, etc}
 
   createdAt DateTime @default(now())
 

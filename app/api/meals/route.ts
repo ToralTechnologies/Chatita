@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const {
       photoBase64,
       detectedFoods,
+      foodEntries, // NEW: Individual food items with detailed nutrition
       aiSummary,
       aiConfidence,
       aiMode,
@@ -77,13 +78,18 @@ export async function POST(request: Request) {
       finalNutritionSource = 'ai';
     }
 
-    // Allow photo-only OR food-list-only (not requiring both)
+    // Allow photo-only OR food-list-only OR foodEntries (not requiring all)
     // At least one must be present
-    if (!photoBase64 && (!detectedFoods || detectedFoods.length === 0)) {
+    if (!photoBase64 && (!detectedFoods || detectedFoods.length === 0) && (!foodEntries || foodEntries.length === 0)) {
       return NextResponse.json(
         { error: 'Either a photo or food items are required' },
         { status: 400 }
       );
+    }
+
+    // If foodEntries exist, update nutritionSource to reflect database source
+    if (foodEntries && foodEntries.length > 0 && !nutritionSource) {
+      finalNutritionSource = 'usda'; // Most likely from USDA/barcode database
     }
 
     const meal = await prisma.meal.create({
@@ -109,6 +115,31 @@ export async function POST(request: Request) {
         restaurantAddress: restaurantAddress || null,
         restaurantPlaceId: restaurantPlaceId || null,
         ...(eatenAt && { eatenAt: new Date(eatenAt) }),
+        // NEW: Create FoodEntry records if provided
+        ...(foodEntries && foodEntries.length > 0 && {
+          foodEntries: {
+            create: foodEntries.map((food: any) => ({
+              foodName: food.foodName,
+              brand: food.brand || null,
+              barcode: food.barcode || null,
+              servingSize: food.servingSize,
+              servingsEaten: food.servingsEaten,
+              calories: food.calories,
+              carbs: food.carbs,
+              protein: food.protein,
+              fat: food.fat,
+              fiber: food.fiber || null,
+              sugar: food.sugar || null,
+              sodium: food.sodium || null,
+              source: food.source || 'manual',
+              fdcId: food.fdcId || null,
+              upcCode: food.barcode || null,
+            })),
+          },
+        }),
+      },
+      include: {
+        foodEntries: true, // Return the created food entries
       },
     });
 
