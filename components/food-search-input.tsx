@@ -182,10 +182,70 @@ export default function FoodSearchInput({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, just prompt user to enter manually
-    // In a full implementation, we'd use a barcode scanner library like @zxing/browser
-    alert('📷 Barcode scanning from images is coming soon! For now, please type the barcode number manually.');
-    setShowBarcodeInput(true);
+    setScanningBarcode(true);
+
+    try {
+      // Import ZXing library dynamically (client-side only)
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+
+      // Create an image element to load the file
+      const img = document.createElement('img');
+      const reader = new FileReader();
+
+      reader.onload = async (event) => {
+        if (!event.target?.result) {
+          alert('Failed to read image file');
+          setScanningBarcode(false);
+          return;
+        }
+
+        img.src = event.target.result as string;
+        img.onload = async () => {
+          try {
+            const codeReader = new BrowserMultiFormatReader();
+            const result = await codeReader.decodeFromImageElement(img);
+
+            if (result) {
+              const barcode = result.getText();
+              setBarcodeInput(barcode);
+
+              // Automatically lookup the barcode
+              await lookupBarcode(barcode);
+            } else {
+              alert('No barcode detected in image. Please try again or enter the barcode manually.');
+            }
+          } catch (error) {
+            console.error('Barcode scanning error:', error);
+            alert('Could not read barcode from image. Please try again with a clearer photo or enter the barcode manually.');
+            setShowBarcodeInput(true);
+          } finally {
+            setScanningBarcode(false);
+          }
+        };
+
+        img.onerror = () => {
+          alert('Failed to load image');
+          setScanningBarcode(false);
+        };
+      };
+
+      reader.onerror = () => {
+        alert('Failed to read image file');
+        setScanningBarcode(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Barcode upload error:', error);
+      alert('Failed to process image. Please try again or enter the barcode manually.');
+      setScanningBarcode(false);
+      setShowBarcodeInput(true);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const getTotalNutrition = () => {
@@ -313,32 +373,58 @@ export default function FoodSearchInput({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.setAttribute('capture', 'environment');
+                    fileInputRef.current.click();
+                  }
+                }}
+                disabled={scanningBarcode}
+                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Camera className="w-4 h-4" />
-                Scan from camera
+                {scanningBarcode ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+                {scanningBarcode ? 'Scanning...' : 'Scan from camera'}
               </button>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.removeAttribute('capture');
+                    fileInputRef.current.click();
+                  }
+                }}
+                disabled={scanningBarcode}
+                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Upload className="w-4 h-4" />
-                Upload photo
+                {scanningBarcode ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {scanningBarcode ? 'Processing...' : 'Upload photo'}
               </button>
             </div>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleBarcodeImageUpload}
               className="hidden"
             />
-            <p className="text-xs text-gray-500">
-              💡 Type the barcode number manually or scan the product package
-            </p>
+            {scanningBarcode ? (
+              <p className="text-xs text-primary font-medium flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Scanning barcode from image...
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                💡 Type the barcode number manually or scan/upload a photo of the product barcode
+              </p>
+            )}
           </div>
         )}
       </div>
