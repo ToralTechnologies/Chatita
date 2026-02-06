@@ -2,9 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import BottomNav from '@/components/bottom-nav';
-import { TrendingUp, Calendar, AlertTriangle, CheckCircle, Info, Lightbulb, Activity } from 'lucide-react';
+import ExportButton from '@/components/export-button';
+import CardSkeleton from '@/components/skeletons/card-skeleton';
+import ChartSkeleton from '@/components/skeletons/chart-skeleton';
+import { TrendingUp, Calendar, AlertTriangle, CheckCircle, Info, Lightbulb, Activity, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from '@/lib/i18n/context';
+import { exportAnalyticsToPDF, exportAnalyticsToCSV } from '@/lib/export-utils';
+import dynamic from 'next/dynamic';
+
+// Dynamically import charts to avoid SSR issues
+const GlucoseTrendChart = dynamic(() => import('@/components/charts/glucose-trend-chart'), { ssr: false });
+const TimeInRangeChart = dynamic(() => import('@/components/charts/time-in-range-chart'), { ssr: false });
+const MealComparisonChart = dynamic(() => import('@/components/charts/meal-comparison-chart'), { ssr: false });
+const DailyPatternChart = dynamic(() => import('@/components/charts/daily-pattern-chart'), { ssr: false });
 
 export default function InsightsPage() {
   const { t } = useTranslation();
@@ -83,10 +94,25 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background pb-24 flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
-          <p className="text-gray-500">Analyzing your data...</p>
+      <div className="min-h-screen bg-gray-background pb-24">
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-2xl mx-auto px-6 py-4">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-primary" />
+              Insights & Analytics
+            </h1>
+            <div className="flex items-center gap-2 mt-3">
+              {[7, 30, 90].map((days) => (
+                <div key={days} className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+          <CardSkeleton />
+          <CardSkeleton />
+          <ChartSkeleton />
+          <ChartSkeleton />
         </div>
         <BottomNav />
       </div>
@@ -98,13 +124,21 @@ export default function InsightsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-primary" />
-            Insights & Analytics
-          </h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-primary" />
+              Insights & Analytics
+            </h1>
+            {correlation && (
+              <ExportButton
+                onExportPDF={() => exportAnalyticsToPDF(correlation, period)}
+                onExportCSV={() => exportAnalyticsToCSV(correlation, period)}
+              />
+            )}
+          </div>
 
           {/* Period Selector */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2">
             {[7, 30, 90].map((days) => (
               <button
                 key={days}
@@ -214,6 +248,55 @@ export default function InsightsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Visualizations */}
+            {correlation.chartData && (
+              <>
+                {/* Glucose Trend Chart */}
+                {correlation.chartData.trendData && correlation.chartData.trendData.length > 0 && (
+                  <div className="bg-white rounded-card shadow-card p-6">
+                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      Glucose Trend
+                    </h2>
+                    <GlucoseTrendChart data={correlation.chartData.trendData} />
+                  </div>
+                )}
+
+                {/* Time in Range Pie Chart */}
+                {correlation.stats.timeInRange && (
+                  <div className="bg-white rounded-card shadow-card p-6">
+                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      Time in Range Distribution
+                    </h2>
+                    <TimeInRangeChart data={correlation.stats.timeInRange} />
+                  </div>
+                )}
+
+                {/* Meal Type Comparison */}
+                {correlation.chartData.mealComparison && correlation.chartData.mealComparison.length > 0 && (
+                  <div className="bg-white rounded-card shadow-card p-6">
+                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-primary" />
+                      Average Glucose by Meal Type
+                    </h2>
+                    <MealComparisonChart data={correlation.chartData.mealComparison} />
+                  </div>
+                )}
+
+                {/* Daily Pattern */}
+                {correlation.chartData.dailyPattern && correlation.chartData.dailyPattern.length > 0 && (
+                  <div className="bg-white rounded-card shadow-card p-6">
+                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      Daily Glucose Pattern
+                    </h2>
+                    <DailyPatternChart data={correlation.chartData.dailyPattern} />
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Detected Patterns */}
             {correlation.patterns && correlation.patterns.length > 0 && (

@@ -21,6 +21,8 @@ export async function GET() {
         targetGlucoseMin: true,
         targetGlucoseMax: true,
         preferredLanguage: true,
+        weeklyReportEnabled: true,
+        lastReportSent: true,
         createdAt: true,
       },
     });
@@ -48,7 +50,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { name, diabetesType, targetGlucoseMin, targetGlucoseMax, preferredLanguage } = body;
+    const { name, diabetesType, targetGlucoseMin, targetGlucoseMax, preferredLanguage, weeklyReportEnabled } = body;
 
     const user = await prisma.user.update({
       where: { id: session.user.id },
@@ -58,6 +60,7 @@ export async function PATCH(request: Request) {
         ...(targetGlucoseMin !== undefined && { targetGlucoseMin }),
         ...(targetGlucoseMax !== undefined && { targetGlucoseMax }),
         ...(preferredLanguage !== undefined && { preferredLanguage }),
+        ...(weeklyReportEnabled !== undefined && { weeklyReportEnabled }),
       },
       select: {
         id: true,
@@ -67,6 +70,8 @@ export async function PATCH(request: Request) {
         targetGlucoseMin: true,
         targetGlucoseMax: true,
         preferredLanguage: true,
+        weeklyReportEnabled: true,
+        lastReportSent: true,
       },
     });
 

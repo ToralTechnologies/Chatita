@@ -21,6 +21,8 @@ model User {
   targetGlucoseMin  Int       @default(70)
   targetGlucoseMax  Int       @default(180)
   preferredLanguage String    @default("en") // en, es
+  weeklyReportEnabled Boolean @default(true) // Send weekly progress emails
+  lastReportSent    DateTime? // Track last email sent
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -34,6 +36,8 @@ model User {
   customFoods       CustomFood[]
   recipes           Recipe[]
   mealPlans         MealPlan[]
+  favoriteRestaurants FavoriteRestaurant[]
+  restaurantVisits    RestaurantVisit[]
 }
 
 // NextAuth models for OAuth and session management
@@ -356,4 +360,50 @@ model UserBadge {
 
   @@unique([userId, badgeId])
   @@index([userId])
+}
+
+// Restaurant tracking
+model FavoriteRestaurant {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Restaurant details
+  placeId       String   // Google Place ID or simulated ID
+  name          String
+  address       String?
+  cuisine       String?
+  rating        Float?
+  priceLevel    Int?     // 1-4
+
+  // User notes
+  notes         String?  @db.Text
+  tags          String?  @db.Text // JSON array: ["low-carb", "quick", "family-friendly"]
+
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, placeId])
+  @@index([userId])
+}
+
+model RestaurantVisit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Restaurant details (denormalized for quick access)
+  placeId       String   // Google Place ID or simulated ID
+  name          String
+  address       String?
+  cuisine       String?
+
+  // Visit tracking
+  visitedAt     DateTime @default(now())
+  mealId        String?  // Link to meal if user logged it
+
+  // Performance metrics (for recommendations)
+  glucoseImpact String?  // 'low' | 'medium' | 'high' based on post-meal glucose
+
+  @@index([userId, visitedAt])
+  @@index([userId, placeId])
 }

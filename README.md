@@ -4,20 +4,47 @@ A warm, caring bilingual (English/Spanish) diabetes companion app with a "caring
 
 ## Features
 
-- 📸 Quick meal photo logging
-- 💙 Gentle, warm AI-powered insights
+### Core Features
+- 📸 Quick meal photo logging with AI analysis
+- 💙 Gentle, warm AI-powered insights and chat assistance
 - 🍽️ Menu scanning for restaurant recommendations
 - 🎯 Support for underserved users (manual glucose entry, no CGM required)
-- 💬 Conversational chat interface
-- 🎗️ Contextual health tracking (period, feeling unwell, stress)
+- 💬 Conversational chat interface with context awareness
+- 🎗️ Contextual health tracking (mood, stress, activity levels)
+
+### Analytics & Insights
+- 📊 Comprehensive analytics dashboard with charts
+- 🔍 Pattern detection (glucose spikes, time-of-day trends)
+- 📈 A1C estimation based on glucose readings
+- 📉 Time in range tracking and visualization
+- 🎯 Meal type comparison and daily pattern analysis
+
+### Data Management
+- 📥 Export data as PDF (formatted reports) or CSV (spreadsheet)
+- 📧 Weekly email reports with progress summaries
+- 📅 AI-powered meal plan generator (3/7/14 days)
+- 🛒 Shopping list generator from meal plans
+- 🌐 Restaurant finder with diabetes-friendly recommendations
+
+### User Experience
+- 🌍 Bilingual support (English/Spanish)
+- 🎨 Modern, accessible UI with loading skeletons
+- ⚡ React Query for optimized data caching
+- 🏅 Achievement system with badges and rewards
+- 📱 Mobile-responsive design
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14 (App Router) + TypeScript + TailwindCSS
+- **Frontend:** Next.js 16 (App Router) + TypeScript + TailwindCSS
 - **Backend:** Next.js API routes
 - **Database:** Neon Postgres (free tier)
 - **ORM:** Prisma
-- **Auth:** NextAuth.js
+- **Auth:** NextAuth.js with Google OAuth
+- **AI:** Anthropic Claude 3.5 Sonnet
+- **Email:** Nodemailer (SMTP)
+- **State Management:** React Query (TanStack Query)
+- **Data Visualization:** Recharts
+- **Export:** jsPDF, PapaCSV
 - **Hosting:** Vercel (free tier)
 
 ## Getting Started
@@ -103,15 +130,28 @@ chatita/
 └── types/               # TypeScript types
 ```
 
-## Development Phases
+## Development Status
 
-- [x] Phase 1: Core setup (Next.js + Prisma + Auth)
-- [ ] Phase 2: Onboarding + Home dashboard
-- [ ] Phase 3: Meal logging
-- [ ] Phase 4: Menu scanner
-- [ ] Phase 5: Insights & rewards
-- [ ] Phase 6: Chat assistant
-- [ ] Phase 7: Internationalization
+- [x] Core setup (Next.js + Prisma + Auth)
+- [x] Onboarding flow with profile setup
+- [x] Home dashboard with quick actions
+- [x] Meal logging with photo upload
+- [x] AI-powered meal analysis (Claude 3.5 Sonnet)
+- [x] Glucose tracking with manual entry
+- [x] Comprehensive analytics & insights
+- [x] Pattern detection and A1C estimation
+- [x] Data export (PDF/CSV)
+- [x] Weekly email reports
+- [x] AI-powered meal plan generator
+- [x] Shopping list generator
+- [x] Restaurant finder with recommendations
+- [x] Achievement system with badges
+- [x] Bilingual support (English/Spanish)
+- [x] React Query data caching
+- [x] Loading skeletons for better UX
+- [x] ARIA accessibility improvements
+- [ ] Chat assistant (planned)
+- [ ] Menu scanning (planned)
 
 ## License
 

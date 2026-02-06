@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import { MapPin, Loader2, Utensils, Star, Navigation, Search, X, Plus } from 'lucide-react';
+import { MapPin, Loader2, Utensils, Star, Navigation, Search, X, Plus, Heart, Clock } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
 
 interface MenuItem {
@@ -23,6 +23,7 @@ interface Restaurant {
   address?: string;
   diabetesFriendly: boolean;
   hasDish?: string;
+  priceLevel?: number;
 }
 
 interface Suggestion {
@@ -32,7 +33,7 @@ interface Suggestion {
   address: string;
 }
 
-type SearchMode = 'location' | 'dish' | 'name' | 'detect';
+type SearchMode = 'location' | 'dish' | 'name' | 'detect' | 'favorites' | 'recent';
 
 export default function RestaurantFinderPage() {
   const { t } = useTranslation();
@@ -72,12 +73,157 @@ export default function RestaurantFinderPage() {
   // free-text dish the user typed in (keyed by restaurant id)
   const [customDishInput, setCustomDishInput] = useState<Record<string, string>>({});
 
+  // ── favorites & recent visits state ────────────────────────────────────────
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [recentVisits, setRecentVisits] = useState<any[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
   // ── close suggestions on outside click ───────────────────────────────────
   useEffect(() => {
     const handler = () => setShowSuggestions(false);
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // ── Load favorites and recent visits on mount ─────────────────────────────
+  useEffect(() => {
+    fetchFavorites();
+    fetchRecentVisits();
+  }, []);
+
+  const fetchFavorites = async () => {
+    try {
+      const res = await fetch('/api/restaurants/favorites');
+      if (res.ok) {
+        const data = await res.json();
+        setFavorites(data.favorites || []);
+        setFavoriteIds(new Set(data.favorites.map((f: any) => f.placeId)));
+      }
+    } catch (err) {
+      console.error('Failed to fetch favorites:', err);
+    }
+  };
+
+  const fetchRecentVisits = async () => {
+    try {
+      const res = await fetch('/api/restaurants/visits?limit=10');
+      if (res.ok) {
+        const data = await res.json();
+        setRecentVisits(data.visits || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recent visits:', err);
+    }
+  };
+
+  const toggleFavorite = async (restaurant: Restaurant) => {
+    const isFavorited = favoriteIds.has(restaurant.id);
+
+    if (isFavorited) {
+      // Remove from favorites
+      try {
+        const res = await fetch(`/api/restaurants/favorites/${restaurant.id}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          setFavoriteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(restaurant.id);
+            return next;
+          });
+          setFavorites((prev) => prev.filter((f) => f.placeId !== restaurant.id));
+        }
+      } catch (err) {
+        console.error('Failed to remove favorite:', err);
+      }
+    } else {
+      // Add to favorites
+      try {
+        const res = await fetch('/api/restaurants/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placeId: restaurant.id,
+            name: restaurant.name,
+            address: restaurant.address,
+            cuisine: restaurant.cuisine,
+            rating: restaurant.rating,
+            priceLevel: restaurant.priceLevel,
+          }),
+        });
+        if (res.ok) {
+          setFavoriteIds((prev) => new Set(prev).add(restaurant.id));
+          fetchFavorites(); // Refresh favorites list
+        }
+      } catch (err) {
+        console.error('Failed to add favorite:', err);
+      }
+    }
+  };
+
+  const recordRestaurantVisit = async (restaurant: Restaurant) => {
+    try {
+      await fetch('/api/restaurants/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placeId: restaurant.id,
+          name: restaurant.name,
+          address: restaurant.address,
+          cuisine: restaurant.cuisine,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to record visit:', err);
+    }
+  };
+
+  const loadFavoritesTab = () => {
+    setSearchMode('favorites');
+    setRestaurants([]);
+    setLocation(null);
+    setError('');
+    setLoadingFavorites(true);
+
+    // Convert favorites to restaurants
+    const favoriteRestaurants: Restaurant[] = favorites.map((fav) => ({
+      id: fav.placeId,
+      name: fav.name,
+      cuisine: fav.cuisine || 'Various',
+      address: fav.address,
+      rating: fav.rating,
+      priceLevel: fav.priceLevel,
+      diabetesFriendly: true,
+    }));
+
+    setRestaurants(favoriteRestaurants);
+    setLocation({ lat: 0, lng: 0 }); // truthy so results render
+    setLocationName('your favorites');
+    setLoadingFavorites(false);
+  };
+
+  const loadRecentTab = () => {
+    setSearchMode('recent');
+    setRestaurants([]);
+    setLocation(null);
+    setError('');
+    setLoadingFavorites(true);
+
+    // Convert recent visits to restaurants
+    const recentRestaurants: Restaurant[] = recentVisits.map((visit) => ({
+      id: visit.placeId,
+      name: visit.name,
+      cuisine: visit.cuisine || 'Various',
+      address: visit.address,
+      diabetesFriendly: true,
+    }));
+
+    setRestaurants(recentRestaurants);
+    setLocation({ lat: 0, lng: 0 }); // truthy so results render
+    setLocationName('recent visits');
+    setLoadingFavorites(false);
+  };
 
   // ── reset results when switching tabs ─────────────────────────────────────
   const switchMode = (mode: SearchMode) => {
@@ -88,9 +234,14 @@ export default function RestaurantFinderPage() {
     setSearchedDish('');
     setNearbyPlaces([]);
     setShowSuggestions(false);
+
     if (mode === 'name') {
       // focus happens after render
       setTimeout(() => nameInputRef.current?.focus(), 100);
+    } else if (mode === 'favorites') {
+      loadFavoritesTab();
+    } else if (mode === 'recent') {
+      loadRecentTab();
     }
   };
 
@@ -346,13 +497,15 @@ export default function RestaurantFinderPage() {
           {/* Tab row – always visible until results load (for location/dish) */}
           {!(location && (searchMode === 'location' || searchMode === 'dish')) && !loading && (
             <div className="mb-4">
-              {/* 4-tab row */}
-              <div className="grid grid-cols-4 gap-1.5 mb-4">
+              {/* 6-tab row */}
+              <div className="grid grid-cols-3 gap-1.5 mb-4">
                 {([
-                  ['location', t.restaurants.browseNearby],
-                  ['dish', t.restaurants.searchByDish],
-                  ['name', t.restaurants.searchByName],
-                  ['detect', t.restaurants.detectLocation],
+                  ['location', t.restaurants.browseNearby || 'Browse Nearby'],
+                  ['dish', t.restaurants.searchByDish || 'Search by Dish'],
+                  ['name', t.restaurants.searchByName || 'Search by Name'],
+                  ['detect', t.restaurants.detectLocation || 'Detect Location'],
+                  ['favorites', '❤️ Favorites'],
+                  ['recent', '🕒 Recent'],
                 ] as [SearchMode, string][]).map(([mode, label]) => (
                   <button
                     key={mode}
@@ -603,12 +756,29 @@ export default function RestaurantFinderPage() {
                       <p className="text-xs text-gray-500 mt-1">{restaurant.address}</p>
                     )}
                   </div>
-                  {restaurant.rating && (
-                    <div className="flex items-center gap-1 bg-warning/10 px-2 py-1 rounded-lg">
-                      <Star className="w-4 h-4 text-warning fill-warning" />
-                      <span className="text-sm font-medium">{restaurant.rating}</span>
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-2 flex-shrink-0 ml-3">
+                    {/* Favorite Button */}
+                    <button
+                      onClick={() => toggleFavorite(restaurant)}
+                      className={`p-2 rounded-full transition-all ${
+                        favoriteIds.has(restaurant.id)
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500'
+                      }`}
+                      title={favoriteIds.has(restaurant.id) ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <Heart
+                        className={`w-5 h-5 ${favoriteIds.has(restaurant.id) ? 'fill-red-600' : ''}`}
+                      />
+                    </button>
+                    {/* Rating */}
+                    {restaurant.rating && (
+                      <div className="flex items-center gap-1 bg-warning/10 px-2 py-1 rounded-lg">
+                        <Star className="w-4 h-4 text-warning fill-warning" />
+                        <span className="text-sm font-medium">{restaurant.rating}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Badges */}
@@ -624,6 +794,23 @@ export default function RestaurantFinderPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Quick Add Button */}
+                <button
+                  onClick={() => {
+                    recordRestaurantVisit(restaurant);
+                    const params = new URLSearchParams({
+                      restaurant: restaurant.name,
+                      ...(restaurant.address && { restaurantAddress: restaurant.address }),
+                      restaurantPlaceId: restaurant.id,
+                    });
+                    router.push(`/add-meal?${params.toString()}`);
+                  }}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg font-medium hover:from-primary-dark hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Quick Add Meal from Here</span>
+                </button>
 
                 {/* ── Dynamic Menu (AI-generated or $0 fallback) ──────── */}
                 {loadingMenu[restaurant.id] ? (

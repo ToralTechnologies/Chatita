@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/context";
+import QueryProvider from "@/lib/query-provider";
 
 export const metadata: Metadata = {
   title: "Chatita - Your Diabetes Companion",
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <QueryProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </QueryProvider>
       </body>
     </html>
   );

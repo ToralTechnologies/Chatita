@@ -55,10 +55,14 @@ export async function GET(request: Request) {
     // Calculate A1C estimate
     const a1cEstimate = estimateA1C(glucoseEntries);
 
+    // Calculate chart data
+    const chartData = calculateChartData(glucoseEntries, meals);
+
     return NextResponse.json({
       stats,
       patterns,
       a1cEstimate,
+      chartData,
       glucoseEntries: glucoseEntries.length,
       mealsTracked: meals.length,
       periodDays: days,
@@ -268,5 +272,70 @@ function estimateA1C(glucoseEntries: any[]) {
     category,
     message,
     readingsUsed: glucoseEntries.length,
+  };
+}
+
+function calculateChartData(glucoseEntries: any[], meals: any[]) {
+  // 1. Trend data - glucose readings over time
+  const trendData = glucoseEntries.map((entry) => ({
+    measuredAt: entry.measuredAt,
+    value: entry.value,
+    context: entry.context,
+  }));
+
+  // 2. Meal type comparison - average glucose by meal type
+  const mealTypeMap: Record<string, { total: number; count: number }> = {};
+
+  meals.forEach((meal) => {
+    if (!meal.mealType) return;
+    const mealType = meal.mealType.toLowerCase();
+
+    // Find related glucose readings (within 2 hours after meal)
+    const mealTime = new Date(meal.eatenAt).getTime();
+    const relatedReadings = glucoseEntries.filter((entry) => {
+      const readingTime = new Date(entry.measuredAt).getTime();
+      const diff = readingTime - mealTime;
+      return diff > 0 && diff <= 2 * 60 * 60 * 1000; // 2 hours
+    });
+
+    if (relatedReadings.length > 0) {
+      if (!mealTypeMap[mealType]) {
+        mealTypeMap[mealType] = { total: 0, count: 0 };
+      }
+      relatedReadings.forEach((reading) => {
+        mealTypeMap[mealType].total += reading.value;
+        mealTypeMap[mealType].count += 1;
+      });
+    }
+  });
+
+  const mealComparison = Object.entries(mealTypeMap).map(([mealType, data]) => ({
+    mealType,
+    averageGlucose: data.total / data.count,
+    count: data.count,
+  }));
+
+  // 3. Daily pattern - average glucose by hour of day
+  const hourlyMap: Record<number, { total: number; count: number }> = {};
+
+  glucoseEntries.forEach((entry) => {
+    const hour = new Date(entry.measuredAt).getHours();
+    if (!hourlyMap[hour]) {
+      hourlyMap[hour] = { total: 0, count: 0 };
+    }
+    hourlyMap[hour].total += entry.value;
+    hourlyMap[hour].count += 1;
+  });
+
+  const dailyPattern = Object.entries(hourlyMap).map(([hour, data]) => ({
+    hour: parseInt(hour),
+    average: data.total / data.count,
+    count: data.count,
+  }));
+
+  return {
+    trendData,
+    mealComparison,
+    dailyPattern,
   };
 }

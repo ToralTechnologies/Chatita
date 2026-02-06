@@ -312,6 +312,45 @@ export const translations = {
       saving: 'Saving...',
     },
 
+    // Recipe Library
+    recipeLibrary: {
+      title: 'Recipe Library',
+      saved: 'Saved Recipes',
+      browse: 'Browse Recipes',
+      noSaved: 'No saved recipes yet',
+      startSaving: 'Save recipes from the generator to see them here',
+      servings: 'servings',
+      prepTime: 'Prep',
+      cookTime: 'Cook',
+      minutes: 'min',
+      viewRecipe: 'View Recipe',
+      saveRecipe: 'Save Recipe',
+      unsaveRecipe: 'Remove from Library',
+      ingredients: 'Ingredients',
+      instructions: 'Instructions',
+      nutritionInfo: 'Nutrition Information',
+      perServing: 'per serving',
+      diabetesTips: 'Diabetes Tips',
+      lowImpact: 'Low Blood Sugar Impact',
+      modImpact: 'Moderate Impact',
+      highImpact: 'High Impact',
+    },
+
+    // Charts and Analytics
+    charts: {
+      glucoseTrend: 'Glucose Trend',
+      timeInRange: 'Time in Range',
+      mealComparison: 'Meal Comparison',
+      dailyPattern: 'Daily Pattern',
+      low: 'Low',
+      normal: 'Normal',
+      high: 'High',
+      inRange: 'In Range',
+      avgGlucose: 'Avg Glucose',
+      readings: 'readings',
+      reading: 'reading',
+    },
+
     // Common
     common: {
       back: 'Back',
@@ -326,6 +365,7 @@ export const translations = {
       success: 'Success',
       tip: 'Tip',
       backToHome: 'Back to Home',
+      export: 'Export',
     },
   },
 
@@ -638,6 +678,45 @@ export const translations = {
       saving: 'Guardando...',
     },
 
+    // Biblioteca de Recetas
+    recipeLibrary: {
+      title: 'Biblioteca de Recetas',
+      saved: 'Recetas Guardadas',
+      browse: 'Explorar Recetas',
+      noSaved: 'No hay recetas guardadas',
+      startSaving: 'Guarda recetas del generador para verlas aquí',
+      servings: 'porciones',
+      prepTime: 'Prep',
+      cookTime: 'Cocción',
+      minutes: 'min',
+      viewRecipe: 'Ver Receta',
+      saveRecipe: 'Guardar Receta',
+      unsaveRecipe: 'Quitar de Biblioteca',
+      ingredients: 'Ingredientes',
+      instructions: 'Instrucciones',
+      nutritionInfo: 'Información Nutricional',
+      perServing: 'por porción',
+      diabetesTips: 'Consejos para Diabetes',
+      lowImpact: 'Impacto Bajo en Azúcar',
+      modImpact: 'Impacto Moderado',
+      highImpact: 'Impacto Alto',
+    },
+
+    // Gráficos y Análisis
+    charts: {
+      glucoseTrend: 'Tendencia de Glucosa',
+      timeInRange: 'Tiempo en Rango',
+      mealComparison: 'Comparación de Comidas',
+      dailyPattern: 'Patrón Diario',
+      low: 'Bajo',
+      normal: 'Normal',
+      high: 'Alto',
+      inRange: 'En Rango',
+      avgGlucose: 'Glucosa Prom',
+      readings: 'lecturas',
+      reading: 'lectura',
+    },
+
     // Común
     common: {
       back: 'Atrás',
@@ -652,6 +731,7 @@ export const translations = {
       success: 'Éxito',
       tip: 'Consejo',
       backToHome: 'Volver al Inicio',
+      export: 'Exportar',
     },
   },
 };

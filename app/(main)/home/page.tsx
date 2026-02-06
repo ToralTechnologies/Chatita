@@ -10,7 +10,7 @@ import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext } from '@/types';
-import { ScanLine, History, MessageCircle, X, MapPin, ChefHat } from 'lucide-react';
+import { ScanLine, History, MessageCircle, X, MapPin, ChefHat, Calendar } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
 
 export default function HomePage() {
@@ -148,7 +148,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Link
             href="/meal-history"
             className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
@@ -171,6 +171,14 @@ export default function HomePage() {
           >
             <span className="text-2xl mb-2">📊</span>
             <span className="font-medium text-sm text-center">{t.nav.insights}</span>
+          </Link>
+
+          <Link
+            href="/meal-plan"
+            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+          >
+            <Calendar className="w-7 h-7 text-primary mb-2" />
+            <span className="font-medium text-sm text-center">Meal Plan</span>
           </Link>
         </div>
 

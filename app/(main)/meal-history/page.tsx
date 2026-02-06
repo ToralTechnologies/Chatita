@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Search, Filter } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
 import MealCard from '@/components/meal-card';
+import ExportButton from '@/components/export-button';
+import MealCardSkeleton from '@/components/skeletons/meal-card-skeleton';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { useTranslation } from '@/lib/i18n/context';
+import { exportMealsToCSV, exportMealsToPDF } from '@/lib/export-utils';
 
 export default function MealHistoryPage() {
   const router = useRouter();
@@ -87,7 +90,13 @@ export default function MealHistoryPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold mb-4">{t.mealHistory.title}</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">{t.mealHistory.title}</h1>
+            <ExportButton
+              onExportPDF={() => exportMealsToPDF(filteredMeals)}
+              onExportCSV={() => exportMealsToCSV(filteredMeals)}
+            />
+          </div>
 
           {/* Search */}
           <div className="relative mb-3">
@@ -144,8 +153,15 @@ export default function MealHistoryPage() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-6 py-6">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">{t.mealHistory.loadingMeals}</p>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-3 text-gray-700">Loading...</h2>
+              <div className="space-y-4">
+                <MealCardSkeleton />
+                <MealCardSkeleton />
+                <MealCardSkeleton />
+              </div>
+            </div>
           </div>
         ) : filteredMeals.length === 0 ? (
           <div className="text-center py-12">
