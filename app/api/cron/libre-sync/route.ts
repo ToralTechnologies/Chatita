@@ -59,9 +59,11 @@ export async function POST(request: Request) {
         );
 
         // Set account ID from stored user ID (required for API v4.16.0+)
-        if (integration.libreUserId) {
-          await client.setAccountIdFromUserId(integration.libreUserId);
+        if (!integration.libreUserId) {
+          throw new Error('LibreLinkUp user ID not found. User needs to reconnect account.');
         }
+
+        await client.setAccountIdFromUserId(integration.libreUserId);
 
         // Re-authenticate if needed
         let authToken = integration.authToken;
