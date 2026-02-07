@@ -39,6 +39,7 @@ model User {
   favoriteRestaurants FavoriteRestaurant[]
   restaurantVisits    RestaurantVisit[]
   dexcomIntegration   DexcomIntegration?
+  libreIntegration    LibreIntegration?
 }
 
 // NextAuth models for OAuth and session management
@@ -430,6 +431,39 @@ model DexcomIntegration {
 
   // Environment (sandbox vs production)
   environment     String   @default("production") // 'sandbox' | 'production'
+
+  // Connection status
+  isActive        Boolean  @default(true)
+  lastError       String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// FreeStyle Libre CGM Integration (via LibreLinkUp)
+model LibreIntegration {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // LibreLinkUp credentials (encrypted)
+  libreEmail      String   @db.Text
+  librePassword   String   @db.Text // Encrypted password
+
+  // Session token
+  authToken       String?  @db.Text
+  tokenExpiresAt  DateTime?
+
+  // Libre user info
+  librePatientId  String?  // Patient ID for data retrieval
+  region          String   @default("US") // 'US' | 'EU' | 'AP' (Asia-Pacific)
+
+  // Sync settings
+  autoSync        Boolean  @default(true)
+  lastSyncAt      DateTime?
+  syncFrequency   Int      @default(15) // minutes
 
   // Connection status
   isActive        Boolean  @default(true)
