@@ -61,8 +61,9 @@ const LIBRE_HEADERS = {
   'cache-control': 'no-cache',
   connection: 'Keep-Alive',
   'content-type': 'application/json',
-  product: 'llu.android',
-  version: '4.7.0',
+  'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+  product: 'llu.ios',
+  version: '4.10.0',
 };
 
 export class LibreLinkUpClient {
@@ -107,9 +108,15 @@ export class LibreLinkUpClient {
       this.authToken = data.data.authTicket.token;
       const expiresAt = new Date(Date.now() + data.data.authTicket.duration * 1000);
 
-      // Get patient connections
-      const connections = await this.getConnections(this.authToken);
-      const patientId = connections.length > 0 ? connections[0].patientId : undefined;
+      // Try to get patient connections, but don't fail if it errors
+      let patientId: string | undefined;
+      try {
+        const connections = await this.getConnections(this.authToken);
+        patientId = connections.length > 0 ? connections[0].patientId : undefined;
+      } catch (error) {
+        console.warn('Failed to get connections during login, will try again during sync:', error);
+        // Continue without patientId - we'll get it during first sync
+      }
 
       return {
         token: this.authToken,
@@ -141,13 +148,21 @@ export class LibreLinkUpClient {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`LibreLinkUp connections API error ${response.status}:`, errorText);
+
+        if (response.status === 403) {
+          throw new Error('Access denied. LibreLinkUp may be blocking API access. Try using a different region or check if your account has active connections.');
+        }
+
         throw new Error(`Failed to get connections: ${response.status}`);
       }
 
       const data = await response.json();
 
       if (data.status !== 0) {
-        throw new Error('Failed to get connections');
+        console.error('LibreLinkUp connections response error:', data);
+        throw new Error(`API returned error status: ${data.status}`);
       }
 
       return data.data || [];

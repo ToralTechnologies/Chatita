@@ -88,11 +88,30 @@ export async function POST(request: Request) {
       }
     }
 
+    // If no patient ID, try to get it now
     if (!patientId) {
-      return NextResponse.json(
-        { error: 'No patient ID found. Please reconnect your account.' },
-        { status: 400 }
-      );
+      try {
+        const connections = await client.getConnections(authToken!);
+        if (connections.length > 0) {
+          patientId = connections[0].patientId;
+
+          // Update patient ID in database
+          await prisma.libreIntegration.update({
+            where: { userId },
+            data: { librePatientId: patientId },
+          });
+        } else {
+          return NextResponse.json(
+            { error: 'No patient connections found. Make sure you have someone added in LibreLinkUp app.' },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        return NextResponse.json(
+          { error: 'Failed to get patient connections. Please make sure you have LibreLinkUp properly configured with at least one connection.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Fetch glucose data
