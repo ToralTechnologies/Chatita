@@ -457,6 +457,7 @@ model LibreIntegration {
   tokenExpiresAt  DateTime?
 
   // Libre user info
+  libreUserId     String?  // LibreLinkUp user ID (for account-id header)
   librePatientId  String?  // Patient ID for data retrieval
   region          String   @default("US") // 'US' | 'EU' | 'AP' (Asia-Pacific)
 

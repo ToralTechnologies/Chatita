@@ -58,6 +58,11 @@ export async function POST(request: Request) {
           integration.region as 'US' | 'EU' | 'AP'
         );
 
+        // Set account ID from stored user ID (required for API v4.16.0+)
+        if (integration.libreUserId) {
+          await client.setAccountIdFromUserId(integration.libreUserId);
+        }
+
         // Re-authenticate if needed
         let authToken = integration.authToken;
         let patientId = integration.librePatientId;
@@ -81,9 +86,13 @@ export async function POST(request: Request) {
             data: {
               authToken: authResult.token,
               tokenExpiresAt: authResult.expires,
+              libreUserId: authResult.userId,
               librePatientId: patientId,
             },
           });
+
+          // Update client with new account ID
+          await client.setAccountIdFromUserId(authResult.userId);
         }
 
         if (!patientId) {

@@ -90,6 +90,13 @@ export class LibreLinkUpClient {
   }
 
   /**
+   * Set account ID from stored user ID (for sync operations)
+   */
+  async setAccountIdFromUserId(userId: string) {
+    this.accountId = await generateAccountId(userId);
+  }
+
+  /**
    * Authenticate with LibreLinkUp
    */
   async login(email: string, password: string): Promise<{
@@ -139,6 +146,7 @@ export class LibreLinkUpClient {
       return {
         token: this.authToken,
         expires: expiresAt,
+        userId: data.data.user.id,
         patientId,
       };
     } catch (error) {

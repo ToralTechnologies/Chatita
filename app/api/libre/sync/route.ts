@@ -44,6 +44,11 @@ export async function POST(request: Request) {
       integration.region as 'US' | 'EU' | 'AP'
     );
 
+    // Set account ID from stored user ID (required for API v4.16.0+)
+    if (integration.libreUserId) {
+      await client.setAccountIdFromUserId(integration.libreUserId);
+    }
+
     // Check if we need to re-authenticate
     let authToken = integration.authToken;
     let patientId = integration.librePatientId;
@@ -64,15 +69,19 @@ export async function POST(request: Request) {
         authToken = authResult.token;
         patientId = authResult.patientId || patientId;
 
-        // Update token in database
+        // Update tokens and user ID in database
         await prisma.libreIntegration.update({
           where: { userId },
           data: {
             authToken: authResult.token,
             tokenExpiresAt: authResult.expires,
+            libreUserId: authResult.userId,
             librePatientId: patientId,
           },
         });
+
+        // Update client with new account ID
+        await client.setAccountIdFromUserId(authResult.userId);
       } catch (error: any) {
         await prisma.libreIntegration.update({
           where: { userId },
@@ -132,8 +141,12 @@ export async function POST(request: Request) {
           data: {
             authToken: authResult.token,
             tokenExpiresAt: authResult.expires,
+            libreUserId: authResult.userId,
           },
         });
+
+        // Update client with new account ID
+        await client.setAccountIdFromUserId(authResult.userId);
 
         // Retry glucose fetch
         glucoseData = await client.getGlucoseData(
