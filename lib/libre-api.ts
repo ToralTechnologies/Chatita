@@ -102,6 +102,7 @@ export class LibreLinkUpClient {
   async login(email: string, password: string): Promise<{
     token: string;
     expires: Date;
+    userId: string;
     patientId?: string;
   }> {
     try {
