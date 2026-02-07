@@ -38,6 +38,7 @@ model User {
   mealPlans         MealPlan[]
   favoriteRestaurants FavoriteRestaurant[]
   restaurantVisits    RestaurantVisit[]
+  dexcomIntegration   DexcomIntegration?
 }
 
 // NextAuth models for OAuth and session management
@@ -406,4 +407,36 @@ model RestaurantVisit {
 
   @@index([userId, visitedAt])
   @@index([userId, placeId])
+}
+
+// Dexcom CGM Integration
+model DexcomIntegration {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // OAuth tokens
+  accessToken     String   @db.Text
+  refreshToken    String   @db.Text
+  tokenExpiresAt  DateTime
+
+  // Dexcom user info
+  dexcomUserId    String?  // Dexcom's user identifier
+
+  // Sync settings
+  autoSync        Boolean  @default(true)
+  lastSyncAt      DateTime?
+  syncFrequency   Int      @default(15) // minutes
+
+  // Environment (sandbox vs production)
+  environment     String   @default("production") // 'sandbox' | 'production'
+
+  // Connection status
+  isActive        Boolean  @default(true)
+  lastError       String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
 }
