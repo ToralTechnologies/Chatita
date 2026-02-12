@@ -40,6 +40,7 @@ model User {
   restaurantVisits    RestaurantVisit[]
   dexcomIntegration   DexcomIntegration?
   libreIntegration    LibreIntegration?
+  mealFollowUps       MealFollowUp[]
 }
 
 // NextAuth models for OAuth and session management
@@ -119,6 +120,9 @@ model Meal {
 
   // NEW: Link to glucose readings for correlation
   relatedGlucoseReadings GlucoseEntry[]
+
+  // Follow-up check-in
+  followUp          MealFollowUp?
 
   @@index([userId, eatenAt])
 }
@@ -474,4 +478,24 @@ model LibreIntegration {
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
+}
+
+// Post-meal check-in follow-up
+model MealFollowUp {
+  id            String    @id @default(cuid())
+  mealId        String    @unique
+  meal          Meal      @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  scheduledFor  DateTime  // eatenAt + 2 hours
+  status        String    @default("pending") // 'pending' | 'responded' | 'dismissed'
+  response      String?   // 'ate_all' | 'ate_some' | 'didnt_eat' | 'changed_meal'
+  portionEaten  Float?    // 0.0 - 1.0 (only set when response = 'ate_some')
+  respondedAt   DateTime?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, status])
+  @@index([userId, scheduledFor])
 }

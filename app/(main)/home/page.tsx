@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GlucoseWidget from '@/components/glucose-widget';
+import MealFollowUpBanner from '@/components/meal-followup-banner';
 import MoodSelector from '@/components/mood-selector';
 import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
@@ -121,6 +122,9 @@ export default function HomePage() {
 
       {/* Main Content */}
       <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+        {/* Meal Follow-Up Check-In */}
+        <MealFollowUpBanner />
+
         {/* Glucose Widget */}
         <GlucoseWidget
           currentValue={currentGlucose}

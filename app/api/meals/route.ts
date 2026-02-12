@@ -143,6 +143,21 @@ export async function POST(request: Request) {
       },
     });
 
+    // Create follow-up check-in for 2 hours after meal
+    const scheduledFor = new Date(meal.eatenAt.getTime() + 2 * 60 * 60 * 1000);
+    if (scheduledFor > new Date()) {
+      await prisma.mealFollowUp.create({
+        data: {
+          mealId: meal.id,
+          userId: session.user.id,
+          scheduledFor,
+        },
+      }).catch((err) => {
+        // Non-critical: don't fail meal save if follow-up creation fails
+        console.error('Follow-up creation error:', err);
+      });
+    }
+
     return NextResponse.json({ meal }, { status: 201 });
   } catch (error) {
     console.error('Meal create error:', error);

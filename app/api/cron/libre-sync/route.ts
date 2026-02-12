@@ -139,6 +139,41 @@ export async function POST(request: Request) {
           }
         }
 
+        // Auto-link new readings to recent meals
+        if (imported > 0) {
+          try {
+            const recentMeals = await prisma.meal.findMany({
+              where: {
+                userId: integration.userId,
+                eatenAt: {
+                  gte: new Date(Date.now() - 4 * 60 * 60 * 1000),
+                },
+              },
+              select: { id: true, eatenAt: true },
+            });
+
+            for (const meal of recentMeals) {
+              const mealTime = meal.eatenAt.getTime();
+              await prisma.glucoseEntry.updateMany({
+                where: {
+                  userId: integration.userId,
+                  relatedMealId: null,
+                  measuredAt: {
+                    gte: meal.eatenAt,
+                    lte: new Date(mealTime + 3 * 60 * 60 * 1000),
+                  },
+                },
+                data: {
+                  relatedMealId: meal.id,
+                  context: 'post-meal',
+                },
+              });
+            }
+          } catch (linkError) {
+            console.error(`[Libre Cron] Auto-link error for user ${integration.user.email}:`, linkError);
+          }
+        }
+
         // Update integration
         await prisma.libreIntegration.update({
           where: { id: integration.id },

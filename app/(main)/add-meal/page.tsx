@@ -65,6 +65,10 @@ function AddMealPageInner() {
   const [menuSelectedDishes, setMenuSelectedDishes] = useState<string[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
 
+  // Restaurant fallback state (when AI analysis fails)
+  const [showRestaurantFallback, setShowRestaurantFallback] = useState(false);
+  const [fallbackStep, setFallbackStep] = useState<'prompt' | 'locating' | 'select-restaurant' | 'select-dishes'>('prompt');
+
   // ── Read query params from restaurant-finder "Save as Meal" ────
   useEffect(() => {
     const restaurantName = searchParams.get('restaurant');
@@ -95,6 +99,13 @@ function AddMealPageInner() {
       fetchRestaurantMenu(selectedRestaurant);
     }
   }, [selectedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── When nearby restaurants arrive during fallback, advance to selection ────
+  useEffect(() => {
+    if (showRestaurantFallback && fallbackStep === 'locating' && nearbyRestaurants.length > 0) {
+      setFallbackStep('select-restaurant');
+    }
+  }, [nearbyRestaurants, showRestaurantFallback, fallbackStep]);
 
   /** Fetch nearby restaurants using GPS from EXIF or live geolocation */
   const fetchNearbyFromGps = async (lat: number, lng: number) => {
@@ -187,22 +198,31 @@ function AddMealPageInner() {
           setSelectedDishes(data.detectedFoods || []); // Pre-select AI's best guess
           setShowDishSelection(true);
         } else if (data.mode === 'ai' && data.detectedFoods.length > 0) {
-          // AI analysis successful - move to confirmation
-          setAnalysis(data);
-          setFlowState('confirmation');
+          // Check confidence threshold
+          if (data.confidence < 40) {
+            // Low confidence -- offer restaurant fallback
+            setAnalysis(data);
+            setShowRestaurantFallback(true);
+            setFallbackStep('prompt');
+          } else {
+            // AI analysis successful - move to confirmation
+            setAnalysis(data);
+            setFlowState('confirmation');
+          }
         } else {
-          // AI disabled or no foods detected - show manual entry
-          setError('AI analysis unavailable. Please add meal details manually.');
-          setFlowState('editing');
+          // AI disabled or no foods detected - offer restaurant fallback
+          setShowRestaurantFallback(true);
+          setFallbackStep('prompt');
         }
       } else {
-        setError('Failed to analyze photo. You can still add meal details manually.');
-        setFlowState('editing');
+        // HTTP error - offer restaurant fallback
+        setShowRestaurantFallback(true);
+        setFallbackStep('prompt');
       }
     } catch (err) {
       console.error('AI analysis error:', err);
-      setError('Failed to analyze photo. You can still add meal details manually.');
-      setFlowState('editing');
+      setShowRestaurantFallback(true);
+      setFallbackStep('prompt');
     } finally {
       setAnalyzing(false);
     }
@@ -382,6 +402,182 @@ function AddMealPageInner() {
                 >
                   Confirm Selection ({selectedDishes.length} item{selectedDishes.length !== 1 ? 's' : ''})
                 </button>
+              </div>
+            )}
+
+            {/* Restaurant Fallback (when AI analysis fails) */}
+            {showRestaurantFallback && (
+              <div className="mt-4 space-y-4">
+                {/* Step 1: Prompt */}
+                {fallbackStep === 'prompt' && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="font-semibold text-sm mb-2">
+                      {t.addMeal.troubleIdentifying || 'Having trouble identifying this meal'}
+                    </h3>
+                    <p className="text-xs text-gray-600 mb-4">
+                      {t.addMeal.areYouAtRestaurant || 'Are you at a restaurant? We can look up the menu to help identify your meal.'}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (nearbyRestaurants.length > 0) {
+                            setFallbackStep('select-restaurant');
+                          } else {
+                            setFallbackStep('locating');
+                            handleShareLocation();
+                          }
+                        }}
+                        className="flex-1 bg-primary text-white py-2 rounded-lg font-medium text-sm hover:bg-primary-dark transition-colors"
+                      >
+                        {t.addMeal.yesFindRestaurant || 'Yes, find my restaurant'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowRestaurantFallback(false);
+                          setFlowState('editing');
+                        }}
+                        className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                      >
+                        {t.addMeal.noEnterManually || 'No, enter manually'}
+                      </button>
+                    </div>
+                    {/* If we have a low-confidence AI result, offer to use it anyway */}
+                    {analysis && (
+                      <button
+                        onClick={() => {
+                          setShowRestaurantFallback(false);
+                          setFlowState('confirmation');
+                        }}
+                        className="w-full mt-2 text-xs text-primary hover:underline"
+                      >
+                        {t.addMeal.useAiAnyway || 'Use AI result anyway (low confidence)'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 2: Locating / Restaurant selection */}
+                {(fallbackStep === 'locating' || fallbackStep === 'select-restaurant') && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      {t.addMeal.selectYourRestaurant || 'Select your restaurant'}
+                    </h4>
+                    {nearbyRestaurants.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {nearbyRestaurants.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedRestaurant(r);
+                              setRestaurantMenu([]);
+                              setMenuSelectedDishes([]);
+                              setFallbackStep('select-dishes');
+                            }}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:border-primary transition-all"
+                          >
+                            {r.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        <span>{t.addMeal.findingNearby || 'Finding nearby restaurants...'}</span>
+                      </div>
+                    )}
+                    {nearbyRestaurants.length === 0 && fallbackStep !== 'locating' && (
+                      <button
+                        type="button"
+                        onClick={handleShareLocation}
+                        className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark mt-2"
+                      >
+                        <Navigation className="w-4 h-4" />
+                        <span>{t.addMeal.shareLocation}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowRestaurantFallback(false);
+                        setFlowState('editing');
+                      }}
+                      className="w-full mt-3 text-xs text-gray-500 hover:underline"
+                    >
+                      {t.addMeal.skipEnterManually || 'Skip, enter manually instead'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 3: Menu item selection */}
+                {fallbackStep === 'select-dishes' && selectedRestaurant && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-purple-900">
+                        {(t.addMeal.whatDidYouOrderAt || 'What did you order at {restaurant}?').replace('{restaurant}', selectedRestaurant.name)}
+                      </h4>
+                    </div>
+                    {loadingMenu ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        <span>{t.addMeal.loadingMenu || 'Loading menu...'}</span>
+                      </div>
+                    ) : restaurantMenu.length > 0 ? (
+                      <>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {restaurantMenu.map((item, idx) => {
+                            const isSelected = menuSelectedDishes.includes(item.name);
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => toggleMenuDish(item.name)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                                  isSelected
+                                    ? 'bg-primary text-white border-primary'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
+                                }`}
+                              >
+                                {isSelected && '+ '}{item.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {menuSelectedDishes.length > 0 && (
+                          <button
+                            onClick={() => {
+                              setAnalysis({
+                                detectedFoods: menuSelectedDishes,
+                                aiSummary: menuSelectedDishes.join(', '),
+                                nutrition: {},
+                                confidence: 60,
+                                mode: 'ai',
+                              });
+                              setShowRestaurantFallback(false);
+                              setFlowState('confirmation');
+                            }}
+                            className="w-full bg-primary text-white py-2 rounded-lg font-medium text-sm hover:bg-primary-dark transition-colors"
+                          >
+                            {(t.addMeal.continueWith || 'Continue with {count} item(s)').replace('{count}', String(menuSelectedDishes.length))}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-500">{t.addMeal.noMenuAvailable}</p>
+                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedRestaurant(null);
+                        setRestaurantMenu([]);
+                        setMenuSelectedDishes([]);
+                        setFallbackStep('select-restaurant');
+                      }}
+                      className="w-full mt-2 text-xs text-gray-500 hover:underline"
+                    >
+                      {t.addMeal.backToRestaurants || 'Back to restaurant selection'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

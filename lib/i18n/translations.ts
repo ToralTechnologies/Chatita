@@ -119,6 +119,19 @@ export const translations = {
       whatDidYouOrder: 'What did you order?',
       noMenuAvailable: 'No menu items available for this restaurant.',
       selectedCount: '{count} item(s) selected',
+      // Restaurant fallback (when AI analysis fails)
+      troubleIdentifying: 'Having trouble identifying this meal',
+      areYouAtRestaurant: 'Are you at a restaurant? We can look up the menu to help identify your meal.',
+      yesFindRestaurant: 'Yes, find my restaurant',
+      noEnterManually: 'No, enter manually',
+      useAiAnyway: 'Use AI result anyway (low confidence)',
+      selectYourRestaurant: 'Select your restaurant',
+      findingNearby: 'Finding nearby restaurants...',
+      skipEnterManually: 'Skip, enter manually instead',
+      whatDidYouOrderAt: 'What did you order at {restaurant}?',
+      loadingMenu: 'Loading menu...',
+      continueWith: 'Continue with {count} item(s)',
+      backToRestaurants: 'Back to restaurant selection',
     },
 
     // Recipes
@@ -351,6 +364,40 @@ export const translations = {
       reading: 'reading',
     },
 
+    // Follow-up check-in
+    followUp: {
+      checkIn: 'Quick Check-in',
+      didYouEat: 'Did you eat everything?',
+      ateAll: 'Ate everything',
+      ateSome: 'Ate some',
+      didntEat: "Didn't eat",
+      changedMeal: 'Changed meal',
+      howMuch: 'How much did you eat?',
+      thanks: 'Thanks for updating!',
+      dismiss: 'Dismiss',
+      hoursAgo: '{hours}h ago',
+      justNow: 'Just now',
+      yourMeal: 'your meal',
+    },
+
+    // Glucose impact per meal
+    glucoseImpact: {
+      title: 'Blood Sugar Impact',
+      preMeal: 'Before meal',
+      peak: 'Peak',
+      rise: 'Rise',
+      timeToSpike: 'Time to peak',
+      minutes: 'min',
+      minimal: 'Minimal Impact',
+      moderate: 'Moderate Impact',
+      significant: 'Significant Impact',
+      high: 'High Impact',
+      noData: 'No CGM data for this meal',
+      stillTracking: 'Still tracking...',
+      completeIn: 'Complete in {minutes} min',
+      highWarning: 'This meal caused a significant glucose spike. Consider smaller portions or pairing with protein/fiber next time.',
+    },
+
     // Common
     common: {
       back: 'Back',
@@ -485,6 +532,19 @@ export const translations = {
       whatDidYouOrder: '¿Qué pediste?',
       noMenuAvailable: 'No hay elementos de menú disponibles para este restaurante.',
       selectedCount: '{count} elemento(s) seleccionado(s)',
+      // Restaurant fallback (when AI analysis fails)
+      troubleIdentifying: 'Teniendo problemas para identificar esta comida',
+      areYouAtRestaurant: '¿Estas en un restaurante? Podemos buscar el menu para ayudar a identificar tu comida.',
+      yesFindRestaurant: 'Si, buscar mi restaurante',
+      noEnterManually: 'No, ingresar manualmente',
+      useAiAnyway: 'Usar resultado de IA de todos modos (baja confianza)',
+      selectYourRestaurant: 'Selecciona tu restaurante',
+      findingNearby: 'Buscando restaurantes cercanos...',
+      skipEnterManually: 'Saltar, ingresar manualmente',
+      whatDidYouOrderAt: '¿Que pediste en {restaurant}?',
+      loadingMenu: 'Cargando menu...',
+      continueWith: 'Continuar con {count} elemento(s)',
+      backToRestaurants: 'Volver a seleccion de restaurante',
     },
 
     // Recetas
@@ -715,6 +775,40 @@ export const translations = {
       avgGlucose: 'Glucosa Prom',
       readings: 'lecturas',
       reading: 'lectura',
+    },
+
+    // Seguimiento de comida
+    followUp: {
+      checkIn: 'Check Rapido',
+      didYouEat: '¿Comiste todo?',
+      ateAll: 'Comi todo',
+      ateSome: 'Comi algo',
+      didntEat: 'No comi',
+      changedMeal: 'Cambie de comida',
+      howMuch: '¿Cuanto comiste?',
+      thanks: '¡Gracias por actualizar!',
+      dismiss: 'Descartar',
+      hoursAgo: 'hace {hours}h',
+      justNow: 'Justo ahora',
+      yourMeal: 'tu comida',
+    },
+
+    // Impacto de glucosa por comida
+    glucoseImpact: {
+      title: 'Impacto en Azucar',
+      preMeal: 'Antes de comer',
+      peak: 'Pico',
+      rise: 'Subida',
+      timeToSpike: 'Tiempo al pico',
+      minutes: 'min',
+      minimal: 'Impacto Minimo',
+      moderate: 'Impacto Moderado',
+      significant: 'Impacto Significativo',
+      high: 'Impacto Alto',
+      noData: 'Sin datos CGM para esta comida',
+      stillTracking: 'Aun rastreando...',
+      completeIn: 'Completo en {minutes} min',
+      highWarning: 'Esta comida causo un pico significativo de glucosa. Considera porciones mas pequenas o combinar con proteina/fibra la proxima vez.',
     },
 
     // Común

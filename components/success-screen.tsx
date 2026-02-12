@@ -3,9 +3,11 @@
 import { CheckCircle, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/context';
+import GlucoseImpactCard from '@/components/glucose-impact-card';
 
 interface SuccessScreenProps {
   meal: {
+    id?: string;
     aiSummary?: string;
     detectedFoods?: string[];
     nutrition?: {
@@ -56,6 +58,11 @@ export default function SuccessScreen({ meal }: SuccessScreenProps) {
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium capitalize">
             {meal.mealType}
           </div>
+        )}
+
+        {/* Blood Sugar Impact */}
+        {meal.id && (
+          <GlucoseImpactCard mealId={meal.id} compact />
         )}
 
         {/* Action Buttons */}
