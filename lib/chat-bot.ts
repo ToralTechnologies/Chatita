@@ -99,7 +99,7 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
   // --- RESTAURANT flow ---
   if (message.includes('restaurant') || message.includes('eating out') || message.includes('menu') || message === 'find a restaurant') {
     return {
-      message: "Going out to eat? That's okay, mi amor! 🍽️\n\nHere are Chatita's tips:\n• Look for grilled, baked, or steamed dishes\n• Ask for vegetables instead of fries or rice\n• Request sauces and dressings on the side\n\nWhat type of restaurant are you going to?",
+      message: "Going out to eat? That's okay! 🍽️\n\nHere are Chatita's tips:\n• Look for grilled, baked, or steamed dishes\n• Ask for vegetables instead of fries or rice\n• Request sauces and dressings on the side\n\nWhat type of restaurant are you going to?",
       suggestions: ['Mexican', 'Italian', 'Asian', 'American'],
     };
   }
@@ -149,7 +149,7 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
 
   if (message.includes('dinner')) {
     return {
-      message: "Let's make a good dinner, mi amor! 🌙\n\nKeep it simple:\n• Grilled protein (chicken, fish, tofu) + vegetables\n• Stir-fry with lots of veggies\n• Soup or stew\n• Salad with protein\n\nWhat protein do you have?",
+      message: "Let's make a good dinner! 🌙\n\nKeep it simple:\n• Grilled protein (chicken, fish, tofu) + vegetables\n• Stir-fry with lots of veggies\n• Soup or stew\n• Salad with protein\n\nWhat protein do you have?",
       suggestions: ['Chicken', 'Fish', 'Vegetarian options'],
     };
   }
@@ -192,7 +192,7 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
 
   if (message === 'comfort food') {
     return {
-      message: "Nothing wrong with wanting comfort, mi amor! 🥘\n\nHere are comforting meals that are still blood sugar friendly:\n• Chicken soup with lots of veggies (skip heavy noodles)\n• Baked mac and cheese (use smaller pasta, add veggies)\n• Shepherd's pie with mashed cauliflower on top\n• Warm oatmeal with nuts and berries\n\nSometimes comfort is exactly what you need. 💛\n\nWant to make any of these?",
+      message: "Nothing wrong with wanting comfort! 🥘\n\nHere are comforting meals that are still blood sugar friendly:\n• Chicken soup with lots of veggies (skip heavy noodles)\n• Baked mac and cheese (use smaller pasta, add veggies)\n• Shepherd's pie with mashed cauliflower on top\n• Warm oatmeal with nuts and berries\n\nSometimes comfort is exactly what you need. 💛\n\nWant to make any of these?",
       suggestions: ['Chicken soup', 'Something quick', 'Thank you'],
     };
   }
@@ -222,14 +222,14 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
   // --- THANK YOU / GOODBYE ---
   if (message.includes('thank') || message.includes('gracias') || message === "yes, thank you!") {
     return {
-      message: "De nada, mi amor! I'm always here for you. 💙\n\nRemember: you're not alone in this journey. One day at a time, one meal at a time.\n\nIs there anything else I can help you with?",
+      message: "De nada! I'm always here for you. 💙\n\nRemember: you're not alone in this journey. One day at a time, one meal at a time.\n\nIs there anything else I can help you with?",
       suggestions: ["No, I'm good", 'Yes, one more thing', 'See you later'],
     };
   }
 
   if (message === "no, i'm good" || message === 'see you later') {
     return {
-      message: "Take care of yourself, mi amor! 💙 Remember to stay hydrated and check in whenever you need me. ¡Hasta la próxima!",
+      message: "Take care of yourself! 💙 Remember to stay hydrated and check in whenever you need me. ¡Hasta la próxima!",
       suggestions: [],
     };
   }
@@ -334,14 +334,14 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
 
   if (context?.notFeelingWell || message.includes('sick') || message.includes('not feeling')) {
     return {
-      message: "Oh mi amor, I'm sorry you're not feeling well. 🤒 When you're sick, simple and gentle foods are best.\n\nWould you like ideas for easy-to-digest meals that won't upset your stomach?",
+      message: "Oh dear, I'm sorry you're not feeling well. 🤒 When you're sick, simple and gentle foods are best.\n\nWould you like ideas for easy-to-digest meals that won't upset your stomach?",
       suggestions: ['Yes, please', 'I need something warm', 'Just water for now'],
     };
   }
 
   if (message === 'just water for now') {
     return {
-      message: "That's totally fine, mi amor. Water is the best thing right now. 💧\n\nWhen you're ready to eat, start with something gentle like:\n• Clear broth\n• Plain crackers\n• A small banana\n• Some plain rice\n\nListen to your body. I'm here whenever you need me. 💛",
+      message: "That's totally fine. Water is the best thing right now. 💧\n\nWhen you're ready to eat, start with something gentle like:\n• Clear broth\n• Plain crackers\n• A small banana\n• Some plain rice\n\nListen to your body. I'm here whenever you need me. 💛",
       suggestions: ['Thank you', 'What should I eat later?'],
     };
   }
@@ -349,14 +349,14 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
   // --- MOOD-AWARE fallbacks (only fire when no topic matched and mood is set) ---
   if (context?.mood === 'anxious') {
     return {
-      message: "I hear you, mi amor. When you're feeling anxious, it's good to focus on one small thing at a time. 💛\n\nLet's start simple — are you hungry right now? I can suggest something easy and calming to eat, or we can just chat.",
+      message: "I hear you. When you're feeling anxious, it's good to focus on one small thing at a time. 💛\n\nLet's start simple — are you hungry right now? I can suggest something easy and calming to eat, or we can just chat.",
       suggestions: ['Something calm to eat', 'I need encouragement', 'What should I eat?'],
     };
   }
 
   if (context?.mood === 'sad') {
     return {
-      message: "I'm here for you, mi amor. 💙 It's okay to have a tough day. Sometimes a warm, comforting meal can help a little bit.\n\nWould you like me to suggest something cozy to eat, or just talk?",
+      message: "I'm here for you. 💙 It's okay to have a tough day. Sometimes a warm, comforting meal can help a little bit.\n\nWould you like me to suggest something cozy to eat, or just talk?",
       suggestions: ['Comfort food', 'I need encouragement', 'What should I eat?'],
     };
   }

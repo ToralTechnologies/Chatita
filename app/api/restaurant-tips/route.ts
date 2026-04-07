@@ -33,7 +33,7 @@ Dishes they're considering: ${dishes.join(', ')}
 
 Provide personalized diabetes-friendly ordering tips for EACH dish they selected, plus overall advice for this meal.
 
-Be specific, practical, and supportive. Use "mi amor" occasionally (user is Latina). Focus on:
+Be specific, practical, and supportive. Keep a warm, grandmotherly tone. Focus on:
 - Portion control
 - How to modify the dish (sauces on side, skip certain ingredients)
 - What to pair it with
@@ -46,7 +46,7 @@ Respond in JSON format:
     {
       "dish": "Grilled chicken salad",
       "tips": [
-        "Perfect choice, mi amor! Lean protein won't spike blood sugar.",
+        "Perfect choice! Lean protein won't spike blood sugar.",
         "Ask for dressing on the side - use only 1-2 tablespoons.",
         "Skip croutons or ask for a small amount (they add carbs).",
         "Add extra non-starchy veggies like cucumber, peppers."

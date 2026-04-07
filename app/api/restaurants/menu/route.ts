@@ -61,7 +61,7 @@ Rules:
     "moderate" = some carbs but manageable with small tweaks
     "caution"  = high carb / high sugar / fried — okay occasionally with care
 - carbEstimate: realistic net-carb range in grams for one typical serving (e.g. "8-14g").
-- tip: ONE short, actionable sentence about how to eat this dish in a diabetes-friendly way.  Be warm — user is Latina, occasional "mi amor" is fine.
+- tip: ONE short, actionable sentence about how to eat this dish in a diabetes-friendly way.  Be warm and supportive with a grandmotherly tone.
 
 Respond ONLY with valid JSON, no markdown, no extra text:
 {
@@ -109,7 +109,7 @@ Respond ONLY with valid JSON, no markdown, no extra text:
 function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
   const menus: Record<string, ReturnType<typeof buildDish>[]> = {
     Mexican: [
-      buildDish('Grilled Chicken Tacos', 'Entrée', 'moderate', '22-30g', 'Stick to 2 corn tortillas and load up on lettuce & salsa, mi amor.'),
+      buildDish('Grilled Chicken Tacos', 'Entrée', 'moderate', '22-30g', 'Stick to 2 corn tortillas and load up on lettuce & salsa.'),
       buildDish('Fish Tacos', 'Entrée', 'great', '14-20g', 'Great lean-protein choice — ask for corn tortillas, not flour.'),
       buildDish('Burrito Bowl (no tortilla)', 'Entrée', 'great', '18-25g', 'Skip the tortilla and limit rice to a few spoonfuls.'),
       buildDish('Fajita Vegetables & Chicken', 'Entrée', 'great', '8-12g', 'Focus on the veggies and protein — amazing for blood sugar.'),
@@ -118,7 +118,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
       buildDish('Agua Fresca (no sugar)', 'Beverage', 'great', '0g', 'Ask for unsweetened — agua con limón is refreshing and zero carb.'),
     ],
     Italian: [
-      buildDish('Grilled Salmon with Vegetables', 'Entrée', 'great', '6-10g', 'Omega-3 powerhouse — perfect pick, mi amor!'),
+      buildDish('Grilled Salmon with Vegetables', 'Entrée', 'great', '6-10g', 'Omega-3 powerhouse — perfect pick!'),
       buildDish('Chicken Parmigiana', 'Entrée', 'moderate', '20-28g', 'Ask for it without breading or with a light coating only.'),
       buildDish('Caprese Salad', 'Appetizer', 'great', '4-8g', 'Light, fresh, and low carb — a great starter.'),
       buildDish('Spaghetti Bolognese', 'Entrée', 'caution', '45-55g', 'If you have it, limit to a small bowl and add extra veggies.'),
@@ -137,7 +137,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
     ],
     Chinese: [
       buildDish('Steamed Fish with Ginger', 'Entrée', 'great', '2-6g', 'Light and flavourful — one of the healthiest picks here.'),
-      buildDish('Chicken & Broccoli Stir-Fry', 'Entrée', 'great', '8-14g', 'Ask for light sauce on the side, mi amor.'),
+      buildDish('Chicken & Broccoli Stir-Fry', 'Entrée', 'great', '8-14g', 'Ask for light sauce on the side.'),
       buildDish('Dumplings (steamed, 4 pcs)', 'Appetizer', 'moderate', '18-24g', 'Choose steamed over fried and limit to 3-4 pieces.'),
       buildDish('Egg Drop Soup', 'Appetizer', 'great', '3-5g', 'Protein-packed and low carb — a lovely starter.'),
       buildDish('Kung Pao Chicken', 'Entrée', 'moderate', '12-18g', 'Tasty but can be sweet — ask for less sauce.'),
@@ -147,7 +147,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
     Indian: [
       buildDish('Tandoori Chicken', 'Entrée', 'great', '2-5g', 'Grilled perfection — one of the best protein choices here.'),
       buildDish('Chana Masala', 'Entrée', 'moderate', '25-32g', 'High fibre! Skip the naan and have it with a salad instead.'),
-      buildDish('Spinach & Cottage Cheese (Palak Paneer)', 'Side', 'great', '6-10g', 'Rich in iron and fibre — a great side, mi amor.'),
+      buildDish('Spinach & Cottage Cheese (Palak Paneer)', 'Side', 'great', '6-10g', 'Rich in iron and fibre — a great side.'),
       buildDish('Garlic Naan', 'Side', 'caution', '30-38g', 'Very carb-heavy — skip or share one small piece.'),
       buildDish('Tikka Masala', 'Entrée', 'moderate', '15-22g', 'Creamy and tasty — ask for less sauce to keep portions manageable.'),
       buildDish('Basmati Rice', 'Side', 'caution', '35-45g', 'Limit to 1/3 cup if you\'re having it.'),
@@ -156,7 +156,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
     Mediterranean: [
       buildDish('Grilled Fish with Lemon & Herbs', 'Entrée', 'great', '0-3g', 'Stunning and diabetes-friendly — omega-3 city!'),
       buildDish('Greek Salad', 'Appetizer', 'great', '6-10g', 'Fresh veggies + feta — ask for dressing on the side.'),
-      buildDish('Grilled Chicken with Hummus', 'Entrée', 'great', '10-16g', 'Lean protein + healthy fats. A winning combo, mi amor.'),
+      buildDish('Grilled Chicken with Hummus', 'Entrée', 'great', '10-16g', 'Lean protein + healthy fats. A winning combo.'),
       buildDish('Lentil Soup', 'Appetizer', 'great', '15-20g', 'Super high in fibre — keeps blood sugar nice and steady.'),
       buildDish('Falafel Wrap', 'Entrée', 'moderate', '28-35g', 'Tasty but the wrap adds carbs — ask for lettuce wraps instead.'),
       buildDish('Warm Pita Bread', 'Side', 'caution', '26-32g', 'Skip it or have half a piece — it adds up.'),
@@ -172,7 +172,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
       buildDish('Iced Thai Tea (unsweetened)', 'Beverage', 'great', '0-2g', 'Fragrant and refreshing — just make sure no sugar is added.'),
     ],
     Vietnamese: [
-      buildDish('Pho with Lean Beef', 'Entrée', 'moderate', '30-38g', 'Ask for fewer noodles and extra vegetables, mi amor.'),
+      buildDish('Pho with Lean Beef', 'Entrée', 'moderate', '30-38g', 'Ask for fewer noodles and extra vegetables.'),
       buildDish('Grilled Lemongrass Chicken', 'Entrée', 'great', '2-5g', 'Beautifully flavoured and very low carb.'),
       buildDish('Fresh Spring Rolls', 'Appetizer', 'great', '10-14g', 'Light and fresh — much better than fried rolls.'),
       buildDish('Banh Mi Sandwich', 'Entrée', 'caution', '35-42g', 'The bread is the issue — ask for it in a lettuce wrap if possible.'),
@@ -193,7 +193,7 @@ function getFallbackMenu(cuisine: string): ReturnType<typeof buildDish>[] {
       buildDish('Greek Salad', 'Appetizer', 'great', '6-10g', 'Fresh and colourful — ask for olive oil & lemon on the side.'),
       buildDish('Grilled Fish Fillet', 'Entrée', 'great', '0-3g', 'Simple, light, and perfect for blood sugar.'),
       buildDish('Hummus with Vegetables', 'Appetizer', 'great', '8-12g', 'Healthy fats and fibre — skip the pita, use veggies to dip.'),
-      buildDish('Lamb Kebabs', 'Entrée', 'great', '2-6g', 'Flavourful and low carb — a great pick, mi amor.'),
+      buildDish('Lamb Kebabs', 'Entrée', 'great', '2-6g', 'Flavourful and low carb — a great pick.'),
       buildDish('Pita Bread', 'Side', 'caution', '26-32g', 'Limit to half a piece or skip entirely.'),
       buildDish('Greek Yogurt with Berries', 'Dessert', 'great', '12-18g', 'High protein dessert — berries are the cherry on top!'),
     ],

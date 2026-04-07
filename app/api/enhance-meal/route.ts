@@ -70,7 +70,7 @@ Respond in JSON format:
   ]
 }
 
-Be conversational, supportive, and culturally aware (user may be Latina). Use "mi amor" occasionally.`;
+Be conversational, supportive, and culturally aware (user may be Latina). Keep a warm, grandmotherly tone.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',

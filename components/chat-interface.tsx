@@ -11,16 +11,16 @@ interface ChatInterfaceProps {
 
 function getGreeting(ctx?: UserContext): string {
   if (ctx?.feelingOverwhelmed) {
-    return "Hi mi amor, I see you're feeling a bit overwhelmed. 💙 That's okay — let's take it one step at a time. How can I help you right now?";
+    return "Hi dear, I see you're feeling a bit overwhelmed. 💙 That's okay — let's take it one step at a time. How can I help you right now?";
   }
   if (ctx?.notFeelingWell) {
-    return "Hey there, mi amor. I see you're not feeling well today. 🤒 I'm here to help — just take things easy. What do you need?";
+    return "Hey there. I see you're not feeling well today. 🤒 I'm here to help — just take things easy. What do you need?";
   }
   if (ctx?.mood === 'anxious') {
-    return "Hi mi amor, I can see you're feeling anxious today. 💛 That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to chat with?";
+    return "Hi dear, I can see you're feeling anxious today. 💛 That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to chat with?";
   }
   if (ctx?.mood === 'sad') {
-    return "Hey there, mi amor. I'm sorry you're feeling down today. 💙 I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
+    return "Hey there. I'm sorry you're feeling down today. 💙 I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
   }
   if (ctx?.mood === 'tired') {
     return "Hi sweetheart! I see you're feeling tired today. 😴 Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
@@ -29,15 +29,15 @@ function getGreeting(ctx?: UserContext): string {
     return "Hi sweetheart! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
   }
   if (ctx?.mood === 'grateful') {
-    return "Hi mi amor! Love that you're feeling grateful today! 🥰 That positive energy helps everything. What can I help you with?";
+    return "Hi! Love that you're feeling grateful today! 🥰 That positive energy helps everything. What can I help you with?";
   }
   if (ctx?.mood === 'calm') {
     return "Hey there! Glad you're feeling calm today. 😌 Let's keep that good energy going. What can I help you with?";
   }
   if (ctx?.mood === 'happy') {
-    return "Hi mi amor! So happy to see you're in a great mood today! 😊 Let's keep it going — what can I help you with?";
+    return "Hi! So happy to see you're in a great mood today! 😊 Let's keep it going — what can I help you with?";
   }
-  return "Hello, mi amor! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
+  return "Hello! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
 }
 
 export default function ChatInterface({ userContext, onClose }: ChatInterfaceProps) {

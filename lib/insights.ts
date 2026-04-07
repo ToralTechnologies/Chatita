@@ -102,7 +102,7 @@ export function calculateWeeklyInsights(
     patterns.push({
       type: 'positive',
       title: 'Excellent glucose control! ⭐',
-      description: `You stayed in range ${timeInRange}% of the time. This is outstanding, mi amor! Keep up the great work.`,
+      description: `You stayed in range ${timeInRange}% of the time. This is outstanding! Keep up the great work.`,
       icon: '🎉',
     });
   }

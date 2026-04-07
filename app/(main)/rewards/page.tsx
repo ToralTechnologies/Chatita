@@ -148,7 +148,7 @@ export default function RewardsPage() {
         {/* Encouragement */}
         <div className="bg-success/10 border border-success/30 rounded-lg p-4">
           <p className="text-sm text-gray-700">
-            💚 <strong>You&apos;re doing great, mi amor!</strong> Every day you track is a step toward better health.
+            💚 <strong>You&apos;re doing great!</strong> Every day you track is a step toward better health.
             Keep going!
           </p>
         </div>

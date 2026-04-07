@@ -198,7 +198,7 @@ Provide insights in JSON format:
     {
       "type": "warning|success|tip|info",
       "title": "Short title (max 40 chars)",
-      "message": "Warm, encouraging message from Chatita (1-2 sentences, use 'mi amor' occasionally)",
+      "message": "Warm, encouraging message from Chatita (1-2 sentences, supportive grandmotherly tone)",
       "action": "Optional action button text"
     }
   ]

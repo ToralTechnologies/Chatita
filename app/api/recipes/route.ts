@@ -190,7 +190,7 @@ Requirements:
 - Prioritize lean proteins, healthy fats, and non-starchy vegetables
 - Include estimated carbs per serving (keep under 30g if possible)
 - Keep recipes simple (under 30 minutes prep time)
-- Be encouraging and supportive — use "mi amor" once or twice
+- Be encouraging and supportive — keep a warm, grandmotherly tone
 
 Respond in JSON format:
 {
