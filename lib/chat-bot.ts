@@ -207,7 +207,7 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
   // --- ENCOURAGEMENT / EMOTIONAL ---
   if (message.includes('hard') || message.includes('difficult') || message.includes('frustrated') || message === 'i need encouragement') {
     return {
-      message: "Mi querida, I know this is hard sometimes. But look at you — you're here, you're trying, and that matters so much. 💚\n\nEvery small step counts. Every meal you track, every time you check your glucose, every healthy choice — it all adds up.\n\nYou're doing better than you think. How can I help you today?",
+      message: "I know this is hard sometimes. But look at you — you're here, you're trying, and that matters so much. 💚\n\nEvery small step counts. Every meal you track, every time you check your glucose, every healthy choice — it all adds up.\n\nYou're doing better than you think. How can I help you today?",
       suggestions: ['I need meal ideas', 'Tell me more', 'Thank you'],
     };
   }
@@ -320,14 +320,14 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
   // --- CONTEXT-AWARE fallback (only when no specific topic matched above) ---
   if (context?.feelingOverwhelmed || message.includes('overwhelmed') || message.includes("don't know")) {
     return {
-      message: "Ay, mi querida, I understand. Let's breathe together first. 💙\n\nTake this one step at a time. What sounds easier for you right now — something quick to make, or help finding a healthy option nearby?",
+      message: "I understand. Let's breathe together first. 💙\n\nTake this one step at a time. What sounds easier for you right now — something quick to make, or help finding a healthy option nearby?",
       suggestions: ['Something quick at home', 'Find a restaurant', 'I need encouragement'],
     };
   }
 
   if (context?.onPeriod || context?.havingCravings || message.includes('craving') || message.includes('period')) {
     return {
-      message: "I hear you, sweetheart. During this time, your body needs extra care. It's okay to want comfort foods! 🩸\n\nLet's find something satisfying that also helps your blood sugar. What are you craving — something sweet, salty, or creamy?",
+      message: "I hear you. During this time, your body needs extra care. It's okay to want comfort foods! 🩸\n\nLet's find something satisfying that also helps your blood sugar. What are you craving — something sweet, salty, or creamy?",
       suggestions: ['Something sweet', 'Something salty', 'Comfort food'],
     };
   }
@@ -363,7 +363,7 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
 
   if (context?.mood === 'tired') {
     return {
-      message: "Sounds like you need some rest, sweetheart. 😴 Let's keep things super easy — no complicated meals today.\n\nWant me to find you something quick and simple to eat?",
+      message: "Sounds like you need some rest. 😴 Let's keep things super easy — no complicated meals today.\n\nWant me to find you something quick and simple to eat?",
       suggestions: ['Need something quick', 'Something warm', 'What should I eat?'],
     };
   }

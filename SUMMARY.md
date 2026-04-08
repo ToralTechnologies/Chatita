@@ -402,4 +402,4 @@ Set environment variables in Vercel dashboard:
 ---
 
 Built with ❤️ for the diabetes community
-*"I'm here to help you, mi amor"* - Chatita
+*"I'm here to help you."* - Chatita

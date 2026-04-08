@@ -18,7 +18,7 @@ Chatita now supports both English and Spanish! Users can switch between language
 
 ✅ **Cultural Awareness**
 - Spanish translations use authentic Latino phrasing
-- "mi amor" preserved in both languages
+- Warm, supportive tone preserved in both languages
 - Culturally appropriate terminology
 
 ## How to Use
@@ -190,7 +190,7 @@ export default function MyNewFeature() {
 - **Use authentic Spanish** - Not literal Google Translate
 - **Consider context** - "Save" = "Guardar" (general) vs "Ahorrar" (money)
 - **Cultural sensitivity** - Use Latino Spanish, not just Spain Spanish
-- **Preserve tone** - Keep the warm, caring voice ("mi amor")
+- **Preserve tone** - Keep the warm, caring grandmotherly voice
 - **Test thoroughly** - Check UI doesn't break with longer text
 
 ### Don'ts ❌
@@ -213,7 +213,7 @@ export default function MyNewFeature() {
 | Profile | Perfil | - |
 | Sign Out | Cerrar Sesión | Not "Desconectar" |
 | Loading... | Cargando... | - |
-| mi amor | mi amor | Same in both! |
+| You're doing great | Lo estás haciendo muy bien | Supportive without terms of endearment |
 
 ## Testing
 

@@ -37,7 +37,7 @@ Added an interactive dish selector that allows users to:
 
 ```
 🍽️ Burrito bowl
-• Skip the tortilla - saves 45g carbs, mi amor!
+• Skip the tortilla - saves 45g carbs!
 • Use the bowl as your portion guide
 • Load up with fajita veggies (free food!)
 
@@ -135,7 +135,7 @@ getCustomTips(restaurantId: string, restaurantName: string, cuisine: string)
     {
       "dish": "Burrito bowl",
       "tips": [
-        "Skip the tortilla - saves 45g carbs, mi amor!",
+        "Skip the tortilla - saves 45g carbs!",
         "Use the bowl as your portion guide",
         "Load up with fajita veggies (free food!)"
       ]
@@ -189,7 +189,7 @@ AI considers:
 2. **Meal composition** - Balance of macros across all dishes
 3. **Portion sizes** - Visual guides (fist, palm, deck of cards)
 4. **Diabetes management** - ADA guidelines, glycemic impact
-5. **Cultural sensitivity** - Uses "mi amor", understands Latino cuisine
+5. **Cultural sensitivity** - Warm, grandmotherly tone; understands Latino cuisine
 
 ## UI/UX Design
 
@@ -314,7 +314,7 @@ Based on user's history at this restaurant:
 - [ ] Overall advice shows at bottom
 - [ ] Estimated carbs and blood sugar impact included
 - [ ] Tips are specific to selected dishes
-- [ ] Cultural tone ("mi amor") present
+- [ ] Cultural tone (warm, grandmotherly) present
 
 ## Configuration
 

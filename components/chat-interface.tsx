@@ -23,10 +23,10 @@ function getGreeting(ctx?: UserContext): string {
     return "Hey there. I'm sorry you're feeling down today. 💙 I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
   }
   if (ctx?.mood === 'tired') {
-    return "Hi sweetheart! I see you're feeling tired today. 😴 Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
+    return "Hi! I see you're feeling tired today. 😴 Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
   }
   if (ctx?.onPeriod || ctx?.havingCravings) {
-    return "Hi sweetheart! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
+    return "Hi! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
   }
   if (ctx?.mood === 'grateful') {
     return "Hi! Love that you're feeling grateful today! 🥰 That positive energy helps everything. What can I help you with?";

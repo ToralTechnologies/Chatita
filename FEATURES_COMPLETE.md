@@ -418,7 +418,7 @@ NEXTAUTH_URL="https://your-domain.vercel.app"
 
 ### Chatita Personality
 - Warm, caring grandmother tone
-- Terms of endearment ("mi amor", "dear", "sweetheart")
+- Warm, supportive tone without terms of endearment
 - Mix of English & Spanish
 - Encouraging, never judgmental
 - Celebrates small wins
@@ -522,7 +522,7 @@ Every feature works. Every page is beautiful. Every interaction is thoughtful.
 
 Built with ❤️ for the diabetes community.
 
-*"I'm here to help you, mi amor"* - Chatita 💙
+*"I'm here to help you."* - Chatita 💙
 
 ---
 
