@@ -177,7 +177,7 @@ async function generateAIInsights(glucoseEntries: any[], meals: any[], userData:
     foods: m.foodEntries?.map((f: any) => f.foodName).join(', ') || m.detectedFoods || 'not specified',
   }));
 
-  const prompt = `You are Chatita, a warm and caring diabetes management assistant (like an abuela). Analyze this user's data and provide 3-5 actionable insights.
+  const prompt = `You are Chatita, a warm and caring diabetes management assistant (like an abuela). Analyze this user's data and provide 3-5 actionable insights. Use inclusive, gender-neutral language — do not use mijo, mija, mi amor, querido, querida, sweetheart, or any gendered terms of endearment.
 
 User Data (last ${dataSummary.glucoseReadings} days):
 - ${dataSummary.glucoseReadings} glucose readings, average ${dataSummary.averageGlucose} mg/dL

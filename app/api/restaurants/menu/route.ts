@@ -61,7 +61,7 @@ Rules:
     "moderate" = some carbs but manageable with small tweaks
     "caution"  = high carb / high sugar / fried — okay occasionally with care
 - carbEstimate: realistic net-carb range in grams for one typical serving (e.g. "8-14g").
-- tip: ONE short, actionable sentence about how to eat this dish in a diabetes-friendly way.  Be warm and supportive with a grandmotherly tone.
+- tip: ONE short, actionable sentence about how to eat this dish in a diabetes-friendly way. Be warm and supportive with a grandmotherly tone. Use inclusive, gender-neutral language — never use mijo, mija, mi amor, querido, querida, or any gendered terms.
 
 Respond ONLY with valid JSON, no markdown, no extra text:
 {

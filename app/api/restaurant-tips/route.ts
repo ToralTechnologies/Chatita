@@ -33,7 +33,7 @@ Dishes they're considering: ${dishes.join(', ')}
 
 Provide personalized diabetes-friendly ordering tips for EACH dish they selected, plus overall advice for this meal.
 
-Be specific, practical, and supportive. Keep a warm, grandmotherly tone. Focus on:
+Be specific, practical, and supportive. Keep a warm, grandmotherly tone. Use inclusive, gender-neutral language — do not use mijo, mija, mi amor, querido, querida, sweetheart, or any gendered terms. Focus on:
 - Portion control
 - How to modify the dish (sauces on side, skip certain ingredients)
 - What to pair it with

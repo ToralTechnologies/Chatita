@@ -70,7 +70,7 @@ Respond in JSON format:
   ]
 }
 
-Be conversational, supportive, and culturally aware (user may be Latina). Keep a warm, grandmotherly tone.`;
+Be conversational, supportive, and culturally aware. Keep a warm, grandmotherly tone. Do not use any terms of endearment or gendered language — avoid mijo, mija, mi amor, querido, querida, sweetheart, or similar. Use inclusive, gender-neutral language at all times.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',

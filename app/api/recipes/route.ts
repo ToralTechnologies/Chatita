@@ -190,7 +190,7 @@ Requirements:
 - Prioritize lean proteins, healthy fats, and non-starchy vegetables
 - Include estimated carbs per serving (keep under 30g if possible)
 - Keep recipes simple (under 30 minutes prep time)
-- Be encouraging and supportive — keep a warm, grandmotherly tone
+- Be encouraging and supportive — keep a warm, grandmotherly tone. Use inclusive, gender-neutral language — do not use mijo, mija, mi amor, querido, querida, sweetheart, or any gendered terms
 
 Respond in JSON format:
 {
