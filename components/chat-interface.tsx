@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Send, X, MessageCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { UserContext } from '@/types';
+import ChatOptionsMenu from './chat-options-menu';
 
 interface ChatInterfaceProps {
   userContext?: UserContext;
   onClose?: () => void;
+}
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  error?: boolean;
 }
 
 function getGreeting(ctx?: UserContext): string {
@@ -40,26 +48,29 @@ function getGreeting(ctx?: UserContext): string {
   return "Hello! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
 }
 
+function getInitialSuggestions(ctx?: UserContext): string[] {
+  if (ctx?.feelingOverwhelmed) return ['Something quick at home', 'Find a restaurant', 'I need encouragement'];
+  if (ctx?.notFeelingWell) return ['Yes, please', 'I need something warm', 'Just water for now'];
+  if (ctx?.mood === 'anxious') return ['Something calm to eat', 'I need encouragement', 'What should I eat?'];
+  if (ctx?.mood === 'sad') return ['Comfort food', 'I need encouragement', 'What should I eat?'];
+  if (ctx?.mood === 'tired') return ['Something quick', 'Need something quick', 'What should I eat?'];
+  if (ctx?.onPeriod || ctx?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
+  return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
+}
+
 export default function ChatInterface({ userContext, onClose }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<any[]>([
-    {
-      role: 'assistant',
-      content: getGreeting(userContext),
-      timestamp: new Date(),
-    },
-  ]);
+  const initialMessage: Message = {
+    role: 'assistant',
+    content: getGreeting(userContext),
+    timestamp: new Date(),
+  };
+
+  const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const getInitialSuggestions = (): string[] => {
-    if (userContext?.feelingOverwhelmed) return ['Something quick at home', 'Find a restaurant', 'I need encouragement'];
-    if (userContext?.notFeelingWell) return ['Yes, please', 'I need something warm', 'Just water for now'];
-    if (userContext?.mood === 'anxious') return ['Something calm to eat', 'I need encouragement', 'What should I eat?'];
-    if (userContext?.mood === 'sad') return ['Comfort food', 'I need encouragement', 'What should I eat?'];
-    if (userContext?.mood === 'tired') return ['Something quick', 'Need something quick', 'What should I eat?'];
-    if (userContext?.onPeriod || userContext?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
-    return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
-  };
-  const [suggestions, setSuggestions] = useState<string[]>(getInitialSuggestions);
+  const [suggestions, setSuggestions] = useState<string[]>(() => getInitialSuggestions(userContext));
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -70,19 +81,21 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async (messageText: string) => {
+  const sendMessage = useCallback(async (messageText: string) => {
     if (!messageText.trim() || loading) return;
 
-    const userMessage = {
+    const userMessage: Message = {
       role: 'user',
       content: messageText,
       timestamp: new Date(),
     };
 
-    setMessages([...messages, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
     setSuggestions([]);
+    setErrorMessage(null);
+    setLastFailedMessage(null);
 
     try {
       const response = await fetch('/api/chat', {
@@ -94,20 +107,32 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const assistantMessage = {
-          role: 'assistant',
-          content: data.message,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        setSuggestions(data.suggestions || []);
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
       }
+
+      const data = await response.json();
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.message,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setSuggestions(data.suggestions || []);
     } catch (error) {
       console.error('Failed to send message:', error);
+      setErrorMessage("I couldn't send that message. Please try again.");
+      setLastFailedMessage(messageText);
+      // Remove the user message we optimistically added
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
+    }
+  }, [loading, userContext]);
+
+  const handleRetry = () => {
+    if (lastFailedMessage) {
+      sendMessage(lastFailedMessage);
     }
   };
 
@@ -118,6 +143,43 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
   const handleSuggestionClick = (suggestion: string) => {
     sendMessage(suggestion);
+  };
+
+  const handleClearChat = async () => {
+    try {
+      await fetch('/api/chat', { method: 'DELETE' });
+      setMessages([{ ...initialMessage, timestamp: new Date() }]);
+      setSuggestions(getInitialSuggestions(userContext));
+      setErrorMessage(null);
+      setLastFailedMessage(null);
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+    }
+  };
+
+  const handleExportChat = () => {
+    const text = messages
+      .map((m) => {
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const sender = m.role === 'user' ? 'You' : 'Chatita';
+        return `[${time}] ${sender}: ${m.content}`;
+      })
+      .join('\n\n');
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chatita-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleNewChat = () => {
+    setMessages([{ ...initialMessage, timestamp: new Date() }]);
+    setSuggestions(getInitialSuggestions(userContext));
+    setErrorMessage(null);
+    setLastFailedMessage(null);
   };
 
   return (
@@ -131,14 +193,22 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
             <p className="text-xs text-gray-600">Your caring companion</p>
           </div>
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          <ChatOptionsMenu
+            onClearChat={handleClearChat}
+            onExportChat={handleExportChat}
+            onNewChat={handleNewChat}
+          />
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Close chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Active context tags banner */}
@@ -194,11 +264,28 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           </div>
         )}
 
+        {/* Error banner */}
+        {errorMessage && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">{errorMessage}</span>
+            {lastFailedMessage && (
+              <button
+                onClick={handleRetry}
+                className="flex items-center gap-1 text-xs font-medium text-red-700 hover:text-red-900 underline flex-shrink-0"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Suggestions */}
-      {suggestions.length > 0 && (
+      {suggestions.length > 0 && !loading && (
         <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
           <div className="flex flex-wrap gap-2">
             {suggestions.map((suggestion, index) => (

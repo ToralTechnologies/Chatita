@@ -8,11 +8,80 @@ interface ChatResponse {
 export function getChatResponse(userMessage: string, context?: UserContext): ChatResponse {
   const message = userMessage.toLowerCase().trim();
 
+  // --- EMERGENCY: Severe symptoms (check before everything else) ---
+  if (
+    message.includes('pass out') ||
+    message.includes('passing out') ||
+    message.includes('going to faint') ||
+    message.includes('blacking out') ||
+    message.includes('blackout') ||
+    message.includes('can\'t see') ||
+    message.includes('shaking uncontrollably') ||
+    message.includes('can\'t speak') ||
+    message.includes('feel like i\'m dying') ||
+    message.includes('feel like dying')
+  ) {
+    return {
+      message: "⚠️ This sounds like it could be a serious emergency.\n\nPlease call 911 right now or have someone nearby call for you. Do not wait.\n\nIf you can still swallow safely and someone confirms your blood sugar is very low:\n• 4 glucose tablets or 1/2 cup of juice\n• Then call for help immediately\n\nI'm not a doctor — please get emergency help now. 💙",
+      suggestions: ['I called for help', 'I feel a little better', 'Call my doctor'],
+    };
+  }
+
+  // --- URGENT: Dizziness, lightheadedness, shakiness ---
+  if (
+    message.includes('dizzy') ||
+    message.includes('lightheaded') ||
+    message.includes('light headed') ||
+    message.includes('feel faint') ||
+    message.includes('feeling faint') ||
+    message.includes('shaky') ||
+    message.includes('i\'m shaking') ||
+    message.includes('sweating a lot') ||
+    message.includes('heart racing') ||
+    message.includes('feel confused') ||
+    message.includes('feel weak') ||
+    message.includes('i feel weak')
+  ) {
+    return {
+      message: "These symptoms can be signs of a blood sugar issue — let's check a few things right away. 💙\n\n**First steps:**\n• Check your blood sugar now if you have your meter\n• Sit or lie down somewhere safe\n• Drink a glass of water\n\n**Questions for me to help you better:**\n• Have you eaten anything in the last 2-3 hours?\n• Do you have your glucose meter nearby?\n\nIf symptoms don't improve or get worse, please contact your doctor or go to urgent care. You know your body best — trust that instinct.\n\nI'm here with you. How are you feeling right now?",
+      suggestions: ['I checked — blood sugar is low', 'I checked — blood sugar is high', 'I haven\'t eaten recently', 'Calling my doctor'],
+    };
+  }
+
   // --- BLOOD SUGAR (urgent — always check first) ---
   if (message.includes('low') && (message.includes('blood') || message.includes('sugar') || message.includes('glucose') || message === 'still feeling low')) {
     return {
       message: "Low blood sugar needs quick attention! ⚠️\n\nHave 15g of fast-acting carbs:\n• 4 glucose tablets\n• 1/2 cup juice\n• 1 tablespoon honey\n\nThen recheck in 15 minutes. If still low, repeat. Once stable, have a balanced snack.\n\nAre you feeling okay?",
       suggestions: ["Yes, I'm okay", 'Still feeling low', 'What snack after?'],
+    };
+  }
+
+  // --- SYMPTOM FOLLOW-UPS (from triage suggestions) ---
+  if (message === 'i checked — blood sugar is low' || message === 'i checked blood sugar is low') {
+    return {
+      message: "Okay — low blood sugar needs quick action. ⚠️\n\n**Right now:**\n• Have 15g of fast-acting carbs:\n  - 4 glucose tablets\n  - 1/2 cup of juice or regular soda\n  - 1 tablespoon of honey\n• Sit down and rest\n• Recheck in 15 minutes\n\nIf it doesn't come up or you feel worse, please call someone to be with you or go to urgent care.\n\nI'm not a doctor — please contact your healthcare provider if this keeps happening. How are you doing right now?",
+      suggestions: ['I had juice, waiting 15 min', 'I\'m feeling better', 'Still not great'],
+    };
+  }
+
+  if (message === 'i checked — blood sugar is high' || message === 'i checked blood sugar is high') {
+    return {
+      message: "Thank you for checking. A high reading with symptoms needs attention. 💙\n\n**Right now:**\n• Drink water — stay hydrated\n• Avoid more sugar or carbs\n• Rest if you feel dizzy or tired\n• Check again in 30-60 minutes\n\nIf your reading is very high (above 300 mg/dL), or symptoms are getting worse — please call your doctor or go to urgent care. Don't wait.\n\nI'm not a doctor — always trust your care team's guidance. How are you feeling?",
+      suggestions: ['I\'m drinking water', 'Calling my doctor', 'Symptoms are getting worse'],
+    };
+  }
+
+  if (message === 'i haven\'t eaten recently' || message === 'i haven\'t eaten' || message === 'i didn\'t eat') {
+    return {
+      message: "That could definitely be why you're feeling off. Not eating for several hours can cause blood sugar to drop, especially for people with diabetes. 💙\n\n**Try this right now:**\n• Have a small snack with both carbs and protein\n  - Crackers with peanut butter\n  - Cheese and a few grapes\n  - A small banana\n• Drink some water\n• Sit down while you eat\n\nIf you have your meter, it would help to check your blood sugar first so you know where you're starting.\n\nPlease reach out to your doctor if you feel like this often. They can help adjust your meal timing plan. How are you feeling?",
+      suggestions: ['I have a snack now', 'I\'ll check my blood sugar', 'Feeling a little better'],
+    };
+  }
+
+  if (message === 'symptoms are getting worse' || message === 'getting worse') {
+    return {
+      message: "Please don't wait — if your symptoms are getting worse, contact your doctor or go to urgent care right now. 💙\n\nIf you feel like you may lose consciousness, call 911 or have someone nearby call for you.\n\nI care about your safety. Please get help now — I'm not able to provide medical treatment, but your doctor can. 🙏",
+      suggestions: ['Calling 911', 'Going to urgent care', 'Someone is with me'],
     };
   }
 
@@ -231,6 +300,45 @@ export function getChatResponse(userMessage: string, context?: UserContext): Cha
     return {
       message: "Take care of yourself! 💙 Remember to stay hydrated and check in whenever you need me. ¡Hasta la próxima!",
       suggestions: [],
+    };
+  }
+
+  // --- POST-MEAL FOLLOW-UP: How are you feeling after eating? ---
+  if (
+    message.includes('just ate') ||
+    message.includes('just finished eating') ||
+    message.includes('just had') ||
+    message.includes('finished my meal') ||
+    message.includes('done eating') ||
+    message === 'i ate' ||
+    message === 'i just ate'
+  ) {
+    return {
+      message: "Good! Now let's check in with how you're feeling. 💙\n\nAfter meals, it's helpful to notice:\n• How does your stomach feel — comfortable or heavy?\n• Any signs of a blood sugar rise (thirst, headache, tiredness)?\n• How's your energy level?\n\nIf you have your meter, checking your blood sugar about 2 hours after eating can tell you a lot about how that meal affected you.\n\nHow are you feeling right now?",
+      suggestions: ['I feel good', 'Feeling a bit tired', 'I think my blood sugar spiked', 'I want to log this meal'],
+    };
+  }
+
+  if (
+    message === 'i feel good' ||
+    message.includes('feeling good after') ||
+    message.includes('feeling great after')
+  ) {
+    return {
+      message: "That's wonderful to hear! 🌟 That's a great sign that the meal worked well for your blood sugar.\n\nKeep noting what foods make you feel this way — over time you'll build a really helpful picture of what works best for your body.\n\nIs there anything else I can help you with?",
+      suggestions: ['Log this meal', 'What should I eat next?', 'Thank you'],
+    };
+  }
+
+  if (
+    message === 'i think my blood sugar spiked' ||
+    message.includes('blood sugar went up') ||
+    message.includes('spike after eating') ||
+    message.includes('spiked after')
+  ) {
+    return {
+      message: "I hear you. Post-meal spikes happen, especially with higher-carb foods. 💙\n\n**Right now:**\n• Drink some water\n• A short walk (even 10 minutes) can help lower blood sugar naturally\n• Avoid more carbs for the next few hours\n\n**For next time:**\n• Try eating your vegetables and protein first, then carbs\n• Smaller portions of high-carb items\n• Add fiber (salad, veggies) to slow absorption\n\nIf spikes happen often after meals, it's worth talking to your doctor about it. They can help adjust your plan.\n\nWould you like to log this meal so you can track the pattern?",
+      suggestions: ['Log this meal', 'What to eat next?', 'Call my doctor'],
     };
   }
 

@@ -41,6 +41,7 @@ model User {
   dexcomIntegration   DexcomIntegration?
   libreIntegration    LibreIntegration?
   mealFollowUps       MealFollowUp[]
+  chatPreference      ChatPreference?
 }
 
 // NextAuth models for OAuth and session management
@@ -478,6 +479,20 @@ model LibreIntegration {
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
+}
+
+model ChatPreference {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  communicationStyle   String   @default("warm")      // "warm" | "professional" | "casual"
+  responseLength       String   @default("medium")    // "short" | "medium" | "detailed"
+  enableNotifications  Boolean  @default(true)
+  notificationTime     String?                        // "09:00"
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 // Post-meal check-in follow-up
