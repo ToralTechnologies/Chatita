@@ -70,7 +70,7 @@ Respond in JSON format:
 Keep tips short (1 sentence each), actionable, and encouraging.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       messages: [
         {

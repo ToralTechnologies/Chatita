@@ -178,7 +178,7 @@ restaurantPlaceId String? // Google Place ID for reference
 ## Cost Considerations
 
 **AI Enhancement API:**
-- Uses Claude 3.5 Sonnet
+- Uses 'Claude' 3.5 Sonnet
 - ~1,000 tokens per request
 - Cost: ~$0.003 per enhancement
 - Only triggered when user clicks the button (not automatic)

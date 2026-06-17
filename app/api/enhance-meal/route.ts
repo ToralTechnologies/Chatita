@@ -73,7 +73,7 @@ Respond in JSON format:
 Be conversational, supportive, and culturally aware. Keep a warm, grandmotherly tone. Do not use any terms of endearment or gendered language — avoid mijo, mija, mi amor, querido, querida, sweetheart, or similar. Use inclusive, gender-neutral language at all times.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [
         {
