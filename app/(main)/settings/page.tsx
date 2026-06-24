@@ -3,6 +3,7 @@
 import { signOut } from 'next-auth/react';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import LanguageSwitcher from '@/components/language-switcher';
 import { useTranslation } from '@/lib/i18n/context';
@@ -652,6 +653,11 @@ function SettingsContent() {
             >
               {t.auth.logout}
             </button>
+            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-4 text-xs text-gray-secondary">
+              <Link href="/privacy" className="hover:text-primary hover:underline">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-primary hover:underline">Terms of Use</Link>
+              <Link href="/consent" className="hover:text-primary hover:underline">Consent</Link>
+            </div>
           </div>
         </div>
       </div>

@@ -40,7 +40,7 @@ export const translations = {
       welcome: 'Welcome back',
       greeting: 'Hello {name}',
       subtitle: 'How are you feeling today?',
-      disclaimer: 'Chatita provides general guidance only. Always consult your healthcare provider for medical decisions.',
+      disclaimer: '⚠️ Chatita is not a medical device and does not provide medical advice. It is not a substitute for professional medical care. In an emergency, call 911 immediately. Always consult your healthcare provider before making changes to your diabetes management.',
       quickActions: {
         findRestaurants: 'Find Restaurants',
         scanMenu: 'Scan Menu',
@@ -453,7 +453,7 @@ export const translations = {
       welcome: 'Bienvenida de nuevo',
       greeting: 'Hola {name}',
       subtitle: '¿Cómo te sientes hoy?',
-      disclaimer: 'Chatita proporciona orientación general solamente. Siempre consulte a su proveedor de atención médica para decisiones médicas.',
+      disclaimer: '⚠️ Chatita no es un dispositivo médico y no proporciona asesoramiento médico. No sustituye la atención médica profesional. En caso de emergencia, llame al 911 de inmediato. Siempre consulte a su proveedor de atención médica antes de realizar cambios en el manejo de su diabetes.',
       quickActions: {
         findRestaurants: 'Buscar Restaurantes',
         scanMenu: 'Escanear Menú',

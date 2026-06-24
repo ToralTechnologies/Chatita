@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
+import { checkRateLimit, recordAiUsage } from '@/lib/rate-limit';
 
 const ENABLE_AI = process.env.ENABLE_AI_ANALYSIS === 'true';
 
@@ -21,6 +22,14 @@ export async function POST(request: Request) {
       });
     }
 
+    const limit = await checkRateLimit(session.user.id, 'enhance-meal');
+    if (!limit.allowed) {
+      return NextResponse.json({
+        mode: '$0',
+        message: 'AI enhancement limit reached. Please add nutrition manually.',
+      });
+    }
+
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
@@ -30,7 +39,7 @@ export async function POST(request: Request) {
     const portionInfo = portionSize ? `Portion size: ${portionSize}` : '';
     const mealInfo = mealType ? `Meal type: ${mealType}` : '';
 
-    const prompt = `You are a diabetes-friendly nutrition assistant. A user is manually logging a meal without a photo.
+    const prompt = `You are a diabetes-aware nutrition assistant helping someone log a meal. Your approach is culturally sensitive, balance-focused, and non-judgmental. You focus on HOW MUCH and HOW TO BALANCE — not on whether the food is "allowed."
 
 User provided:
 - Foods: ${foodsList}
@@ -38,42 +47,54 @@ ${portionInfo ? `- ${portionInfo}` : ''}
 ${mealInfo ? `- ${mealInfo}` : ''}
 
 Your task:
-1. Ask 2-3 clarifying questions to better estimate nutrition (portion sizes, cooking method, ingredients)
-2. Based on the information provided, give your best estimate of nutrition values
-3. Provide diabetes-friendly tips specific to this meal
+1. Ask 1-2 clarifying questions focused on portion size and preparation (not "is this a good food")
+2. Give your best nutrition estimate — fiber and protein are PRIMARY metrics alongside carbs
+3. Give culturally aware, balance-focused guidance
+
+KEY PRINCIPLES:
+- NEVER suggest replacing a cultural food. Adjust portion, preparation, or add complementary foods.
+- Low carb alone ≠ good meal. Assess balance: protein + fiber + healthy fats + appropriate carbs.
+- Focus on "here is how much" not "don't eat this."
+- Explain WHY your tips matter (fiber slows glucose absorption, protein prevents spikes, etc.)
+- If this is a cultural dish, name it properly and honor it.
 
 Respond in JSON format:
 {
   "questions": [
-    "How was the chicken prepared (grilled, fried, baked)?",
-    "What was the approximate portion size (e.g., size of your palm, 1 cup)?",
-    "Were there any sauces or dressings?"
+    "What was the approximate portion of rice — about 1/2 cup, 1 cup, or more?",
+    "Was the chicken grilled, fried, or braised?"
   ],
   "nutritionEstimate": {
-    "calories": 350,
-    "carbs": 25,
-    "protein": 35,
-    "fat": 12,
-    "fiber": 5,
-    "sugar": 3,
+    "calories": 520,
+    "carbs": 55,
+    "protein": 28,
+    "fat": 14,
+    "fiber": 6,
+    "sugar": 4,
     "confidence": "medium",
     "note": "Estimates based on typical portions. Actual values may vary."
   },
+  "mealBalance": {
+    "balanceScore": "mostly-balanced",
+    "balanceReason": "Good protein from chicken supports steady blood sugar. Adding a fiber-rich side would make this even better.",
+    "portionGuidance": "A fist-sized portion of rice (about 1/2 cup cooked) paired with a palm-sized protein is a practical starting point."
+  },
   "diabetesTips": [
-    "Great protein choice! Grilled chicken is lean and won't spike blood sugar.",
-    "If this had a sauce, ask for it on the side next time to control sugar intake.",
-    "Pair with non-starchy vegetables to add fiber and nutrients."
+    "The fiber in beans slows how quickly the carbs in tortillas raise blood sugar — they're a great combination.",
+    "Eating protein before carbs (or at the same time) helps slow glucose absorption.",
+    "If there's a sauce or dressing, asking for it on the side lets you control the amount."
   ],
+  "culturalNote": "Carne asada tacos are a complete meal. Two corn tortillas with protein and salsa is a reasonable, satisfying portion.",
   "suggestions": [
     "Add portion size for more accurate estimates",
     "Include cooking method (grilled, fried, etc.)"
   ]
 }
 
-Be conversational, supportive, and culturally aware. Keep a warm, grandmotherly tone. Do not use any terms of endearment or gendered language — avoid mijo, mija, mi amor, querido, querida, sweetheart, or similar. Use inclusive, gender-neutral language at all times.`;
+Use inclusive, gender-neutral language. Be warm and supportive. Do not use terms of endearment (mijo, mija, mi amor, sweetheart, etc.).`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       messages: [
         {
@@ -95,6 +116,8 @@ Be conversational, supportive, and culturally aware. Keep a warm, grandmotherly 
     }
 
     const aiResponse = JSON.parse(jsonMatch[0]);
+
+    await recordAiUsage(session.user.id, 'enhance-meal');
 
     return NextResponse.json({
       mode: 'ai',

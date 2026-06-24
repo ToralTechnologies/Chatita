@@ -95,18 +95,18 @@ export const authOptions: NextAuthOptions = {
 
       // Check allowlist for all sign-in attempts
       if (!isEmailAllowed(user.email)) {
-        console.warn(`🚫 Access denied for unauthorized email: ${user.email}`);
+        console.warn(`🚫 Access denied for unauthorized user: ${user.id}`);
 
         // For OAuth providers, redirect with error
         if (account?.provider !== 'credentials') {
-          return `/auth/access-denied?email=${encodeURIComponent(user.email)}`;
+          return `/auth/access-denied`;
         }
 
         // For credentials, throw error (handled by authorize)
         return false;
       }
 
-      console.log(`✅ Sign-in allowed for: ${user.email}`);
+      console.log(`✅ Sign-in allowed for user: ${user.id}`);
       return true;
     },
 
@@ -126,7 +126,7 @@ export const authOptions: NextAuthOptions = {
         // Re-validate email allowlist on every session request
         // This ensures users lose access immediately if removed from allowlist
         if (session.user.email && !isEmailAllowed(session.user.email)) {
-          console.warn(`🚫 Session invalidated for removed email: ${session.user.email}`);
+          console.warn(`🚫 Session invalidated for user: ${session.user.id}`);
           throw new Error('Your access has been revoked. Please contact support.');
         }
       }
@@ -135,10 +135,10 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async signIn({ user, isNewUser }) {
-      console.log(`👤 User signed in: ${user.email} (new: ${isNewUser})`);
+      console.log(`👤 User signed in: ${user.id} (new: ${isNewUser})`);
     },
     async signOut({ token }) {
-      console.log(`👋 User signed out: ${token.email}`);
+      console.log(`👋 User signed out: ${token.sub}`);
     },
   },
   debug: process.env.NODE_ENV === 'development',

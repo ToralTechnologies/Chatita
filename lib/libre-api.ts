@@ -3,6 +3,7 @@
  * Unofficial API for FreeStyle Libre CGM data via LibreLinkUp
  * Based on: https://github.com/DiaKEM/libre-link-up-api-client
  */
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 interface LibreAuthResponse {
   status: number;
@@ -296,15 +297,43 @@ export class LibreLinkUpClient {
 }
 
 /**
- * Encrypt password for storage (simple Base64 - in production use proper encryption)
+ * Encrypt password for storage using AES-256-GCM.
+ * Requires ENCRYPTION_KEY env var (64 hex chars = 32 bytes).
+ * Stored format: iv:authTag:ciphertext (all hex, colon-delimited)
  */
 export function encryptPassword(password: string): string {
-  return Buffer.from(password).toString('base64');
+  const keyHex = process.env.ENCRYPTION_KEY;
+  if (!keyHex || keyHex.length !== 64) {
+    throw new Error('ENCRYPTION_KEY must be a 64-char hex string (32 bytes)');
+  }
+  const key = Buffer.from(keyHex, 'hex');
+  const iv = randomBytes(12); // 96-bit IV for GCM
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
 /**
- * Decrypt password from storage
+ * Decrypt password from storage (AES-256-GCM).
+ * Handles both legacy Base64 and new iv:authTag:ciphertext format.
  */
 export function decryptPassword(encrypted: string): string {
+  // Detect new format
+  const parts = encrypted.split(':');
+  if (parts.length === 3) {
+    const keyHex = process.env.ENCRYPTION_KEY;
+    if (!keyHex || keyHex.length !== 64) {
+      throw new Error('ENCRYPTION_KEY must be a 64-char hex string (32 bytes)');
+    }
+    const key = Buffer.from(keyHex, 'hex');
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const ciphertext = Buffer.from(parts[2], 'hex');
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    return decipher.update(ciphertext).toString('utf8') + decipher.final('utf8');
+  }
+  // Legacy Base64 fallback (for existing stored values)
   return Buffer.from(encrypted, 'base64').toString('utf-8');
 }

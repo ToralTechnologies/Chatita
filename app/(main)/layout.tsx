@@ -1,11 +1,16 @@
-'use client';
-
-import { SessionProvider } from 'next-auth/react';
+import SessionProviderWrapper from '@/components/session-provider-wrapper';
+import BetaBanner from '@/components/beta-banner';
+import { isBeta } from '@/lib/env';
 
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <SessionProviderWrapper>
+      {isBeta && <BetaBanner />}
+      {children}
+    </SessionProviderWrapper>
+  );
 }

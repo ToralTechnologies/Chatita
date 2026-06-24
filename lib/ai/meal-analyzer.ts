@@ -16,7 +16,13 @@ interface MealAnalysisResult {
     sugar?: number;
     sodium?: number;
   };
-  nutritionSummary?: string; // "~35g carbs • 420 cal"
+  mealBalance?: {
+    balanceScore: 'well-balanced' | 'mostly-balanced' | 'needs-balance';
+    balanceReason: string;
+    portionGuidance: string;
+    culturalNote: string | null;
+  };
+  nutritionSummary?: string; // "~35g carbs • 8g fiber • 40g protein • 450 cal"
   portionSize?: string;
   confidence: number;
   mode: 'ai' | '$0';
@@ -72,7 +78,7 @@ export async function analyzeMealPhoto(photoBase64: string): Promise<MealAnalysi
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
         messages: [
           {
@@ -88,67 +94,78 @@ export async function analyzeMealPhoto(photoBase64: string): Promise<MealAnalysi
               },
               {
                 type: 'text',
-                text: `You are a nutrition expert analyzing meal photos for people with diabetes following ADA (American Diabetes Association) guidelines.
+                text: `You are a nutrition expert analyzing meal photos for people with diabetes, following ADA (American Diabetes Association) guidelines. Your approach is culturally sensitive and balance-focused — you celebrate food from all cultures and focus on balance, not restriction.
 
 Analyze this meal image and return ONLY a valid JSON object (no markdown, no code blocks, just the JSON) with:
 
-1. allDetectedDishes: Array of ALL food items/dishes visible in the photo (not just what the user might eat)
-   - Include everything visible: their meal, other people's food, shared dishes, etc.
-   - Each item should be specific (e.g., "grilled chicken breast", "steamed broccoli", "brown rice")
+1. allDetectedDishes: Array of ALL food items/dishes visible in the photo
+   - Include everything visible: their meal, other people's food, shared dishes
+   - Be specific AND culturally accurate (e.g., "carne asada taco", "biryani rice", "dal tadka", "pho bo")
 
-2. needsSelection: boolean - true if there are multiple distinct dishes/meals (likely not all for the user)
+2. needsSelection: boolean - true if multiple distinct dishes/meals are visible (likely not all for the user)
 
-3. detectedFoods: Array of most likely food items for the user (your best guess if it's clearly one meal)
+3. detectedFoods: Array of most likely food items for the user
 
-4. aiSummary: Short, friendly human-readable summary of the meal (e.g., "chicken tacos with salsa", "grilled salmon salad")
-   - Keep it natural and conversational
-   - 3-6 words maximum
+4. aiSummary: Short, friendly human-readable summary (e.g., "chicken biryani with raita", "carne asada tacos with beans")
+   - Be culturally specific — name the actual dish, not a generic Western equivalent
+   - 3-7 words
 
-5. nutrition: Object with estimated nutritional values FOR THE DETECTED USER MEAL:
-   - calories (number): total estimated calories
-   - carbs (number): carbohydrates in grams
-   - protein (number): protein in grams
-   - fat (number): fat in grams
-   - fiber (number): fiber in grams (important for diabetes)
-   - sugar (number): sugar in grams
-   - sodium (number): sodium in mg
+5. nutrition: Estimated nutritional values FOR THE DETECTED USER MEAL:
+   - calories (number)
+   - carbs (number): grams — this is a PRIMARY metric
+   - protein (number): grams — this is a PRIMARY metric
+   - fat (number): grams
+   - fiber (number): grams — this is a PRIMARY metric (fiber slows glucose absorption)
+   - sugar (number): grams
+   - sodium (number): mg
 
-6. portionSize: Estimated serving size for the user's meal (e.g., "1 cup", "6 oz", "1 medium plate")
+6. mealBalance: An assessment of the meal's overall balance:
+   - balanceScore: "well-balanced" | "mostly-balanced" | "needs-balance"
+   - balanceReason: WHY (e.g., "Good protein and fiber, moderate carbs" or "High carbs, low fiber and protein — consider adding beans or vegetables")
+   - portionGuidance: Practical visual portion guidance (e.g., "Rice portion looks about 1 cup — a half cup would slow glucose impact")
+   - culturalNote: If this is a cultural dish, how to enjoy it while supporting blood sugar (NEVER suggest replacing the dish — suggest portion or preparation adjustments)
 
-7. confidence: Your confidence level 0-100 in this analysis
+7. portionSize: Estimated serving size (e.g., "1 cup rice + 4oz chicken")
 
-IMPORTANT:
-- If you see multiple distinct meals/plates (e.g., dining with others), set needsSelection=true
-- If it's clearly one person's meal, set needsSelection=false
-- Be conservative with estimates
-- Focus on carbs and fiber (critical for blood sugar management)
-- Return ONLY the JSON object, nothing else
+8. confidence: Your confidence 0-100
 
-Example format (multiple dishes visible):
+KEY PRINCIPLES:
+- Fiber is as important as carbs. A meal with 8g fiber and 45g carbs is MUCH better than 45g carbs with 0g fiber.
+- Low carb alone does NOT mean a good meal. Protein alone (e.g., plain chicken) without fiber or carbs is not balanced.
+- NEVER suggest replacing cultural foods. Instead suggest portion adjustments or complementary additions.
+- Be conservative with estimates.
+
+Example (cultural meal):
 {
-  "allDetectedDishes": ["grilled chicken breast with broccoli", "cheese pizza slice", "caesar salad", "french fries", "soda"],
-  "needsSelection": true,
-  "detectedFoods": ["grilled chicken breast", "steamed broccoli"],
-  "aiSummary": "grilled chicken with broccoli",
+  "allDetectedDishes": ["chicken biryani", "raita", "sliced cucumber"],
+  "needsSelection": false,
+  "detectedFoods": ["chicken biryani", "raita"],
+  "aiSummary": "chicken biryani with raita",
   "nutrition": {
-    "calories": 350,
-    "carbs": 15,
-    "protein": 40,
-    "fat": 12,
-    "fiber": 5,
-    "sugar": 3,
-    "sodium": 650
+    "calories": 520,
+    "carbs": 65,
+    "protein": 28,
+    "fat": 14,
+    "fiber": 4,
+    "sugar": 5,
+    "sodium": 780
   },
-  "portionSize": "1 medium plate",
-  "confidence": 70
+  "mealBalance": {
+    "balanceScore": "mostly-balanced",
+    "balanceReason": "Good protein from chicken, but fiber is low. The raita adds calcium and probiotics.",
+    "portionGuidance": "Rice portion looks about 1.5 cups — try 1 cup next time and add the extra cucumber salad to fill up.",
+    "culturalNote": "Biryani is a complete meal. Enjoy it — adding a side salad or extra raita boosts fiber without changing the dish."
+  },
+  "portionSize": "1.5 cups biryani + 3oz raita",
+  "confidence": 72
 }
 
-Example format (single meal):
+Example (simple meal):
 {
-  "allDetectedDishes": ["grilled chicken breast", "steamed broccoli", "quinoa"],
+  "allDetectedDishes": ["grilled chicken breast", "steamed broccoli", "brown rice"],
   "needsSelection": false,
-  "detectedFoods": ["grilled chicken breast", "steamed broccoli", "quinoa"],
-  "aiSummary": "chicken bowl with quinoa",
+  "detectedFoods": ["grilled chicken breast", "steamed broccoli", "brown rice"],
+  "aiSummary": "grilled chicken with broccoli and rice",
   "nutrition": {
     "calories": 450,
     "carbs": 35,
@@ -158,7 +175,13 @@ Example format (single meal):
     "sugar": 3,
     "sodium": 650
   },
-  "portionSize": "1 medium plate",
+  "mealBalance": {
+    "balanceScore": "well-balanced",
+    "balanceReason": "Great protein (40g), good fiber (8g), and moderate carbs — a well-balanced plate that will support steady blood sugar.",
+    "portionGuidance": "Portions look right-sized. Rice is about 1/2 cup, chicken about 4oz.",
+    "culturalNote": null
+  },
+  "portionSize": "4oz chicken + 1/2 cup rice + 1 cup broccoli",
   "confidence": 85
 }`,
               },
@@ -193,17 +216,14 @@ Example format (single meal):
     // Auto-detect meal type based on current time
     const mealType = detectMealType();
 
-    // Generate nutrition summary
-    const carbs = result.nutrition?.carbs;
-    const calories = result.nutrition?.calories;
-    let nutritionSummary = '';
-    if (carbs && calories) {
-      nutritionSummary = `~${Math.round(carbs)}g carbs • ${Math.round(calories)} cal`;
-    } else if (carbs) {
-      nutritionSummary = `~${Math.round(carbs)}g carbs`;
-    } else if (calories) {
-      nutritionSummary = `~${Math.round(calories)} cal`;
-    }
+    // Generate nutrition summary — fiber and protein are now primary metrics alongside carbs
+    const { carbs, fiber, protein, calories } = result.nutrition ?? {};
+    const summaryParts: string[] = [];
+    if (carbs != null) summaryParts.push(`~${Math.round(carbs)}g carbs`);
+    if (fiber != null) summaryParts.push(`${Math.round(fiber)}g fiber`);
+    if (protein != null) summaryParts.push(`${Math.round(protein)}g protein`);
+    if (calories != null) summaryParts.push(`${Math.round(calories)} cal`);
+    const nutritionSummary = summaryParts.join(' • ');
 
     return {
       detectedFoods: result.detectedFoods || [],
@@ -212,6 +232,7 @@ Example format (single meal):
       aiSummary: result.aiSummary,
       mealType,
       nutrition: result.nutrition || {},
+      mealBalance: result.mealBalance,
       nutritionSummary,
       portionSize: result.portionSize,
       confidence: result.confidence || 0,

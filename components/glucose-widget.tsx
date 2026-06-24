@@ -281,9 +281,21 @@ export default function GlucoseWidget({
             </div>
           </div>
 
+          {/* Clinical safety banners — deterministic, non-dismissible */}
+          {currentValue !== undefined && currentValue < 54 && (
+            <div className="mt-4 p-3 bg-red-100 border border-red-500 rounded-lg text-red-800 text-sm font-medium">
+              ⚠️ This reading may be an emergency. Seek medical care immediately.
+            </div>
+          )}
+          {currentValue !== undefined && currentValue > 250 && (
+            <div className="mt-4 p-3 bg-orange-100 border border-orange-500 rounded-lg text-orange-800 text-sm font-medium">
+              ⚠️ This is a very high reading. Contact your healthcare provider.
+            </div>
+          )}
+
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full border border-primary text-primary py-2 rounded-lg hover:bg-primary/5 transition-colors"
+            className="w-full mt-4 border border-primary text-primary py-2 rounded-lg hover:bg-primary/5 transition-colors"
           >
             {currentValue ? 'Update Reading' : 'Add Reading'}
           </button>

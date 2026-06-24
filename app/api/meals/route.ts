@@ -92,6 +92,8 @@ export async function POST(request: Request) {
       finalNutritionSource = 'usda'; // Most likely from USDA/barcode database
     }
 
+    // SECURITY: EXIF GPS data (if extracted from photo) is intentionally NOT stored here.
+    // The Meal model has no GPS column and no GPS field is passed to prisma.meal.create().
     const meal = await prisma.meal.create({
       data: {
         userId: session.user.id,

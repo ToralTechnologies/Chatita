@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzeMealPhoto } from '@/lib/ai/meal-analyzer';
+import { checkRateLimit, recordAiUsage } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +20,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Rate limit check
+    const limit = await checkRateLimit(session.user.id, 'analyze-meal');
+    if (!limit.allowed) {
+      return NextResponse.json({
+        message: 'AI analysis limit reached. Please add foods manually.',
+        mode: '$0',
+        detectedFoods: [],
+        nutrition: {},
+      });
+    }
+
     // Analyze the meal photo
     const analysis = await analyzeMealPhoto(photoBase64);
 
@@ -31,6 +43,8 @@ export async function POST(request: Request) {
         nutrition: {},
       });
     }
+
+    await recordAiUsage(session.user.id, 'analyze-meal');
 
     // Return AI analysis
     return NextResponse.json({

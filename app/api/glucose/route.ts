@@ -83,7 +83,18 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ entry }, { status: 201 });
+    // Clinical safety flags — deterministic, non-AI
+    let emergencyFlag = false;
+    let emergencySeverity: 'critical-low' | 'critical-high' | null = null;
+    if (entry.value < 54) {
+      emergencyFlag = true;
+      emergencySeverity = 'critical-low';
+    } else if (entry.value > 250) {
+      emergencyFlag = true;
+      emergencySeverity = 'critical-high';
+    }
+
+    return NextResponse.json({ entry, emergencyFlag, emergencySeverity }, { status: 201 });
   } catch (error) {
     console.error('Glucose create error:', error);
     return NextResponse.json(

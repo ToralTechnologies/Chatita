@@ -3,21 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --primary: #4A90E2;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --primary: #012374;
+  --primary-dark: #001A4D;
+  --accent: #E3171A;
+  --gold: #C8932B;
+  --paper: #F7EFE1;
+  --canvas: #FFFDF9;
+  --ink: #16182A;
   --success: #7ED321;
   --warning: #F5A623;
   --danger: #D0021B;
-  --gray-bg: #F5F5F7;
+  --gray-bg: #F7EFE1;
   --gray-text: #8E8E93;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--gray-bg);
+  background-color: #FFFDF9;
 }
 
 @layer utilities {

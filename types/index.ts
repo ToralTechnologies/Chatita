@@ -4,6 +4,9 @@ export type Language = 'en' | 'es';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type Mood = 'happy' | 'grateful' | 'calm' | 'neutral' | 'tired' | 'anxious' | 'sad';
 export type ChatRole = 'user' | 'assistant';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type WeightGoal = 'lose' | 'gain' | 'maintain';
+export type OtherCondition = 'heart_disease' | 'kidney_disease' | 'hypertension';
 
 // Nutrition data
 export interface NutritionData {
@@ -25,14 +28,18 @@ export interface MealAnalysis {
   mode: '$0' | 'ai';
 }
 
-// Menu recommendation
+// Menu recommendation — scored on balance, not just carbs
 export interface MenuRecommendation {
   name: string;
   score: 'great' | 'moderate' | 'caution';
-  reason: string;
+  reason: string;           // Explains WHY (protein, fiber, balance, fits goals)
   tips: string[];
   estimatedCarbs?: number;
   estimatedCalories?: number;
+  estimatedProtein?: number;
+  estimatedFiber?: number;
+  culturalNote?: string;    // How to keep/adapt cultural foods
+  portionGuidance?: string; // "How much" not "whether to eat"
 }
 
 // Context flags for mood and chat
@@ -42,6 +49,20 @@ export interface UserContext {
   feelingOverwhelmed?: boolean;
   notFeelingWell?: boolean;
   havingCravings?: boolean;
+}
+
+// Extended user health profile for personalized guidance
+export interface UserHealthProfile {
+  age?: number;
+  heightCm?: number;
+  weightKg?: number;
+  activityLevel?: ActivityLevel;
+  weightGoal?: WeightGoal;
+  otherConditions?: OtherCondition[];
+  currentMedications?: string[];
+  dailyCalorieTarget?: number;
+  dailyCarbTarget?: number;
+  mealsPerDay?: number;
 }
 
 // Insight pattern
@@ -75,6 +96,15 @@ export interface ChatMessageWithContext {
   timestamp: Date;
 }
 
+// Today's cumulative nutrition (to judge meals in daily context)
+export interface TodayNutrition {
+  caloriesConsumed: number;
+  carbsConsumed: number;
+  proteinConsumed: number;
+  fiberConsumed: number;
+  mealsLogged: number;
+}
+
 // Full health context assembled server-side for the AI chat
 export interface ChatHealthContext {
   // Mood/status flags (from client)
@@ -97,10 +127,19 @@ export interface ChatHealthContext {
     mealType?: string;
     minutesAgo: number;
     carbs?: number;
+    fiber?: number;
+    protein?: number;
+    calories?: number;
   }>;
 
   // User diabetes profile (from DB)
   diabetesType?: string;
   targetGlucoseMin?: number;
   targetGlucoseMax?: number;
+
+  // Extended health profile for personalized guidance
+  userProfile?: UserHealthProfile;
+
+  // Today's cumulative nutrition (to judge meals in daily context)
+  todayNutrition?: TodayNutrition;
 }

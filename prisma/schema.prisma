@@ -23,6 +23,21 @@ model User {
   preferredLanguage String    @default("en") // en, es
   weeklyReportEnabled Boolean @default(true) // Send weekly progress emails
   lastReportSent    DateTime? // Track last email sent
+  tier              String    @default("free") // 'free' | 'pro' | 'unlimited'
+  subscriptionId    String?
+  subscriptionEnds  DateTime?
+
+  // Extended health profile — for personalized guidance
+  age               Int?
+  heightCm          Float?              // centimeters
+  weightKg          Float?              // kilograms
+  activityLevel     String?             // 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  weightGoal        String?             // 'lose' | 'gain' | 'maintain'
+  otherConditions   String?   @db.Text  // JSON array: ["heart_disease","kidney_disease","hypertension"]
+  currentMedications String?  @db.Text  // JSON array of medication names
+  dailyCalorieTarget Int?
+  dailyCarbTarget    Int?               // grams per day
+  mealsPerDay        Int?     @default(3)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -42,6 +57,7 @@ model User {
   libreIntegration    LibreIntegration?
   mealFollowUps       MealFollowUp[]
   chatPreference      ChatPreference?
+  aiUsage             AiUsage[]
 }
 
 // NextAuth models for OAuth and session management
@@ -493,6 +509,17 @@ model ChatPreference {
 
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+model AiUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   // 'chat' | 'analyze-meal' | 'enhance-meal' | 'restaurant-tips' | etc.
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 // Post-meal check-in follow-up
