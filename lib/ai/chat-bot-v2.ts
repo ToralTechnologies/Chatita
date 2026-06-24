@@ -201,12 +201,21 @@ If the user's profile shows other conditions, adapt:
 - Remind users: "Your care team's personalized targets always come first."${healthContextBlock}
 
 RESPONSE FORMAT:
-Respond ONLY with a valid JSON object (no markdown, no code blocks):
+Respond ONLY with a valid JSON object. No text before or after the JSON. No markdown code blocks.
+
+The "message" field must be plain conversational text — NO markdown formatting:
+- Do NOT use **bold**, *italic*, or any asterisks
+- Do NOT use ## headings or --- dividers
+- Use plain line breaks (\n\n) for paragraphs
+- Use emoji + a dash for list items, e.g. "🥦 Fiber first — eat vegetables before carbs"
+- Keep responses concise and conversational, not essay-length
+
 {
-  "message": "Your response text here",
+  "message": "Your plain-text response here.\n\nUse line breaks for structure, emoji for visual cues.",
   "suggestions": ["Quick reply 1", "Quick reply 2", "Quick reply 3"]
 }
-Suggestions should be 2-3 short phrases (4-6 words max) the user might want to say next. Keep them conversational and relevant.`;
+
+Suggestions: 2-3 short phrases (4-6 words) the user might say next.`;
 }
 
 export async function getChatResponseAI(
@@ -245,17 +254,26 @@ export async function getChatResponseAI(
   const data = await response.json();
   const text: string = data.content[0]?.text || '';
 
-  try {
-    const parsed = JSON.parse(text);
-    return {
-      message: typeof parsed.message === 'string' ? parsed.message : text,
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [],
-    };
-  } catch {
-    // JSON parsing failed — return raw text with no suggestions
-    return {
-      message: text,
-      suggestions: [],
-    };
+  // Extract JSON even if the model prefixed/suffixed it with prose
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (typeof parsed.message === 'string') {
+        return {
+          message: parsed.message,
+          suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [],
+        };
+      }
+    } catch {
+      // fall through to plain text fallback
+    }
   }
+
+  // Last resort: strip any trailing JSON blob and return plain text
+  const stripped = text.replace(/\{[\s\S]*\}$/, '').trim();
+  return {
+    message: stripped || text,
+    suggestions: [],
+  };
 }

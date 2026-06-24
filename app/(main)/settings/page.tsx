@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import LanguageSwitcher from '@/components/language-switcher';
+import HealthProfileCard from '@/components/health-profile-card';
 import { useTranslation } from '@/lib/i18n/context';
 import { Mail, Send, Activity, Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
@@ -287,6 +288,9 @@ function SettingsContent() {
           <div className="bg-white rounded-card shadow-card p-6">
             <LanguageSwitcher />
           </div>
+
+          {/* Health Profile */}
+          <HealthProfileCard />
 
           {/* Success/Error messages */}
           {showDexcomSuccess && (
