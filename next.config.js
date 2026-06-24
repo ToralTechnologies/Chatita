@@ -8,15 +8,17 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // CSP: Next.js requires 'unsafe-inline' for its hydration scripts.
+          // A nonce-based approach (more secure) requires middleware and is a future improvement.
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob:",
-              "connect-src 'self'",
+              "connect-src 'self' https://api.anthropic.com",
             ].join('; '),
           },
           {
