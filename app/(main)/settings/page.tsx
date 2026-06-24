@@ -7,8 +7,37 @@ import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import LanguageSwitcher from '@/components/language-switcher';
 import HealthProfileCard from '@/components/health-profile-card';
+import ThemeToggle from '@/components/theme-toggle';
 import { useTranslation } from '@/lib/i18n/context';
 import { Mail, Send, Activity, Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+
+const cardStyle = {
+  background: 'var(--bg-card)',
+  borderRadius: '22px',
+  border: '1px solid var(--border-card)',
+  boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+  padding: '20px',
+} as const;
+
+const primaryBtnStyle = {
+  borderRadius: '12px',
+  background: '#012374',
+  color: '#FFFDF9',
+  boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
+  padding: '10px 18px',
+  fontSize: '14px',
+  fontWeight: 600,
+} as const;
+
+const outlineBtnStyle = {
+  borderRadius: '12px',
+  border: '1px solid rgba(1,35,116,0.2)',
+  background: 'transparent',
+  color: 'var(--text-primary)',
+  padding: '10px 18px',
+  fontSize: '14px',
+  fontWeight: 600,
+} as const;
 
 function SettingsContent() {
   const { t } = useTranslation();
@@ -280,12 +309,20 @@ function SettingsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      <div className="max-w-2xl mx-auto px-6 py-6">
-        <h1 className="text-2xl font-bold mb-6">{t.settings.title}</h1>
+    <div className="min-h-screen pb-24" style={{ background: 'var(--bg-page)' }}>
+      <div className="max-w-2xl mx-auto px-5 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1
+            className="text-[30px] leading-[1.1] font-serif-italic"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {t.settings.title}
+          </h1>
+          <ThemeToggle />
+        </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-card shadow-card p-6">
+          <div style={cardStyle}>
             <LanguageSwitcher />
           </div>
 
@@ -312,9 +349,9 @@ function SettingsContent() {
           )}
 
           {/* Dexcom Integration Section */}
-          <div className="bg-white rounded-card shadow-card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" />
+          <div style={cardStyle}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Activity className="w-4 h-4" style={{ color: '#012374' }} />
               Dexcom CGM Integration
             </h2>
 
@@ -416,9 +453,9 @@ function SettingsContent() {
           </div>
 
           {/* FreeStyle Libre Integration Section */}
-          <div className="bg-white rounded-card shadow-card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-orange-500" />
+          <div style={cardStyle}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Activity className="w-4 h-4" style={{ color: '#C8932B' }} />
               FreeStyle Libre CGM (LibreLinkUp)
             </h2>
 
@@ -599,9 +636,9 @@ function SettingsContent() {
           </div>
 
           {/* Weekly Reports Section */}
-          <div className="bg-white rounded-card shadow-card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary" />
+          <div style={cardStyle}>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Mail className="w-4 h-4" style={{ color: '#012374' }} />
               Weekly Reports
             </h2>
 
@@ -649,18 +686,29 @@ function SettingsContent() {
             )}
           </div>
 
-          <div className="bg-white rounded-card shadow-card p-6">
-            <h2 className="font-semibold mb-4">Account</h2>
+          <div style={cardStyle}>
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] mb-4"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Account
+            </p>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-danger font-medium"
+              className="w-full text-left px-4 py-3 text-sm font-semibold transition-all rounded-[12px]"
+              style={{ color: '#D0021B' }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(208,2,27,0.06)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               {t.auth.logout}
             </button>
-            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-4 text-xs text-gray-secondary">
-              <Link href="/privacy" className="hover:text-primary hover:underline">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-primary hover:underline">Terms of Use</Link>
-              <Link href="/consent" className="hover:text-primary hover:underline">Consent</Link>
+            <div
+              className="mt-3 pt-3 flex gap-4 text-[11px]"
+              style={{ borderTop: '1px solid rgba(1,35,116,0.08)', color: 'var(--text-muted)' }}
+            >
+              <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+              <Link href="/terms" className="hover:underline">Terms of Use</Link>
+              <Link href="/consent" className="hover:underline">Consent</Link>
             </div>
           </div>
         </div>
@@ -673,8 +721,8 @@ function SettingsContent() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-background pb-24 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen pb-24 flex items-center justify-center" style={{ background: 'var(--bg-page)' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#012374' }} />
       </div>
     }>
       <SettingsContent />

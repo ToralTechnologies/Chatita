@@ -35,7 +35,7 @@ export default function GlucoseWidget({
   const [loadingMeals, setLoadingMeals] = useState(false);
 
   const getStatus = (value?: number) => {
-    if (!value) return { label: 'No data', color: 'gray' };
+    if (!value) return { label: 'No reading', color: 'gray' };
     if (value < minRange) return { label: 'Low', color: 'danger' };
     if (value > maxRange) return { label: 'High', color: 'warning' };
     return { label: 'In Range', color: 'success' };
@@ -43,7 +43,13 @@ export default function GlucoseWidget({
 
   const status = getStatus(currentValue);
 
-  // Fetch recent meals when editing and context is post-meal
+  const statusStyle = {
+    success: { background: 'rgba(126,211,33,0.15)', color: '#4A8C00' },
+    danger:  { background: 'rgba(208,2,27,0.12)', color: '#D0021B' },
+    warning: { background: 'rgba(245,166,35,0.15)', color: '#9A6F18' },
+    gray:    { background: 'rgba(1,35,116,0.08)', color: 'rgba(1,35,116,0.6)' },
+  }[status.color];
+
   useEffect(() => {
     if (isEditing && (context === 'post-meal' || context === 'pre-meal')) {
       fetchRecentMeals();
@@ -53,7 +59,6 @@ export default function GlucoseWidget({
   const fetchRecentMeals = async () => {
     setLoadingMeals(true);
     try {
-      // Fetch meals from the last 4 hours
       const res = await fetch('/api/meals?limit=10');
       if (res.ok) {
         const data = await res.json();
@@ -81,11 +86,11 @@ export default function GlucoseWidget({
 
   const getContextLabel = (ctx: GlucoseContext) => {
     const labels: Record<GlucoseContext, { emoji: string; label: string }> = {
-      fasting: { emoji: '🌅', label: 'Fasting' },
+      fasting:    { emoji: '🌅', label: 'Fasting' },
       'pre-meal': { emoji: '🍽️', label: 'Before meal' },
-      'post-meal': { emoji: '⏱️', label: 'After meal' },
-      bedtime: { emoji: '🌙', label: 'Bedtime' },
-      random: { emoji: '📊', label: 'Random' },
+      'post-meal':{ emoji: '⏱️', label: 'After meal' },
+      bedtime:    { emoji: '🌙', label: 'Bedtime' },
+      random:     { emoji: '📊', label: 'Random' },
     };
     return labels[ctx];
   };
@@ -93,65 +98,105 @@ export default function GlucoseWidget({
   const getMealSummary = (meal: RecentMeal) => {
     if (meal.aiSummary) return meal.aiSummary;
     if (meal.detectedFoods) {
-      try {
-        const foods = JSON.parse(meal.detectedFoods);
-        return foods.join(', ');
-      } catch {
-        return meal.detectedFoods;
-      }
+      try { return JSON.parse(meal.detectedFoods).join(', '); }
+      catch { return meal.detectedFoods; }
     }
     return `${meal.mealType} meal`;
   };
 
   const getTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = Date.now() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
-
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return date.toLocaleDateString();
   };
 
+  // Range bar position (40–400 mg/dL scale)
+  const rangePercent = currentValue
+    ? Math.min(100, Math.max(0, ((currentValue - 40) / 360) * 100))
+    : null;
+
   return (
-    <div className="bg-white rounded-card shadow-card p-6">
-      <h3 className="text-lg font-semibold mb-4">Today&apos;s Glucose</h3>
+    <div
+      className="p-5 transition-all"
+      style={{
+        background: 'var(--bg-card)',
+        borderRadius: '22px',
+        border: '1px solid var(--border-card)',
+        boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <p
+          className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          Blood Glucose
+        </p>
+        {currentValue && (
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-chip"
+            style={statusStyle}
+          >
+            {status.label}
+          </span>
+        )}
+      </div>
 
       {isEditing ? (
         <div className="space-y-4">
-          {/* Blood Glucose Input */}
+          {/* Number input */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label
+              className="block text-xs font-semibold mb-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               Blood Glucose (mg/dL)
             </label>
             <input
               type="number"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter value"
+              className="w-full px-4 py-3 text-sm focus:outline-none focus:ring-2"
+              style={{
+                borderRadius: '12px',
+                border: '1px solid rgba(1,35,116,0.15)',
+                background: 'var(--bg-card-alt)',
+                color: 'var(--text-primary)',
+              }}
+              placeholder="e.g. 120"
               autoFocus
             />
           </div>
 
-          {/* Context Selector */}
+          {/* Context selector */}
           <div>
-            <label className="block text-sm font-medium mb-2">When did you measure?</label>
+            <label
+              className="block text-xs font-semibold mb-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              When did you measure?
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {(['fasting', 'pre-meal', 'post-meal', 'bedtime', 'random'] as GlucoseContext[]).map((ctx) => {
                 const { emoji, label } = getContextLabel(ctx);
+                const selected = context === ctx;
                 return (
                   <button
                     key={ctx}
                     type="button"
                     onClick={() => setContext(ctx)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                      context === ctx
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
-                    }`}
+                    className="px-2 py-2.5 text-xs font-semibold transition-all"
+                    style={{
+                      borderRadius: '10px',
+                      border: `1px solid ${selected ? '#012374' : 'rgba(1,35,116,0.15)'}`,
+                      background: selected ? '#012374' : 'var(--bg-card-alt)',
+                      color: selected ? '#FFFDF9' : 'var(--text-primary)',
+                    }}
                   >
                     <span className="block text-base mb-0.5">{emoji}</span>
                     {label}
@@ -161,15 +206,15 @@ export default function GlucoseWidget({
             </div>
           </div>
 
-          {/* Meal Linking (only for post-meal) */}
+          {/* Meal linking */}
           {context === 'post-meal' && (
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+              <label className="flex items-center gap-1.5 text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <Clock className="w-3.5 h-3.5" />
                 Link to recent meal (optional)
               </label>
               {loadingMeals ? (
-                <div className="text-sm text-gray-500 py-2">Loading meals...</div>
+                <div className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>Loading meals…</div>
               ) : recentMeals.length > 0 ? (
                 <div className="space-y-2">
                   {recentMeals.slice(0, 5).map((meal) => (
@@ -177,46 +222,61 @@ export default function GlucoseWidget({
                       key={meal.id}
                       type="button"
                       onClick={() => setSelectedMealId(meal.id === selectedMealId ? undefined : meal.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-all ${
-                        selectedMealId === meal.id
-                          ? 'bg-primary/10 border-primary'
-                          : 'bg-white border-gray-200 hover:border-primary'
-                      }`}
+                      className="w-full text-left px-3 py-2.5 text-sm transition-all"
+                      style={{
+                        borderRadius: '12px',
+                        border: `1px solid ${selectedMealId === meal.id ? '#012374' : 'rgba(1,35,116,0.12)'}`,
+                        background: selectedMealId === meal.id ? 'rgba(1,35,116,0.06)' : 'var(--bg-card-alt)',
+                      }}
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-gray-900 capitalize">{meal.mealType}</p>
-                          <p className="text-xs text-gray-600">{getMealSummary(meal)}</p>
+                          <p className="font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>{meal.mealType}</p>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{getMealSummary(meal)}</p>
                         </div>
-                        <span className="text-xs text-gray-500">{getTimeAgo(meal.eatenAt)}</span>
+                        <span className="text-[10px] ml-2 shrink-0" style={{ color: 'var(--text-muted)' }}>{getTimeAgo(meal.eatenAt)}</span>
                       </div>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 py-2">No recent meals found</p>
+                <p className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>No recent meals found</p>
               )}
             </div>
           )}
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium mb-2">Notes (optional)</label>
+            <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Notes (optional)
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="How are you feeling? Any symptoms?"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+              className="w-full px-3 py-2.5 text-sm focus:outline-none resize-none"
+              style={{
+                borderRadius: '12px',
+                border: '1px solid rgba(1,35,116,0.15)',
+                background: 'var(--bg-card-alt)',
+                color: 'var(--text-primary)',
+              }}
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleSave}
               disabled={!inputValue || parseFloat(inputValue) <= 0}
-              className="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2.5 text-sm font-semibold transition-all disabled:opacity-50"
+              style={{
+                borderRadius: '12px',
+                background: '#012374',
+                color: '#FFFDF9',
+                boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
+              }}
             >
               Save Reading
             </button>
@@ -229,7 +289,13 @@ export default function GlucoseWidget({
                 setSelectedMealId(undefined);
                 setRecentMeals([]);
               }}
-              className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 text-sm font-semibold transition-all"
+              style={{
+                borderRadius: '12px',
+                border: '1px solid rgba(1,35,116,0.2)',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+              }}
             >
               Cancel
             </button>
@@ -237,65 +303,93 @@ export default function GlucoseWidget({
         </div>
       ) : (
         <>
-          <div className="text-center mb-4">
-            <div className="text-5xl font-bold text-gray-800 mb-2">
-              {currentValue ? `${currentValue}` : '—'}
-              <span className="text-2xl text-gray-500 ml-2">mg/dL</span>
-            </div>
+          {/* Large serif number display */}
+          <div className="flex items-end gap-2 mb-5">
             <span
-              className={`inline-block px-4 py-1 rounded-full text-sm font-medium ${
-                status.color === 'success'
-                  ? 'bg-green-100 text-success'
-                  : status.color === 'danger'
-                  ? 'bg-red-100 text-danger'
-                  : status.color === 'warning'
-                  ? 'bg-yellow-100 text-warning'
-                  : 'bg-gray-100 text-gray-500'
-              }`}
+              className="leading-none font-serif"
+              style={{ fontSize: '64px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
             >
-              {status.label}
+              {currentValue ?? '—'}
+            </span>
+            <span
+              className="text-sm font-medium mb-2"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              mg/dL
             </span>
           </div>
 
-          {/* Range visualization */}
-          <div className="mb-4">
-            <div className="h-2 bg-gradient-to-r from-danger via-success to-warning rounded-full relative">
-              {currentValue && (
+          {/* Range bar */}
+          <div className="mb-5">
+            <div
+              className="relative h-2 rounded-full overflow-visible"
+              style={{ background: '#F7EFE1' }}
+            >
+              {/* Fill bar */}
+              {rangePercent !== null && (
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-800 rounded-full"
+                  className="absolute top-0 left-0 h-full rounded-full"
                   style={{
-                    left: `${Math.min(
-                      100,
-                      Math.max(0, ((currentValue - 50) / 200) * 100)
-                    )}%`,
+                    width: `${rangePercent}%`,
+                    background: status.color === 'success'
+                      ? 'rgba(1,35,116,0.5)'
+                      : status.color === 'danger'
+                      ? '#D0021B'
+                      : '#F5A623',
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+              )}
+              {/* Indicator dot */}
+              {rangePercent !== null && (
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full"
+                  style={{
+                    left: `calc(${rangePercent}% - 9px)`,
+                    background: '#C8932B',
+                    border: '3px solid #FFFDF9',
+                    boxShadow: '0 2px 8px rgba(200,147,43,0.5)',
                   }}
                 />
               )}
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div
+              className="flex justify-between text-[10px] font-semibold mt-2"
+              style={{ color: 'var(--text-muted)' }}
+            >
               <span>Low</span>
-              <span>
-                {minRange}-{maxRange} mg/dL
-              </span>
+              <span>{minRange}–{maxRange} mg/dL target</span>
               <span>High</span>
             </div>
           </div>
 
           {/* Clinical safety banners — deterministic, non-dismissible */}
           {currentValue !== undefined && currentValue < 54 && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-500 rounded-lg text-red-800 text-sm font-medium">
+            <div
+              className="p-3 text-sm font-semibold rounded-[12px] mb-4"
+              style={{ background: 'rgba(208,2,27,0.1)', border: '1px solid #D0021B', color: '#D0021B' }}
+            >
               ⚠️ This reading may be an emergency. Seek medical care immediately.
             </div>
           )}
           {currentValue !== undefined && currentValue > 250 && (
-            <div className="mt-4 p-3 bg-orange-100 border border-orange-500 rounded-lg text-orange-800 text-sm font-medium">
+            <div
+              className="p-3 text-sm font-semibold rounded-[12px] mb-4"
+              style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid #F5A623', color: '#9A6F18' }}
+            >
               ⚠️ This is a very high reading. Contact your healthcare provider.
             </div>
           )}
 
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full mt-4 border border-primary text-primary py-2 rounded-lg hover:bg-primary/5 transition-colors"
+            className="w-full py-2.5 text-sm font-semibold transition-all"
+            style={{
+              borderRadius: '12px',
+              border: '1px solid rgba(1,35,116,0.2)',
+              background: 'transparent',
+              color: '#012374',
+            }}
           >
             {currentValue ? 'Update Reading' : 'Add Reading'}
           </button>

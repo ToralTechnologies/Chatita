@@ -4,20 +4,24 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import GlucoseWidget from '@/components/glucose-widget';
 import MealFollowUpBanner from '@/components/meal-followup-banner';
 import MoodSelector from '@/components/mood-selector';
 import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
+import ThemeToggle from '@/components/theme-toggle';
 import { Mood, UserContext } from '@/types';
-import { ScanLine, History, MessageCircle, X, MapPin, ChefHat, Calendar } from 'lucide-react';
+import { ScanLine, History, MessageCircle, MapPin, ChefHat, Calendar, TrendingUp } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
+import { useTheme } from '@/lib/theme-context';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [userData, setUserData] = useState<any>(null);
   const [currentGlucose, setCurrentGlucose] = useState<number | undefined>(undefined);
   const [showChat, setShowChat] = useState(false);
@@ -30,39 +34,21 @@ export default function HomePage() {
   }, [status, router]);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch('/api/user/profile');
-        if (response.ok) {
-          const data = await response.json();
-          setUserData(data.user);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user data:', error);
-      }
-    };
-
-    if (session) {
-      fetchUserData();
-    }
+    if (!session) return;
+    fetch('/api/user/profile')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => data && setUserData(data.user))
+      .catch(console.error);
   }, [session]);
 
-  const handleGlucoseUpdate = async (
-    value: number,
-    context?: string,
-    relatedMealId?: string,
-    notes?: string
-  ) => {
+  const handleGlucoseUpdate = async (value: number, context?: string, relatedMealId?: string, notes?: string) => {
     try {
-      const response = await fetch('/api/glucose', {
+      const res = await fetch('/api/glucose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value, context, relatedMealId, notes }),
       });
-
-      if (response.ok) {
-        setCurrentGlucose(value);
-      }
+      if (res.ok) setCurrentGlucose(value);
     } catch (error) {
       console.error('Failed to update glucose:', error);
     }
@@ -82,7 +68,7 @@ export default function HomePage() {
   };
 
   const handleContextSave = async (context: UserContext) => {
-    setUserContext(context); // Save for chat context
+    setUserContext(context);
     try {
       await fetch('/api/mood', {
         method: 'POST',
@@ -96,32 +82,77 @@ export default function HomePage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">{t.common.loading}</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-page)' }}>
+        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{t.common.loading}</div>
       </div>
     );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   const userName = userData?.name || session.user?.name || 'there';
+  const isDark = theme === 'dark';
 
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-6">
-          <h1 className="text-3xl font-bold">
-            {t.home.greeting.replace('{name}', userName)} 👋
-          </h1>
-          <p className="text-gray-600 mt-1">{t.home.subtitle}</p>
+    <div className="min-h-screen pb-24" style={{ background: 'var(--bg-page)' }}>
+      {/* Hero Header */}
+      <div
+        className="relative"
+        style={{
+          background: isDark ? '#012374' : 'var(--bg-page)',
+          paddingBottom: isDark ? '48px' : '0',
+        }}
+      >
+        <div className="max-w-2xl mx-auto px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between mb-5">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-9 h-9 rounded-[11px] flex items-center justify-center"
+                style={{ background: isDark ? '#FFFDF9' : '#012374' }}
+              >
+                <Image
+                  src="/logo-icon.svg"
+                  alt="Chatita"
+                  width={22}
+                  height={22}
+                  style={{ filter: isDark ? 'none' : 'brightness(0) invert(1)' }}
+                />
+              </div>
+            </div>
+            {/* Theme toggle */}
+            <ThemeToggle />
+          </div>
+
+          {/* Greeting */}
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.16em] mb-1"
+              style={{ color: isDark ? 'rgba(255,253,249,0.62)' : 'var(--text-muted)' }}
+            >
+              Good morning
+            </p>
+            <h1
+              className="text-[34px] leading-[1.08] font-serif-italic"
+              style={{ color: isDark ? '#FFFDF9' : 'var(--text-primary)' }}
+            >
+              {t.home.greeting.replace('{name}', userName)}
+            </h1>
+            <p
+              className="text-sm mt-1"
+              style={{ color: isDark ? 'rgba(255,253,249,0.7)' : 'var(--text-secondary)' }}
+            >
+              {t.home.subtitle}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+      {/* Content — negative margin overlap in dark mode */}
+      <div
+        className="max-w-2xl mx-auto px-5 space-y-4"
+        style={{ marginTop: isDark ? '-32px' : '0', paddingTop: isDark ? '0' : '8px' }}
+      >
         {/* Meal Follow-Up Check-In */}
         <MealFollowUpBanner />
 
@@ -133,57 +164,76 @@ export default function HomePage() {
           onUpdate={handleGlucoseUpdate}
         />
 
-        {/* Primary Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Primary Quick Actions */}
+        <div className="grid grid-cols-2 gap-3">
           <Link
             href="/restaurant-finder"
-            className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+            className="flex flex-col items-center justify-center gap-2 p-5 transition-all active:scale-[0.98]"
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: '22px',
+              border: '1px solid var(--border-card)',
+              boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+            }}
           >
-            <MapPin className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium text-center">{t.home.quickActions.findRestaurants}</span>
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(1,35,116,0.08)' }}
+            >
+              <MapPin className="w-5 h-5" style={{ color: '#012374' }} />
+            </div>
+            <span className="text-sm font-semibold text-center" style={{ color: 'var(--text-primary)' }}>
+              {t.home.quickActions.findRestaurants}
+            </span>
           </Link>
 
           <Link
             href="/menu-scanner"
-            className="bg-white rounded-card shadow-card p-6 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+            className="flex flex-col items-center justify-center gap-2 p-5 transition-all active:scale-[0.98]"
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: '22px',
+              border: '1px solid var(--border-card)',
+              boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+            }}
           >
-            <ScanLine className="w-8 h-8 text-primary mb-2" />
-            <span className="font-medium">{t.home.quickActions.scanMenu}</span>
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(1,35,116,0.08)' }}
+            >
+              <ScanLine className="w-5 h-5" style={{ color: '#012374' }} />
+            </div>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {t.home.quickActions.scanMenu}
+            </span>
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/meal-history"
-            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
-          >
-            <History className="w-7 h-7 text-primary mb-2" />
-            <span className="font-medium text-sm text-center">{t.home.quickActions.mealHistory}</span>
-          </Link>
-
-          <Link
-            href="/recipes"
-            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
-          >
-            <ChefHat className="w-7 h-7 text-primary mb-2" />
-            <span className="font-medium text-sm text-center">{t.home.quickActions.recipes}</span>
-          </Link>
-
-          <Link
-            href="/insights"
-            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-2xl mb-2">📊</span>
-            <span className="font-medium text-sm text-center">{t.nav.insights}</span>
-          </Link>
-
-          <Link
-            href="/meal-plan"
-            className="bg-white rounded-card shadow-card p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
-          >
-            <Calendar className="w-7 h-7 text-primary mb-2" />
-            <span className="font-medium text-sm text-center">Meal Plan</span>
-          </Link>
+        {/* Secondary Actions */}
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { href: '/meal-history', icon: History, label: t.home.quickActions.mealHistory },
+            { href: '/recipes', icon: ChefHat, label: t.home.quickActions.recipes },
+            { href: '/insights', icon: TrendingUp, label: t.nav.insights },
+            { href: '/meal-plan', icon: Calendar, label: 'Meal Plan' },
+          ].map(({ href, icon: Icon, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex flex-col items-center justify-center gap-1.5 py-4 transition-all active:scale-[0.96]"
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: '18px',
+                border: '1px solid var(--border-card)',
+                boxShadow: '0 10px 24px -8px rgba(1,35,116,0.18)',
+              }}
+            >
+              <Icon className="w-5 h-5" style={{ color: '#012374' }} strokeWidth={1.8} />
+              <span className="text-[10px] font-semibold text-center leading-tight" style={{ color: 'var(--text-secondary)' }}>
+                {label}
+              </span>
+            </Link>
+          ))}
         </div>
 
         {/* Mood & Stress */}
@@ -193,8 +243,14 @@ export default function HomePage() {
         <ContextTags onSave={handleContextSave} />
 
         {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-          <p className="text-sm text-gray-700">
+        <div
+          className="p-4 rounded-[15px]"
+          style={{
+            background: 'rgba(200,147,43,0.12)',
+            borderLeft: '3px solid #C8932B',
+          }}
+        >
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
             ⚠️ {t.home.disclaimer}
           </p>
         </div>
@@ -204,16 +260,28 @@ export default function HomePage() {
       {!showChat && (
         <button
           onClick={() => setShowChat(true)}
-          className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-dark transition-all hover:scale-110 z-20"
+          className="fixed bottom-24 right-5 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 hover:scale-105 z-20"
+          style={{
+            background: '#012374',
+            boxShadow: '0 6px 16px -4px rgba(1,35,116,0.5)',
+          }}
         >
-          <MessageCircle className="w-6 h-6" />
+          <MessageCircle className="w-6 h-6" style={{ color: '#FFFDF9' }} />
         </button>
       )}
 
       {/* Chat Interface */}
       {showChat && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
-          <div className="w-full max-w-2xl h-[80vh] md:h-[600px] bg-white md:rounded-t-2xl flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center"
+          style={{ background: 'rgba(0,26,77,0.38)', backdropFilter: 'blur(3px)' }}
+        >
+          <div
+            className="w-full max-w-2xl h-[80vh] md:h-[600px] flex flex-col md:rounded-[26px] rounded-t-[26px] overflow-hidden"
+            style={{
+              background: 'var(--bg-card)',
+              boxShadow: '0 40px 90px -30px rgba(0,26,77,0.6)',
+            }}
+          >
             <ChatInterface userContext={userContext} onClose={() => setShowChat(false)} />
           </div>
         </div>

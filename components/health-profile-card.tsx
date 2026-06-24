@@ -154,37 +154,60 @@ export default function HealthProfileCard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-card shadow-card p-6 flex items-center gap-2 text-sm text-gray-secondary">
+      <div
+        className="flex items-center gap-2 text-sm p-5"
+        style={{
+          background: 'var(--bg-card)',
+          borderRadius: '22px',
+          border: '1px solid var(--border-card)',
+          boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+          color: 'var(--text-muted)',
+        }}
+      >
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading health profile...
+        Loading health profile…
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-card shadow-card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold flex items-center gap-2">
-          <User className="w-5 h-5 text-primary" />
-          Health Profile
-        </h2>
+    <div
+      className="p-5"
+      style={{
+        background: 'var(--bg-card)',
+        borderRadius: '22px',
+        border: '1px solid var(--border-card)',
+        boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <User className="w-4 h-4" style={{ color: '#012374' }} />
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Health Profile
+          </p>
+        </div>
         {!editing && (
           <button
             onClick={startEdit}
-            className="flex items-center gap-1 text-sm text-primary hover:underline"
+            className="flex items-center gap-1 text-xs font-semibold transition-all"
+            style={{ color: '#012374' }}
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-3.5 h-3.5" />
             Edit
           </button>
         )}
         {saved && (
-          <span className="flex items-center gap-1 text-sm text-success">
-            <Check className="w-4 h-4" /> Saved
+          <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#4A8C00' }}>
+            <Check className="w-3.5 h-3.5" /> Saved
           </span>
         )}
       </div>
 
-      <p className="text-xs text-gray-secondary mb-4">
+      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
         Your profile helps Chatita give you personalized guidance based on your goals and health context.
       </p>
 
@@ -195,14 +218,14 @@ export default function HealthProfileCard() {
 
           {/* Diabetes */}
           <div>
-            <p className="text-xs font-semibold text-gray-secondary uppercase tracking-wide mb-2">Diabetes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--text-muted)' }}>Diabetes</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Diabetes type</label>
                 <select
                   value={form.diabetesType ?? ''}
                   onChange={e => setForm(f => ({ ...f, diabetesType: e.target.value || undefined }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                 >
                   <option value="">— Select —</option>
                   {DIABETES_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -215,7 +238,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.targetGlucoseMin ?? ''}
                   onChange={e => setForm(f => ({ ...f, targetGlucoseMin: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="70"
                 />
               </div>
@@ -225,7 +248,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.targetGlucoseMax ?? ''}
                   onChange={e => setForm(f => ({ ...f, targetGlucoseMax: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="180"
                 />
               </div>
@@ -234,7 +257,7 @@ export default function HealthProfileCard() {
 
           {/* Personal */}
           <div>
-            <p className="text-xs font-semibold text-gray-secondary uppercase tracking-wide mb-2">Personal details</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--text-muted)' }}>Personal details</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Age</label>
@@ -242,7 +265,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.age ?? ''}
                   onChange={e => setForm(f => ({ ...f, age: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="e.g. 42"
                 />
               </div>
@@ -252,7 +275,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.heightCm ?? ''}
                   onChange={e => setForm(f => ({ ...f, heightCm: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="e.g. 165"
                 />
               </div>
@@ -262,7 +285,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.weightKg ?? ''}
                   onChange={e => setForm(f => ({ ...f, weightKg: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="e.g. 70"
                 />
               </div>
@@ -271,7 +294,7 @@ export default function HealthProfileCard() {
                 <select
                   value={form.weightGoal ?? ''}
                   onChange={e => setForm(f => ({ ...f, weightGoal: e.target.value || null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                 >
                   <option value="">— Select —</option>
                   {WEIGHT_GOALS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
@@ -283,7 +306,7 @@ export default function HealthProfileCard() {
               <select
                 value={form.activityLevel ?? ''}
                 onChange={e => setForm(f => ({ ...f, activityLevel: e.target.value || null }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
               >
                 <option value="">— Select —</option>
                 {ACTIVITY_LEVELS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
@@ -293,7 +316,7 @@ export default function HealthProfileCard() {
 
           {/* Medical context */}
           <div>
-            <p className="text-xs font-semibold text-gray-secondary uppercase tracking-wide mb-2">Medical context</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--text-muted)' }}>Medical context</p>
             <div className="space-y-2 mb-3">
               {CONDITIONS.map(c => (
                 <label key={c.value} className="flex items-center gap-2 cursor-pointer">
@@ -313,7 +336,7 @@ export default function HealthProfileCard() {
                 type="text"
                 value={medInput}
                 onChange={e => setMedInput(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                 placeholder="e.g. Metformin, Insulin glargine"
               />
               <p className="text-xs text-gray-secondary mt-1">Separate multiple medications with commas.</p>
@@ -322,7 +345,7 @@ export default function HealthProfileCard() {
 
           {/* Nutrition goals */}
           <div>
-            <p className="text-xs font-semibold text-gray-secondary uppercase tracking-wide mb-2">Nutrition goals</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--text-muted)' }}>Nutrition goals</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Daily calorie target</label>
@@ -330,7 +353,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.dailyCalorieTarget ?? ''}
                   onChange={e => setForm(f => ({ ...f, dailyCalorieTarget: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="e.g. 1800"
                 />
               </div>
@@ -340,7 +363,7 @@ export default function HealthProfileCard() {
                   type="number"
                   value={form.dailyCarbTarget ?? ''}
                   onChange={e => setForm(f => ({ ...f, dailyCarbTarget: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                   placeholder="e.g. 150"
                 />
               </div>
@@ -349,7 +372,7 @@ export default function HealthProfileCard() {
                 <select
                   value={form.mealsPerDay ?? ''}
                   onChange={e => setForm(f => ({ ...f, mealsPerDay: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
                 >
                   <option value="">— Select —</option>
                   {[2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} meals</option>)}
@@ -363,7 +386,13 @@ export default function HealthProfileCard() {
             <button
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50"
+              style={{
+                borderRadius: '12px',
+                background: '#012374',
+                color: '#FFFDF9',
+                boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
+              }}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {saving ? 'Saving…' : 'Save'}
@@ -371,7 +400,13 @@ export default function HealthProfileCard() {
             <button
               onClick={cancel}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all"
+              style={{
+                borderRadius: '12px',
+                border: '1px solid rgba(1,35,116,0.2)',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+              }}
             >
               <X className="w-4 h-4" />
               Cancel

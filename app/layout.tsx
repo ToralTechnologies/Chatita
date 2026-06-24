@@ -3,6 +3,7 @@ import { DM_Serif_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/context";
 import QueryProvider from "@/lib/query-provider";
+import { ThemeProvider } from "@/lib/theme-context";
 
 const dmSerifDisplay = DM_Serif_Display({
   weight: "400",
@@ -36,7 +37,9 @@ export default function RootLayout({
     <html lang="en" className={`${dmSerifDisplay.variable} ${dmSans.variable}`}>
       <body className="font-sans">
         <QueryProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <ThemeProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

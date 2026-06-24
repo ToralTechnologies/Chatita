@@ -183,14 +183,25 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg-card)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary/5">
+      <div
+        className="flex items-center justify-between px-5 py-4"
+        style={{
+          borderBottom: '1px solid rgba(1,35,116,0.08)',
+          background: 'var(--bg-card)',
+        }}
+      >
         <div className="flex items-center gap-3">
-          <img src="/logo-icon.svg" alt="Chatita" className="w-10 h-10" />
+          <div
+            className="w-9 h-9 rounded-[11px] flex items-center justify-center"
+            style={{ background: '#012374' }}
+          >
+            <img src="/logo-icon.svg" alt="Chatita" className="w-5 h-5" style={{ filter: 'brightness(0) invert(1)' }} />
+          </div>
           <div>
-            <h3 className="font-semibold">Chatita</h3>
-            <p className="text-xs text-gray-600">Your caring companion</p>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Chatita</h3>
+            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Your caring companion</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -202,10 +213,11 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+              style={{ background: 'var(--bg-card-alt)' }}
               aria-label="Close chat"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
             </button>
           )}
         </div>
@@ -213,40 +225,51 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
       {/* Active context tags banner */}
       {userContext && Object.values(userContext).some(Boolean) && (
-        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex flex-wrap gap-1.5">
-          {userContext.mood === 'happy' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😊 Feeling great</span>}
-          {userContext.mood === 'grateful' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🥰 Grateful</span>}
-          {userContext.mood === 'calm' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😌 Feeling calm</span>}
-          {userContext.mood === 'tired' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😴 Feeling tired</span>}
-          {userContext.mood === 'anxious' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😟 Feeling anxious</span>}
-          {userContext.mood === 'sad' && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😞 Feeling down</span>}
-          {userContext.notFeelingWell && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🤒 Not feeling well</span>}
-          {userContext.onPeriod && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🩸 On my period</span>}
-          {userContext.feelingOverwhelmed && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">😰 Feeling overwhelmed</span>}
-          {userContext.havingCravings && <span className="text-xs bg-white rounded-full px-2 py-0.5 shadow-sm">🍫 Having cravings</span>}
+        <div
+          className="px-4 py-2 flex flex-wrap gap-1.5"
+          style={{ borderBottom: '1px solid rgba(1,35,116,0.08)', background: 'rgba(1,35,116,0.04)' }}
+        >
+          {userContext.mood === 'happy' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😊 Feeling great</span>}
+          {userContext.mood === 'grateful' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🥰 Grateful</span>}
+          {userContext.mood === 'calm' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😌 Feeling calm</span>}
+          {userContext.mood === 'tired' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😴 Feeling tired</span>}
+          {userContext.mood === 'anxious' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😟 Feeling anxious</span>}
+          {userContext.mood === 'sad' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😞 Feeling down</span>}
+          {userContext.notFeelingWell && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🤒 Not feeling well</span>}
+          {userContext.onPeriod && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🩸 On my period</span>}
+          {userContext.feelingOverwhelmed && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😰 Overwhelmed</span>}
+          {userContext.havingCravings && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🍫 Cravings</span>}
         </div>
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {messages.map((msg, index) => (
           <div
             key={index}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                msg.role === 'user'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
+              className="max-w-[82%] px-4 py-3"
+              style={{
+                borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                background: msg.role === 'user' ? '#012374' : 'var(--bg-card-alt)',
+                boxShadow: msg.role === 'user'
+                  ? '0 6px 16px -4px rgba(1,35,116,0.35)'
+                  : '0 4px 12px -4px rgba(1,35,116,0.12)',
+              }}
             >
-              <p className="text-sm whitespace-pre-line leading-relaxed">{msg.content}</p>
-              <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-white/70' : 'text-gray-500'}`}>
-                {new Date(msg.timestamp).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+              <p
+                className="text-sm whitespace-pre-line leading-relaxed"
+                style={{ color: msg.role === 'user' ? '#FFFDF9' : 'var(--text-primary)' }}
+              >
+                {msg.content}
+              </p>
+              <p
+                className="text-[10px] mt-1.5"
+                style={{ color: msg.role === 'user' ? 'rgba(255,253,249,0.6)' : 'var(--text-muted)' }}
+              >
+                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </div>
@@ -254,11 +277,18 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl px-4 py-3">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200" />
+            <div
+              className="px-4 py-3"
+              style={{ borderRadius: '18px 18px 18px 4px', background: 'var(--bg-card-alt)' }}
+            >
+              <div className="flex gap-1.5 items-center h-4">
+                {[0, 150, 300].map((delay) => (
+                  <div
+                    key={delay}
+                    className="w-1.5 h-1.5 rounded-full animate-bounce"
+                    style={{ background: 'rgba(1,35,116,0.4)', animationDelay: `${delay}ms` }}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -266,13 +296,16 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
         {/* Error banner */}
         {errorMessage && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div
+            className="flex items-center gap-2 px-4 py-3 text-sm rounded-[14px]"
+            style={{ background: 'rgba(208,2,27,0.08)', border: '1px solid rgba(208,2,27,0.25)', color: '#D0021B' }}
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1">{errorMessage}</span>
             {lastFailedMessage && (
               <button
                 onClick={handleRetry}
-                className="flex items-center gap-1 text-xs font-medium text-red-700 hover:text-red-900 underline flex-shrink-0"
+                className="flex items-center gap-1 text-xs font-semibold underline shrink-0"
               >
                 <RefreshCw className="w-3 h-3" />
                 Retry
@@ -286,13 +319,23 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
       {/* Suggestions */}
       {suggestions.length > 0 && !loading && (
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+        <div
+          className="px-4 py-2.5"
+          style={{ borderTop: '1px solid rgba(1,35,116,0.08)' }}
+        >
           <div className="flex flex-wrap gap-2">
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="px-3 py-1.5 bg-white border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors"
+                className="text-xs font-semibold transition-all active:scale-95"
+                style={{
+                  padding: '7px 13px',
+                  borderRadius: '99px',
+                  background: 'var(--bg-card-alt)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid rgba(1,35,116,0.18)',
+                }}
               >
                 {suggestion}
               </button>
@@ -302,25 +345,38 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-        <div className="flex gap-2">
+      <form
+        onSubmit={handleSubmit}
+        className="px-4 pb-4 pt-3"
+        style={{ borderTop: '1px solid rgba(1,35,116,0.08)' }}
+      >
+        <div
+          className="flex items-center gap-2 px-2 py-1"
+          style={{
+            borderRadius: '999px',
+            border: '1px solid rgba(1,35,116,0.15)',
+            background: 'var(--bg-card-alt)',
+          }}
+        >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="Type your message…"
             disabled={loading}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            className="flex-1 px-3 py-2 text-sm bg-transparent focus:outline-none disabled:opacity-50"
+            style={{ color: 'var(--text-primary)' }}
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="p-3 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-all disabled:opacity-40 shrink-0"
+            style={{ background: '#012374' }}
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4" style={{ color: '#FFFDF9' }} />
           </button>
         </div>
-        <p className="text-xs text-gray-500 text-center mt-2">
+        <p className="text-[10px] text-center mt-2" style={{ color: 'var(--text-muted)' }}>
           💙 Chatita provides general guidance. Always consult your doctor for medical advice.
         </p>
       </form>

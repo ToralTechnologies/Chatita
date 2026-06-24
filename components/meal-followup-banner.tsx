@@ -121,9 +121,16 @@ export default function MealFollowUpBanner() {
 
   if (thankYou) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-card shadow-card p-4 text-center">
-        <Check className="w-6 h-6 text-success mx-auto mb-1" />
-        <p className="text-sm font-medium text-green-800">
+      <div
+        className="p-4 text-center"
+        style={{
+          background: 'rgba(126,211,33,0.1)',
+          borderRadius: '18px',
+          border: '1px solid rgba(126,211,33,0.3)',
+        }}
+      >
+        <Check className="w-5 h-5 mx-auto mb-1" style={{ color: '#4A8C00' }} />
+        <p className="text-sm font-semibold" style={{ color: '#4A8C00' }}>
           {t.followUp?.thanks || 'Thanks for updating!'}
         </p>
       </div>
@@ -131,18 +138,27 @@ export default function MealFollowUpBanner() {
   }
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-card shadow-card p-4">
+    <div
+      className="p-4"
+      style={{
+        background: 'var(--bg-card)',
+        borderRadius: '18px',
+        border: '1px solid var(--border-card-gold)',
+        boxShadow: '0 10px 24px -8px rgba(1,35,116,0.18)',
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Utensils className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
+          <Utensils className="w-4 h-4" style={{ color: '#C8932B' }} />
+          <span className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--text-muted)' }}>
             {t.followUp?.checkIn || 'Quick Check-in'}
           </span>
         </div>
         <button
           onClick={handleDismiss}
-          className="text-gray-400 hover:text-gray-600 p-1"
+          className="p-1 rounded-full transition-colors"
+          style={{ color: 'var(--text-muted)' }}
           aria-label={t.followUp?.dismiss || 'Dismiss'}
         >
           <X className="w-4 h-4" />
@@ -159,8 +175,8 @@ export default function MealFollowUpBanner() {
           />
         )}
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{mealName}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{mealName}</p>
+          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
             {hoursAgo > 0
               ? (t.followUp?.hoursAgo || '{hours}h ago').replace('{hours}', String(hoursAgo))
               : t.followUp?.justNow || 'Just now'}
@@ -169,49 +185,34 @@ export default function MealFollowUpBanner() {
       </div>
 
       {/* Question */}
-      <p className="text-sm text-gray-700 mb-3">
+      <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
         {t.followUp?.didYouEat || 'Did you eat everything?'}
       </p>
 
       {/* Response buttons */}
       {!showPortionPicker ? (
         <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => handleRespond('ate_all')}
-            disabled={responding}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-green-100 text-green-800 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-50"
-          >
-            <Check className="w-3.5 h-3.5" />
-            {t.followUp?.ateAll || 'Ate everything'}
-          </button>
-          <button
-            onClick={() => setShowPortionPicker(true)}
-            disabled={responding}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors disabled:opacity-50"
-          >
-            <Minus className="w-3.5 h-3.5" />
-            {t.followUp?.ateSome || 'Ate some'}
-          </button>
-          <button
-            onClick={() => handleRespond('didnt_eat')}
-            disabled={responding}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-red-100 text-red-800 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors disabled:opacity-50"
-          >
-            <X className="w-3.5 h-3.5" />
-            {t.followUp?.didntEat || "Didn't eat"}
-          </button>
-          <button
-            onClick={() => handleRespond('changed_meal')}
-            disabled={responding}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            <Utensils className="w-3.5 h-3.5" />
-            {t.followUp?.changedMeal || 'Changed meal'}
-          </button>
+          {[
+            { fn: () => handleRespond('ate_all'), icon: <Check className="w-3.5 h-3.5" />, label: t.followUp?.ateAll || 'Ate everything', color: '#4A8C00', bg: 'rgba(126,211,33,0.1)' },
+            { fn: () => setShowPortionPicker(true), icon: <Minus className="w-3.5 h-3.5" />, label: t.followUp?.ateSome || 'Ate some', color: '#9A6F18', bg: 'rgba(200,147,43,0.12)' },
+            { fn: () => handleRespond('didnt_eat'), icon: <X className="w-3.5 h-3.5" />, label: t.followUp?.didntEat || "Didn't eat", color: '#D0021B', bg: 'rgba(208,2,27,0.08)' },
+            { fn: () => handleRespond('changed_meal'), icon: <Utensils className="w-3.5 h-3.5" />, label: t.followUp?.changedMeal || 'Changed meal', color: 'var(--text-primary)', bg: 'var(--bg-card-alt)' },
+          ].map(({ fn, icon, label, color, bg }) => (
+            <button
+              key={label}
+              onClick={fn}
+              disabled={responding}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold transition-all disabled:opacity-50"
+              style={{ borderRadius: '10px', background: bg, color }}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
         </div>
       ) : (
         <div>
-          <p className="text-sm text-gray-600 mb-2">
+          <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
             {t.followUp?.howMuch || 'How much did you eat?'}
           </p>
           <div className="flex gap-2">
@@ -224,7 +225,8 @@ export default function MealFollowUpBanner() {
                 key={value}
                 onClick={() => handleRespond('ate_some', value)}
                 disabled={responding}
-                className="flex-1 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors disabled:opacity-50"
+                className="flex-1 py-2 text-sm font-semibold transition-all disabled:opacity-50"
+                style={{ borderRadius: '10px', background: 'rgba(200,147,43,0.12)', color: '#9A6F18' }}
               >
                 {label}
               </button>
@@ -232,7 +234,8 @@ export default function MealFollowUpBanner() {
           </div>
           <button
             onClick={() => setShowPortionPicker(false)}
-            className="w-full mt-2 text-xs text-gray-500 hover:underline"
+            className="w-full mt-2 text-xs font-semibold"
+            style={{ color: 'var(--text-muted)' }}
           >
             {t.common?.back || 'Back'}
           </button>

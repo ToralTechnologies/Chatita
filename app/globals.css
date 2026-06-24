@@ -2,32 +2,125 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Light mode (Direction A — Cálida) ── */
 :root {
   --font-serif: 'DM Serif Display', Georgia, serif;
   --font-sans: 'DM Sans', system-ui, sans-serif;
+
+  /* Brand */
   --primary: #012374;
   --primary-dark: #001A4D;
   --accent: #E3171A;
   --gold: #C8932B;
-  --paper: #F7EFE1;
-  --canvas: #FFFDF9;
   --ink: #16182A;
   --success: #7ED321;
   --warning: #F5A623;
   --danger: #D0021B;
+
+  /* Light mode surfaces */
+  --bg-page: #F7EFE1;       /* warm cream page background */
+  --bg-card: #FFFDF9;       /* off-white card */
+  --bg-card-alt: #F7EFE1;   /* secondary card */
+  --bg-nav: #FFFDF9;        /* tab bar */
+  --border-card: rgba(1,35,116,0.07);
+  --border-card-gold: rgba(200,147,43,0.28);
+  --border-nav: rgba(200,147,43,0.3);
+
+  /* Text */
+  --text-primary: #001A4D;
+  --text-secondary: rgba(1,35,116,0.62);
+  --text-muted: rgba(1,35,116,0.5);
+
+  /* Legacy aliases */
+  --paper: #F7EFE1;
+  --canvas: #FFFDF9;
   --gray-bg: #F7EFE1;
   --gray-text: #8E8E93;
+}
+
+/* ── Dark mode (Direction B — Confiada) ── */
+.dark {
+  --bg-page: #F7EFE1;       /* cream body background */
+  --bg-card: #F7EFE1;       /* cream cards */
+  --bg-card-alt: #FFFDF9;
+  --bg-nav: #012374;        /* navy tab bar */
+  --border-card: rgba(1,35,116,0.1);
+  --border-card-gold: rgba(200,147,43,0.3);
+  --border-nav: transparent;
+
+  --text-primary: #001A4D;
+  --text-secondary: rgba(1,35,116,0.62);
+  --text-muted: rgba(1,35,116,0.5);
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FFFDF9;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(1,35,116,0.18);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(1,35,116,0.3);
+}
+
+/* ── Mood range slider ── */
+input[type="range"].mood-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #001A4D, #34508C, #7C86AB, #C8932B, #B07C1C);
+  outline: none;
+}
+input[type="range"].mood-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #FFFDF9;
+  border: 3px solid #012374;
+  box-shadow: 0 4px 12px -2px rgba(1,35,116,0.5);
+  cursor: pointer;
+}
+input[type="range"].mood-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #FFFDF9;
+  border: 3px solid #012374;
+  box-shadow: 0 4px 12px -2px rgba(1,35,116,0.5);
+  cursor: pointer;
+}
+
+/* ── Pulse ring animation ── */
+@keyframes pulsering {
+  0%   { transform: scale(1); opacity: 0.55; }
+  70%  { transform: scale(1.9); opacity: 0; }
+  100% { opacity: 0; }
+}
+.animate-pulsering {
+  animation: pulsering 1.8s ease-out infinite;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .font-serif-italic {
+    font-family: var(--font-serif);
+    font-style: italic;
   }
 }
