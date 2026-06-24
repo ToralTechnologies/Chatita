@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
-import { MapPin, Loader2, Utensils, Star, Navigation, Search, X, Plus, Heart, Clock } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/context';
+import BackButton from '@/components/back-button';
+import WebNav from '@/components/web-nav';
 
-interface MenuItem {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Place {
+  id: string;
+  name: string;
+  cuisine: string;
+  distance?: string;
+  address?: string;
+}
+
+interface Dish {
   name: string;
   category: string;
   score: 'great' | 'moderate' | 'caution';
@@ -14,1055 +23,674 @@ interface MenuItem {
   tip: string;
 }
 
-interface Restaurant {
-  id: string;
-  name: string;
-  cuisine: string;
-  rating?: number;
-  distance?: string;
-  address?: string;
-  diabetesFriendly: boolean;
-  hasDish?: string;
-  priceLevel?: number;
+type SearchMode = 'nearby' | 'dish' | 'name' | 'favs';
+
+// ─── Rating config ─────────────────────────────────────────────────────────────
+// Maps API score → design labels (great/mindful/save-for-later)
+const RATING = {
+  great:    { label: 'Great',         color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   border: 'rgba(28,122,79,0.18)',   row: 'rgba(28,122,79,0.06)' },
+  moderate: { label: 'Mindful',       color: '#9A6F18', bg: 'rgba(200,147,43,0.18)',  border: 'rgba(200,147,43,0.22)',  row: 'rgba(200,147,43,0.07)' },
+  caution:  { label: 'Save for later',color: '#B5562E', bg: 'rgba(181,86,46,0.13)',   border: 'rgba(181,86,46,0.18)',   row: 'rgba(181,86,46,0.05)' },
+} as const;
+
+// ─── Plate tip logic ──────────────────────────────────────────────────────────
+
+function getPlateTip(selected: string[], menu: Dish[]): string {
+  if (!selected.length) return '';
+  const dishes = selected.map(n => menu.find(d => d.name === n)).filter(Boolean) as Dish[];
+  if (dishes.every(d => d.score === 'great')) return "Beautifully gentle — this combination should sit easy with your blood sugar.";
+  if (dishes.some(d => d.score === 'caution')) return "There's a richer pick here — pair it with a salad and a glass of water, and enjoy a smaller portion.";
+  return "Looking balanced. A glass of water before you eat helps too.";
 }
 
-interface Suggestion {
-  id: string;
-  name: string;
-  cuisine: string;
-  address: string;
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function DishRow({ dish, selected, onSelect, web }: { dish: Dish; selected: boolean; onSelect: () => void; web?: boolean }) {
+  const r = RATING[dish.score];
+  return (
+    <div
+      onClick={onSelect}
+      style={{
+        cursor: 'pointer',
+        borderRadius: web ? '14px' : '13px',
+        padding: web ? '15px 16px' : '12px 13px',
+        background: r.row,
+        border: `1px solid ${r.border}`,
+        boxShadow: selected ? `0 0 0 2px #012374` : undefined,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: web ? '11px' : '9px', alignItems: 'flex-start' }}>
+          <span style={{
+            marginTop: '1px', width: web ? '19px' : '17px', height: web ? '19px' : '17px',
+            borderRadius: web ? '6px' : '5px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: selected ? '#012374' : 'transparent',
+            border: selected ? 'none' : '1.5px solid rgba(1,35,116,0.3)',
+          }}>
+            {selected && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </span>
+          <div>
+            <div style={{ fontSize: web ? '15px' : '14px', fontWeight: 600, color: '#16182A' }}>{dish.name}</div>
+            {web && <div style={{ fontSize: '13px', color: '#16182A', opacity: .66, lineHeight: 1.45, marginTop: '5px', maxWidth: '380px' }}>{dish.tip}</div>}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: web ? '5px 11px' : '4px 9px', borderRadius: '999px', fontSize: web ? '11.5px' : '11px', fontWeight: 700, background: r.bg, color: r.color }}>
+            {r.label}
+          </span>
+          <div style={{ fontSize: web ? '12px' : '11.5px', color: '#16182A', opacity: .5, marginTop: web ? '7px' : '5px' }}>{dish.carbEstimate} carbs</div>
+        </div>
+      </div>
+      {!web && <div style={{ fontSize: '12.5px', color: '#16182A', opacity: .66, lineHeight: 1.45, marginTop: '7px', paddingLeft: '26px' }}>{dish.tip}</div>}
+    </div>
+  );
 }
 
-type SearchMode = 'location' | 'dish' | 'name' | 'detect' | 'favorites' | 'recent';
+function PlateCard({ selected, menu, web }: { selected: string[]; menu: Dish[]; web?: boolean }) {
+  if (!selected.length) return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#012374', fontSize: '13px', fontWeight: 600, padding: '4px 2px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.7"/><path d="M12 8v.5M11 11h1v5h1" stroke="#012374" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      Tap dishes to build a plate and get a tip.
+    </div>
+  );
+
+  const tip = getPlateTip(selected, menu);
+  const selectedDishes = selected.map(n => menu.find(d => d.name === n)).filter(Boolean) as Dish[];
+
+  return (
+    <div style={{ background: '#012374', color: '#FFFDF9', borderRadius: web ? '18px' : '15px', padding: web ? '22px' : '16px' }}>
+      <div style={{ fontSize: '11px', letterSpacing: '.14em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Your plate so far</div>
+      <div className="font-serif-italic" style={{ fontSize: web ? '23px' : '19px', lineHeight: 1.2, marginTop: web ? '8px' : '6px' }}>
+        {selected.length} {selected.length === 1 ? 'dish chosen' : 'dishes chosen'}
+      </div>
+      {web && (
+        <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+          {selectedDishes.map(d => (
+            <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '14px' }}>
+              <span style={{ opacity: .92 }}>{d.name}</span>
+              <span style={{ opacity: .7 }}>{d.carbEstimate}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ marginTop: web ? '16px' : '7px', paddingTop: web ? '14px' : '10px', borderTop: web ? '1px solid rgba(255,253,249,0.18)' : undefined, fontSize: web ? '13.5px' : '13px', opacity: .88, lineHeight: 1.5 }}>
+        {tip}
+      </div>
+    </div>
+  );
+}
+
+function RestaurantMenu({ place, menu, selectedDishes, onToggleDish, onQuickAdd, web }: {
+  place: Place;
+  menu: Dish[];
+  selectedDishes: string[];
+  onToggleDish: (name: string) => void;
+  onQuickAdd: () => void;
+  web?: boolean;
+}) {
+  // Group dishes by category
+  const categories = Array.from(new Set(menu.map(d => d.category)));
+  const sections = categories.map(cat => ({ name: cat, dishes: menu.filter(d => d.category === cat) }));
+
+  if (web) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '28px', alignItems: 'start' }}>
+        <div>
+          {sections.map(sec => (
+            <div key={sec.name} style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', letterSpacing: '.08em', textTransform: 'uppercase', color: '#001A4D', opacity: .55, fontWeight: 700 }}>{sec.name}</div>
+              <div style={{ marginTop: '11px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                {sec.dishes.map(d => (
+                  <DishRow key={d.name} dish={d} selected={selectedDishes.includes(d.name)} onSelect={() => onToggleDish(d.name)} web />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ position: 'sticky', top: '10px' }}>
+          <PlateCard selected={selectedDishes} menu={menu} web />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: '8px', padding: '13px 0 14px', borderTop: '1px solid rgba(1,35,116,0.07)' }}>
+        <button onClick={onQuickAdd} style={{ flex: 1, background: '#012374', color: '#FFFDF9', borderRadius: '12px', padding: '12px', textAlign: 'center', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+          + Quick-add a meal
+        </button>
+      </div>
+      {sections.map(sec => (
+        <div key={sec.name} style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '12px', letterSpacing: '.08em', textTransform: 'uppercase', color: '#001A4D', opacity: .55, fontWeight: 700 }}>{sec.name}</div>
+          <div style={{ marginTop: '9px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {sec.dishes.map(d => (
+              <DishRow key={d.name} dish={d} selected={selectedDishes.includes(d.name)} onSelect={() => onToggleDish(d.name)} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <PlateCard selected={selectedDishes} menu={menu} />
+    </>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RestaurantFinderPage() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // ── shared state ──────────────────────────────────────────────────────────
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [locationName, setLocationName] = useState('');
-  const [searchMode, setSearchMode] = useState<SearchMode>('location');
-  const [searchedDish, setSearchedDish] = useState('');
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string | null>(null);
-  const [selectedDishes, setSelectedDishes] = useState<Record<string, string[]>>({});
-  const [gettingTips, setGettingTips] = useState(false);
-  const [customTips, setCustomTips] = useState<Record<string, any>>({});
-
-  // ── dish-search state ─────────────────────────────────────────────────────
-  const [dishQuery, setDishQuery] = useState('');
-
-  // ── name-search state ─────────────────────────────────────────────────────
-  const [nameQuery, setNameQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [searchingName, setSearchingName] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── detect-location state ────────────────────────────────────────────────
-  const [detectingLocation, setDetectingLocation] = useState(false);
-  const [nearbyPlaces, setNearbyPlaces] = useState<Suggestion[]>([]);
-
-  // ── dynamic menu state (keyed by restaurant id) ──────────────────────────
-  const [menuItems, setMenuItems] = useState<Record<string, MenuItem[]>>({});
+  const [mode, setMode] = useState<SearchMode>('nearby');
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [menus, setMenus] = useState<Record<string, Dish[]>>({});
   const [loadingMenu, setLoadingMenu] = useState<Record<string, boolean>>({});
-  // free-text dish the user typed in (keyed by restaurant id)
-  const [customDishInput, setCustomDishInput] = useState<Record<string, string>>({});
-
-  // ── favorites & recent visits state ────────────────────────────────────────
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [recentVisits, setRecentVisits] = useState<any[]>([]);
+  const [selectedDishes, setSelectedDishes] = useState<Record<string, string[]>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);  // mobile
+  const [activeId, setActiveId] = useState<string | null>(null);       // desktop
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [dishQuery, setDishQuery] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [searchingName, setSearchingName] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [error, setError] = useState('');
 
-  // ── close suggestions on outside click ───────────────────────────────────
+  // Load favorites on mount
   useEffect(() => {
-    const handler = () => setShowSuggestions(false);
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // ── Load favorites and recent visits on mount ─────────────────────────────
-  useEffect(() => {
-    fetchFavorites();
-    fetchRecentVisits();
-  }, []);
-
-  const fetchFavorites = async () => {
-    try {
-      const res = await fetch('/api/restaurants/favorites');
-      if (res.ok) {
-        const data = await res.json();
-        setFavorites(data.favorites || []);
-        setFavoriteIds(new Set(data.favorites.map((f: any) => f.placeId)));
-      }
-    } catch (err) {
-      console.error('Failed to fetch favorites:', err);
-    }
-  };
-
-  const fetchRecentVisits = async () => {
-    try {
-      const res = await fetch('/api/restaurants/visits?limit=10');
-      if (res.ok) {
-        const data = await res.json();
-        setRecentVisits(data.visits || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch recent visits:', err);
-    }
-  };
-
-  const toggleFavorite = async (restaurant: Restaurant) => {
-    const isFavorited = favoriteIds.has(restaurant.id);
-
-    if (isFavorited) {
-      // Remove from favorites
-      try {
-        const res = await fetch(`/api/restaurants/favorites/${restaurant.id}`, {
-          method: 'DELETE',
-        });
-        if (res.ok) {
-          setFavoriteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(restaurant.id);
-            return next;
-          });
-          setFavorites((prev) => prev.filter((f) => f.placeId !== restaurant.id));
-        }
-      } catch (err) {
-        console.error('Failed to remove favorite:', err);
-      }
-    } else {
-      // Add to favorites
-      try {
-        const res = await fetch('/api/restaurants/favorites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            placeId: restaurant.id,
-            name: restaurant.name,
-            address: restaurant.address,
-            cuisine: restaurant.cuisine,
-            rating: restaurant.rating,
-            priceLevel: restaurant.priceLevel,
-          }),
-        });
-        if (res.ok) {
-          setFavoriteIds((prev) => new Set(prev).add(restaurant.id));
-          fetchFavorites(); // Refresh favorites list
-        }
-      } catch (err) {
-        console.error('Failed to add favorite:', err);
-      }
-    }
-  };
-
-  const recordRestaurantVisit = async (restaurant: Restaurant) => {
-    try {
-      await fetch('/api/restaurants/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          placeId: restaurant.id,
-          name: restaurant.name,
-          address: restaurant.address,
-          cuisine: restaurant.cuisine,
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to record visit:', err);
-    }
-  };
-
-  const loadFavoritesTab = () => {
-    setSearchMode('favorites');
-    setRestaurants([]);
-    setLocation(null);
-    setError('');
-    setLoadingFavorites(true);
-
-    // Convert favorites to restaurants
-    const favoriteRestaurants: Restaurant[] = favorites.map((fav) => ({
-      id: fav.placeId,
-      name: fav.name,
-      cuisine: fav.cuisine || 'Various',
-      address: fav.address,
-      rating: fav.rating,
-      priceLevel: fav.priceLevel,
-      diabetesFriendly: true,
-    }));
-
-    setRestaurants(favoriteRestaurants);
-    setLocation({ lat: 0, lng: 0 }); // truthy so results render
-    setLocationName('your favorites');
-    setLoadingFavorites(false);
-  };
-
-  const loadRecentTab = () => {
-    setSearchMode('recent');
-    setRestaurants([]);
-    setLocation(null);
-    setError('');
-    setLoadingFavorites(true);
-
-    // Convert recent visits to restaurants
-    const recentRestaurants: Restaurant[] = recentVisits.map((visit) => ({
-      id: visit.placeId,
-      name: visit.name,
-      cuisine: visit.cuisine || 'Various',
-      address: visit.address,
-      diabetesFriendly: true,
-    }));
-
-    setRestaurants(recentRestaurants);
-    setLocation({ lat: 0, lng: 0 }); // truthy so results render
-    setLocationName('recent visits');
-    setLoadingFavorites(false);
-  };
-
-  // ── reset results when switching tabs ─────────────────────────────────────
-  const switchMode = (mode: SearchMode) => {
-    setSearchMode(mode);
-    setLocation(null);
-    setRestaurants([]);
-    setError('');
-    setSearchedDish('');
-    setNearbyPlaces([]);
-    setShowSuggestions(false);
-
-    if (mode === 'name') {
-      // focus happens after render
-      setTimeout(() => nameInputRef.current?.focus(), 100);
-    } else if (mode === 'favorites') {
-      loadFavoritesTab();
-    } else if (mode === 'recent') {
-      loadRecentTab();
-    }
-  };
-
-  // ── existing: browse-nearby & dish-search helpers ─────────────────────────
-  const searchRestaurants = (lat: number, lng: number, dish?: string) => {
-    setLoading(true);
-    setError('');
-
-    fetch('/api/restaurants/nearby', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat, lng, dish }),
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(t.restaurants.noRestaurantsMessage);
-        const data = await response.json();
-        if (data.restaurants.length === 0 && dish) {
-          setError(t.restaurants.noRestaurantsMessage);
-        } else {
-          setRestaurants(data.restaurants);
-          setLocationName(data.locationName || 'your location');
-          setSearchedDish(data.searchedDish || '');
-        }
+    fetch('/api/restaurants/favorites')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.favorites) setFavoriteIds(new Set(data.favorites.map((f: any) => f.placeId)));
       })
-      .catch((err: any) => setError(err.message || t.restaurants.noRestaurantsMessage))
-      .finally(() => setLoading(false));
-  };
+      .catch(() => {});
+  }, []);
 
-  const getCurrentLocation = () => {
-    setLoading(true);
+  // Auto-load nearby on mount
+  useEffect(() => { detectNearby(); }, []);
+
+  const detectNearby = () => {
+    setLoadingPlaces(true);
     setError('');
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      setLoading(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setLocation({ lat: latitude, lng: longitude });
-        const dish = searchMode === 'dish' ? dishQuery.trim() : undefined;
-        searchRestaurants(latitude, longitude, dish);
+    navigator.geolocation?.getCurrentPosition(
+      async pos => {
+        try {
+          const res = await fetch('/api/restaurants/nearby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const list = (data.restaurants || []).map((r: any) => ({
+              id: r.id || r.placeId || r.name,
+              name: r.name,
+              cuisine: r.cuisine || 'Restaurant',
+              distance: r.distance,
+              address: r.address,
+            }));
+            setPlaces(list);
+            if (list.length > 0) { setActiveId(list[0].id); loadMenu(list[0]); }
+          }
+        } catch { setError('Could not load nearby restaurants.'); }
+        setLoadingPlaces(false);
       },
       () => {
-        setError('Unable to retrieve your location. Please enable location services.');
-        setLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        // fallback: use default location
+        fetch('/api/restaurants/nearby', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lat: 40.7128, lng: -74.0060 }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            const list = (data?.restaurants || []).map((r: any) => ({
+              id: r.id || r.placeId || r.name,
+              name: r.name,
+              cuisine: r.cuisine || 'Restaurant',
+              distance: r.distance,
+              address: r.address,
+            }));
+            setPlaces(list);
+            if (list.length > 0) { setActiveId(list[0].id); loadMenu(list[0]); }
+          })
+          .catch(() => setError('Could not load restaurants.'))
+          .finally(() => setLoadingPlaces(false));
+      }
     );
   };
 
-  const handleDishSearch = () => {
-    if (!dishQuery.trim()) {
-      setError(t.restaurants.enterDishName);
-      return;
-    }
-    getCurrentLocation();
+  const searchByDish = async () => {
+    if (!dishQuery.trim()) return;
+    setLoadingPlaces(true);
+    setError('');
+    navigator.geolocation?.getCurrentPosition(
+      async pos => {
+        try {
+          const res = await fetch('/api/restaurants/nearby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, dishFilter: dishQuery }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const list = (data.restaurants || []).map((r: any) => ({ id: r.id || r.name, name: r.name, cuisine: r.cuisine || 'Restaurant', distance: r.distance, address: r.address }));
+            setPlaces(list);
+            if (list.length > 0) setActiveId(list[0].id);
+          }
+        } catch { setError('Search failed.'); }
+        setLoadingPlaces(false);
+      },
+      async () => {
+        // fallback without location
+        setLoadingPlaces(false);
+      }
+    );
   };
 
-  // ── new: name-search helpers ──────────────────────────────────────────────
-  const fetchSuggestions = async (query: string) => {
-    if (query.trim().length < 1) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
+  const searchByName = async (query: string) => {
+    if (!query.trim()) { setSuggestions([]); return; }
     setSearchingName(true);
     try {
       const res = await fetch('/api/restaurants/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'name', query: query.trim() }),
+        body: JSON.stringify({ mode: 'name', query }),
       });
       if (res.ok) {
         const data = await res.json();
-        setSuggestions(data.suggestions || []);
-        setShowSuggestions(true);
+        setSuggestions((data.suggestions || []).map((s: any) => ({ id: s.id || s.name, name: s.name, cuisine: s.cuisine || 'Restaurant', address: s.address, distance: s.distance })));
       }
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setSearchingName(false);
-    }
+    } catch { /* silent */ }
+    setSearchingName(false);
   };
 
-  const handleNameChange = (value: string) => {
-    setNameQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(value), 350);
+  const loadFavorites = async () => {
+    setLoadingPlaces(true);
+    try {
+      const res = await fetch('/api/restaurants/favorites');
+      if (res.ok) {
+        const data = await res.json();
+        const list = (data.favorites || []).map((f: any) => ({ id: f.placeId, name: f.name, cuisine: f.cuisine || 'Restaurant', address: f.address }));
+        setPlaces(list);
+        if (list.length > 0) setActiveId(list[0].id);
+      }
+    } catch { setError('Could not load favorites.'); }
+    setLoadingPlaces(false);
   };
 
-  // When user taps a suggestion, build a single-item restaurant list and kick
-  // off the AI menu fetch simultaneously.
-  const selectSuggestion = (suggestion: Suggestion) => {
-    setShowSuggestions(false);
-    setNameQuery(suggestion.name);
-
-    const restaurant: Restaurant = {
-      id: suggestion.id,
-      name: suggestion.name,
-      cuisine: suggestion.cuisine,
-      address: suggestion.address,
-      diabetesFriendly: true,
-    };
-    setRestaurants([restaurant]);
-    setLocation({ lat: 0, lng: 0 }); // truthy so results render
-    setLocationName('your selection');
-    setSearchedDish('');
-    fetchMenu(suggestion.id, suggestion.name, suggestion.cuisine);
-  };
-
-  // ── new: detect-location helpers ──────────────────────────────────────────
-  const handleDetect = () => {
-    setDetectingLocation(true);
-    setNearbyPlaces([]);
-    setError('');
-
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
-      setDetectingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const res = await fetch('/api/restaurants/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mode: 'nearby', lat: latitude, lng: longitude }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setNearbyPlaces(data.places || []);
-          }
-        } catch {
-          setError('Failed to detect nearby restaurants.');
-        } finally {
-          setDetectingLocation(false);
-        }
-      },
-      () => {
-        setError('Unable to retrieve your location. Please enable location services.');
-        setDetectingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  // User confirmed a nearby place → same pattern as selectSuggestion
-  const confirmNearbyPlace = (place: Suggestion) => {
-    setNearbyPlaces([]);
-    const restaurant: Restaurant = {
-      id: place.id,
-      name: place.name,
-      cuisine: place.cuisine,
-      address: place.address,
-      diabetesFriendly: true,
-    };
-    setRestaurants([restaurant]);
-    setLocation({ lat: 0, lng: 0 });
-    setLocationName('your location');
-    setSearchedDish('');
-    fetchMenu(place.id, place.name, place.cuisine);
-  };
-
-  // ── fetch AI menu for a restaurant ─────────────────────────────────────────
-  const fetchMenu = async (restaurantId: string, restaurantName: string, cuisine: string) => {
-    setLoadingMenu((prev) => ({ ...prev, [restaurantId]: true }));
+  const loadMenu = async (place: Place) => {
+    if (menus[place.id] || loadingMenu[place.id]) return;
+    setLoadingMenu(prev => ({ ...prev, [place.id]: true }));
     try {
       const res = await fetch('/api/restaurants/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantName, cuisine }),
+        body: JSON.stringify({ restaurantName: place.name, cuisine: place.cuisine }),
       });
       if (res.ok) {
         const data = await res.json();
-        setMenuItems((prev) => ({ ...prev, [restaurantId]: data.dishes || [] }));
+        setMenus(prev => ({ ...prev, [place.id]: data.dishes || [] }));
       }
-    } catch {
-      console.error('Failed to fetch menu');
-    } finally {
-      setLoadingMenu((prev) => ({ ...prev, [restaurantId]: false }));
-    }
+    } catch { /* silent */ }
+    setLoadingMenu(prev => ({ ...prev, [place.id]: false }));
   };
 
-  // ── personalized-tips helpers ─────────────────────────────────────────────
-  const toggleDishSelection = (restaurantId: string, dish: string) => {
-    setSelectedDishes((prev) => {
-      const current = prev[restaurantId] || [];
-      const isSelected = current.includes(dish);
-      return {
-        ...prev,
-        [restaurantId]: isSelected ? current.filter((d) => d !== dish) : [...current, dish],
-      };
+  const toggleDish = (placeId: string, dishName: string) => {
+    setSelectedDishes(prev => {
+      const cur = prev[placeId] || [];
+      return { ...prev, [placeId]: cur.includes(dishName) ? cur.filter(n => n !== dishName) : [...cur, dishName] };
     });
   };
 
-  const getCustomTips = async (restaurantId: string, restaurantName: string, cuisine: string) => {
-    const dishes = selectedDishes[restaurantId] || [];
-    if (dishes.length === 0) return;
-    setGettingTips(true);
+  const toggleFavorite = async (place: Place, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isFav = favoriteIds.has(place.id);
+    setFavoriteIds(prev => {
+      const next = new Set(prev);
+      isFav ? next.delete(place.id) : next.add(place.id);
+      return next;
+    });
     try {
-      const response = await fetch('/api/restaurant-tips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantName, cuisine, dishes }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCustomTips((prev) => ({ ...prev, [restaurantId]: data }));
+      if (isFav) {
+        await fetch(`/api/restaurants/favorites/${encodeURIComponent(place.id)}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/restaurants/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ placeId: place.id, name: place.name, cuisine: place.cuisine, address: place.address || '' }),
+        });
       }
-    } catch (err) {
-      console.error('Failed to get custom tips:', err);
-    } finally {
-      setGettingTips(false);
+    } catch { /* rollback */
+      setFavoriteIds(prev => {
+        const next = new Set(prev);
+        isFav ? next.add(place.id) : next.delete(place.id);
+        return next;
+      });
     }
   };
 
-  // ── render helpers ────────────────────────────────────────────────────────
-  // Whether to show the "find near me" / search button block (location & dish modes only)
-  const showPrimaryAction = (searchMode === 'location' || searchMode === 'dish') && !location && !loading;
+  const selectPlace = (place: Place) => {
+    setActiveId(place.id);
+    loadMenu(place);
+  };
+
+  const handleModeChange = (m: SearchMode) => {
+    setMode(m);
+    if (m === 'nearby') detectNearby();
+    if (m === 'favs') loadFavorites();
+  };
+
+  const handleNameQueryChange = (q: string) => {
+    setNameQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchByName(q), 350);
+  };
+
+  const handleSuggestionSelect = (place: Place) => {
+    setSuggestions([]);
+    setNameQuery(place.name);
+    setPlaces([place]);
+    setActiveId(place.id);
+    loadMenu(place);
+  };
+
+  const greatCount = (placeId: string) => {
+    const m = menus[placeId];
+    return m ? m.filter(d => d.score === 'great').length : 0;
+  };
+
+  const activePlace = places.find(p => p.id === activeId) ?? places[0] ?? null;
+  const activeMenu = activePlace ? (menus[activePlace.id] ?? []) : [];
+  const activeSelected = activePlace ? (selectedDishes[activePlace.id] ?? []) : [];
+
+  const MODES: { id: SearchMode; label: string }[] = [
+    { id: 'nearby', label: 'Browse nearby' },
+    { id: 'dish', label: 'Search by dish' },
+    { id: 'name', label: 'Search by name' },
+    { id: 'favs', label: 'Favorites' },
+  ];
+
+  const Disclaimer = () => (
+    <div style={{ marginTop: '16px', background: 'rgba(200,147,43,0.1)', borderRadius: '13px', padding: '13px 15px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
+        <path d="M12 3l9 16H3L12 3z" stroke="#9A6F18" strokeWidth="1.7" strokeLinejoin="round"/>
+        <path d="M12 10v4M12 16.5v.5" stroke="#9A6F18" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+      <div style={{ fontSize: '12px', color: '#16182A', opacity: .72, lineHeight: 1.45 }}>Suggestions are general guidance. Ask about ingredients and portions, and check with your provider for personalized advice.</div>
+    </div>
+  );
+
+  const PlaceListCard = ({ place, onSelect, mobile }: { place: Place; onSelect: () => void; mobile?: boolean }) => {
+    const isActive = activeId === place.id;
+    const isFav = favoriteIds.has(place.id);
+    const gc = greatCount(place.id);
+
+    return (
+      <div
+        onClick={onSelect}
+        style={{
+          cursor: 'pointer',
+          background: '#FFFDF9',
+          borderRadius: mobile ? '18px' : '16px',
+          border: `1px solid ${isActive && !mobile ? '#012374' : 'rgba(1,35,116,0.08)'}`,
+          overflow: 'hidden',
+          boxShadow: '0 8px 20px -18px rgba(1,35,116,.5)',
+        }}
+      >
+        <div style={{ padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 3v8a3 3 0 0 0 6 0V3M8 3v18M19 3c-1.5 0-3 1.5-3 5s1.5 4 3 4m0 0v9" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                <span className="font-serif-italic" style={{ fontSize: '18px', color: '#012374' }}>{place.name}</span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#16182A', opacity: .6, marginTop: '4px' }}>{place.cuisine}{place.distance ? ` · ${place.distance}` : ''}</div>
+              {place.address && <div style={{ fontSize: '12.5px', color: '#16182A', opacity: .5, marginTop: '2px' }}>{place.address}</div>}
+            </div>
+            <button
+              onClick={e => toggleFavorite(place, e)}
+              style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#F7EFE1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, border: 'none' }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill={isFav ? '#C8932B' : 'none'}>
+                <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z" stroke="#C8932B" strokeWidth="1.7"/>
+              </svg>
+            </button>
+          </div>
+
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(28,122,79,0.12)', color: '#1C7A4F', padding: '6px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: 600 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#1C7A4F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              {gc > 0 ? `${gc} gentle picks` : (menus[place.id] ? 'Menu loaded' : 'See the menu')}
+            </span>
+            {mobile && (
+              <span style={{ fontSize: '12px', color: '#16182A', opacity: .55 }}>
+                {expandedId === place.id ? 'Hide menu' : 'See the menu'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile accordion */}
+        {mobile && expandedId === place.id && (
+          <div style={{ padding: '0 16px 16px' }}>
+            {loadingMenu[place.id] ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(1,35,116,0.5)', fontSize: '13px' }}>Loading menu…</div>
+            ) : menus[place.id] ? (
+              <RestaurantMenu
+                place={place}
+                menu={menus[place.id]}
+                selectedDishes={selectedDishes[place.id] ?? []}
+                onToggleDish={name => toggleDish(place.id, name)}
+                onQuickAdd={() => {}}
+              />
+            ) : null}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center">
-          <button onClick={() => router.back()} className="text-primary hover:underline mr-4">
-            ← {t.common.back}
-          </button>
-          <h1 className="text-2xl font-bold">{t.restaurants.title}</h1>
+    <>
+      {/* ── Desktop (lg+) ── */}
+      <div className="hidden lg:flex min-h-screen" style={{ background: '#F7EFE1' }}>
+        <WebNav />
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+          <div style={{ fontSize: '12px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Restaurants · eating out</div>
+          <div className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', lineHeight: 1.05, marginTop: '6px' }}>Find a kind place to eat.</div>
+          <div style={{ fontSize: '16px', color: '#16182A', opacity: .72, marginTop: '4px' }}>Chatita reads the menu with you and points to dishes that sit easy — never good or bad, just gentle or mindful.</div>
+
+          <div style={{ marginTop: '26px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: '24px', alignItems: 'start' }}>
+            {/* Left: sticky search + list */}
+            <div style={{ position: 'sticky', top: '0' }}>
+              {/* Search panel */}
+              <div style={{ background: '#FFFDF9', borderRadius: '22px', padding: '24px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.7"/><circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.7"/></svg>
+                  <div className="font-serif-italic" style={{ fontSize: '21px', color: '#012374' }}>Find a gentle spot</div>
+                </div>
+                <div style={{ fontSize: '14px', color: '#16182A', opacity: .7, lineHeight: 1.5, marginTop: '8px' }}>Choose how you&apos;d like to look. Chatita does the menu reading.</div>
+                <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {MODES.map(m => (
+                    <button key={m.id} onClick={() => handleModeChange(m.id)} style={{ cursor: 'pointer', textAlign: 'center', padding: '13px 8px', borderRadius: '13px', fontSize: '14px', fontWeight: 600, border: 'none', background: mode === m.id ? '#012374' : '#F7EFE1', color: mode === m.id ? '#FFFDF9' : '#012374', transition: 'all .15s' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                {mode === 'dish' && (
+                  <div style={{ marginTop: '14px', display: 'flex', gap: '8px' }}>
+                    <input value={dishQuery} onChange={e => setDishQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchByDish()} placeholder="e.g. grilled salmon, salad…" style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.12)', borderRadius: '11px', padding: '12px 14px', fontFamily: 'inherit', fontSize: '14px', color: '#16182A', outline: 'none' }} />
+                    <button onClick={searchByDish} style={{ padding: '12px 16px', borderRadius: '11px', background: '#012374', color: '#FFFDF9', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13.5px' }}>Go</button>
+                  </div>
+                )}
+                {mode === 'name' && (
+                  <div style={{ marginTop: '14px', position: 'relative' }}>
+                    <input value={nameQuery} onChange={e => handleNameQueryChange(e.target.value)} placeholder="Restaurant name…" style={{ width: '100%', background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.12)', borderRadius: '11px', padding: '12px 14px', fontFamily: 'inherit', fontSize: '14px', color: '#16182A', outline: 'none', boxSizing: 'border-box' }} />
+                    {suggestions.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#FFFDF9', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.12)', boxShadow: '0 10px 24px -8px rgba(1,35,116,.25)', marginTop: '4px', zIndex: 10, overflow: 'hidden' }}>
+                        {suggestions.map(s => (
+                          <div key={s.id} onClick={() => handleSuggestionSelect(s)} style={{ padding: '12px 14px', cursor: 'pointer', fontSize: '14px', color: '#012374', fontWeight: 500, borderBottom: '1px solid rgba(1,35,116,0.06)' }}>
+                            <div>{s.name}</div>
+                            <div style={{ fontSize: '12px', opacity: .6, marginTop: '2px' }}>{s.cuisine}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Restaurant list */}
+              <div style={{ marginTop: '18px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Recommended near you</div>
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {loadingPlaces ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(1,35,116,0.5)', fontSize: '14px' }}>Finding restaurants…</div>
+                ) : places.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(1,35,116,0.5)', fontSize: '14px' }}>No restaurants found</div>
+                ) : (
+                  places.map(place => (
+                    <PlaceListCard key={place.id} place={place} onSelect={() => selectPlace(place)} />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Right: active restaurant menu */}
+            {activePlace ? (
+              <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -26px rgba(1,35,116,.35)', overflow: 'hidden' }}>
+                <div style={{ padding: '26px 28px', borderBottom: '1px solid rgba(1,35,116,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="font-serif-italic" style={{ fontSize: '26px', color: '#012374' }}>{activePlace.name}</div>
+                    <div style={{ fontSize: '14px', color: '#16182A', opacity: .6, marginTop: '4px' }}>{activePlace.cuisine}{activePlace.distance ? ` · ${activePlace.distance}` : ''}{activePlace.address ? ` · ${activePlace.address}` : ''}</div>
+                  </div>
+                  <button style={{ background: '#012374', color: '#FFFDF9', borderRadius: '999px', padding: '12px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 10px 22px -12px rgba(1,35,116,.55)', border: 'none' }}>
+                    + Quick-add a meal
+                  </button>
+                </div>
+                <div style={{ padding: '24px 28px' }}>
+                  {loadingMenu[activePlace.id] ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(1,35,116,0.5)', fontSize: '14px' }}>Loading menu…</div>
+                  ) : activeMenu.length > 0 ? (
+                    <RestaurantMenu
+                      place={activePlace}
+                      menu={activeMenu}
+                      selectedDishes={activeSelected}
+                      onToggleDish={name => toggleDish(activePlace.id, name)}
+                      onQuickAdd={() => {}}
+                      web
+                    />
+                  ) : (
+                    <div style={{ background: '#F7EFE1', border: '1px dashed rgba(1,35,116,0.18)', borderRadius: '18px', padding: '40px', textAlign: 'center' }}>
+                      <div className="font-serif-italic" style={{ fontSize: '19px', color: '#012374', marginTop: '12px' }}>Build your plate</div>
+                      <div style={{ fontSize: '13.5px', color: '#16182A', opacity: .66, lineHeight: 1.5, marginTop: '6px' }}>Select a restaurant on the left and Chatita will read the menu for you.</div>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '16px', display: 'flex', gap: '11px', alignItems: 'flex-start', fontSize: '13px', color: '#16182A', opacity: .6, lineHeight: 1.45 }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}><path d="M12 3l9 16H3L12 3z" stroke="#9A6F18" strokeWidth="1.7" strokeLinejoin="round"/><path d="M12 10v4M12 16.5v.5" stroke="#9A6F18" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    <span>Suggestions are general guidance. Ask about ingredients and portions, and check with your provider for personalized advice.</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#FFFDF9', border: '1px dashed rgba(1,35,116,0.16)', borderRadius: '22px', padding: '60px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+                <div className="font-serif-italic" style={{ fontSize: '22px', color: '#012374' }}>Select a restaurant to see its menu</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
-        {/* Info Card + Search Controls */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <MapPin className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
+      {/* ── Mobile (< lg) ── */}
+      <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
+        {/* Navy hero */}
+        <div style={{ background: '#012374', padding: '0 24px 72px', position: 'relative' }}>
+          <div style={{ paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#FFFDF9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)', flexShrink: 0 }}>
+              <BackButton href="/home" />
+            </div>
             <div>
-              <h2 className="text-lg font-semibold mb-2">{t.restaurants.findDiabetesFriendly}</h2>
-              <p className="text-gray-600 text-sm">
-                {searchMode === 'dish'
-                  ? t.restaurants.descriptionDish
-                  : t.restaurants.descriptionLocation}
-              </p>
+              <div style={{ fontSize: '11px', letterSpacing: '.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Eating out</div>
+              <div className="font-serif-italic" style={{ fontSize: '23px', color: '#FFFDF9', lineHeight: 1 }}>Restaurants near you</div>
             </div>
           </div>
-
-          {/* Tab row – always visible until results load (for location/dish) */}
-          {!(location && (searchMode === 'location' || searchMode === 'dish')) && !loading && (
-            <div className="mb-4">
-              {/* 6-tab row */}
-              <div className="grid grid-cols-3 gap-1.5 mb-4">
-                {([
-                  ['location', t.restaurants.browseNearby || 'Browse Nearby'],
-                  ['dish', t.restaurants.searchByDish || 'Search by Dish'],
-                  ['name', t.restaurants.searchByName || 'Search by Name'],
-                  ['detect', t.restaurants.detectLocation || 'Detect Location'],
-                  ['favorites', '❤️ Favorites'],
-                  ['recent', '🕒 Recent'],
-                ] as [SearchMode, string][]).map(([mode, label]) => (
-                  <button
-                    key={mode}
-                    onClick={() => switchMode(mode)}
-                    className={`py-2 px-2 rounded-lg text-xs font-medium transition-colors ${
-                      searchMode === mode
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* ── dish input ──────────────────────────────────────────── */}
-              {searchMode === 'dish' && (
-                <div className="mb-4 space-y-3">
-                  <input
-                    type="text"
-                    value={dishQuery}
-                    onChange={(e) => setDishQuery(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleDishSearch();
-                      }
-                    }}
-                    placeholder={t.restaurants.dishPlaceholder}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <p className="text-xs text-gray-500">💡 {t.restaurants.tryThese}</p>
-                </div>
-              )}
-
-              {/* ── name-search input + dropdown ─────────────────────── */}
-              {searchMode === 'name' && (
-                <div className="mb-4 relative">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      ref={nameInputRef}
-                      type="text"
-                      value={nameQuery}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      onFocus={() => {
-                        if (suggestions.length > 0) setShowSuggestions(true);
-                      }}
-                      placeholder={t.restaurants.restaurantNamePlaceholder}
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {nameQuery && (
-                      <button
-                        onClick={() => {
-                          setNameQuery('');
-                          setSuggestions([]);
-                          setShowSuggestions(false);
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Suggestions dropdown */}
-                  {showSuggestions && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      {searchingName ? (
-                        <div className="flex items-center gap-2 px-4 py-3 text-sm text-gray-500">
-                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                          {t.restaurants.searchingRestaurants}
-                        </div>
-                      ) : suggestions.length > 0 ? (
-                        suggestions.map((s) => (
-                          <button
-                            key={s.id}
-                            onClick={() => selectSuggestion(s)}
-                            className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0"
-                          >
-                            <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {s.cuisine}{s.address ? ` · ${s.address}` : ''}
-                            </p>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="px-4 py-3 text-sm text-gray-500">{t.restaurants.noSuggestionsFound}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {!showSuggestions && !nameQuery && (
-                    <p className="text-xs text-gray-500 mt-2">{t.restaurants.tapToSelect}</p>
-                  )}
-                </div>
-              )}
-
-              {/* ── detect-location UI ───────────────────────────────── */}
-              {searchMode === 'detect' && !detectingLocation && nearbyPlaces.length === 0 && !restaurants.length && (
-                <div className="mb-4">
-                  <button
-                    onClick={handleDetect}
-                    className="w-full bg-primary text-white py-3 px-4 rounded-button font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Navigation className="w-5 h-5" />
-                    {t.restaurants.detectLocation}
-                  </button>
-                </div>
-              )}
-
-              {detectingLocation && (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                  <span className="ml-3 text-gray-600 text-sm">{t.restaurants.detectingLocation}</span>
-                </div>
-              )}
-
-              {/* "Are you at…?" card list */}
-              {nearbyPlaces.length > 0 && (
-                <div className="mb-2 space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-sm mb-1">{t.restaurants.areYouAt}</h3>
-                    <p className="text-xs text-gray-500">{t.restaurants.areYouAtDescription}</p>
-                  </div>
-                  {nearbyPlaces.map((place) => (
-                    <button
-                      key={place.id}
-                      onClick={() => confirmNearbyPlace(place)}
-                      className="w-full text-left bg-gray-50 hover:bg-primary/5 border border-gray-200 hover:border-primary/40 rounded-lg p-4 transition-colors flex items-center gap-3"
-                    >
-                      <div className="bg-primary/10 rounded-full p-2 flex-shrink-0">
-                        <Utensils className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{place.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {place.cuisine}
-                          {(place as any).distance && ` · ${(place as any).distance}`}
-                        </p>
-                      </div>
-                      <span className="text-primary text-xs font-medium">Tap →</span>
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setNearbyPlaces([]);
-                      switchMode('name');
-                    }}
-                    className="w-full text-center text-sm text-gray-500 hover:text-primary transition-colors py-2"
-                  >
-                    {t.restaurants.noneOfThese}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── primary action button (location / dish modes) ─────────── */}
-          {showPrimaryAction && (searchMode === 'location' || searchMode === 'dish') && (
-            <button
-              onClick={searchMode === 'dish' ? handleDishSearch : getCurrentLocation}
-              className="w-full bg-primary text-white py-3 px-4 rounded-button font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
-            >
-              <Navigation className="w-5 h-5" />
-              {searchMode === 'dish' ? t.restaurants.findThisDish : t.restaurants.findNearMe}
-            </button>
-          )}
-
-          {/* Loading spinner (location / dish modes) */}
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <span className="ml-3 text-gray-600">{t.restaurants.findingRestaurants}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-50 border border-danger/30 text-danger p-4 rounded-lg">
-              {error}
-            </div>
-          )}
         </div>
 
-        {/* Location Display (location / dish modes) */}
-        {location && !loading && (searchMode === 'location' || searchMode === 'dish') && (
-          <div className="bg-blue-50 border border-primary/30 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <p className="text-sm font-medium">
-                {searchedDish
-                  ? t.restaurants.foundNear.replace('{dish}', searchedDish).replace('{location}', locationName)
-                  : t.restaurants.showingNear.replace('{location}', locationName)}
-              </p>
+        <div style={{ maxWidth: '640px', margin: '0 auto', marginTop: '-60px', padding: '0 20px' }}>
+          {/* Search panel */}
+          <div style={{ background: '#FFFDF9', borderRadius: '20px', padding: '20px', border: '1px solid rgba(1,35,116,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.7"/><circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.7"/></svg>
+              <div className="font-serif-italic" style={{ fontSize: '20px', color: '#012374' }}>Find a gentle spot</div>
             </div>
-            <button
-              onClick={() => {
-                setLocation(null);
-                setRestaurants([]);
-                setSearchedDish('');
-              }}
-              className="text-primary text-xs font-medium mt-1 hover:underline"
-            >
-              {t.restaurants.tryAgain}
-            </button>
-          </div>
-        )}
-
-        {/* Restaurant Results */}
-        {restaurants.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">
-                {searchedDish
-                  ? t.restaurants.servingDish.replace('{dish}', searchedDish)
-                  : t.restaurants.recommended}
-              </h3>
-              {/* "Search again" link for name / detect results */}
-              {(searchMode === 'name' || searchMode === 'detect') && (
-                <button
-                  onClick={() => {
-                    setRestaurants([]);
-                    setLocation(null);
-                    setNameQuery('');
-                    setSuggestions([]);
-                  }}
-                  className="text-primary text-sm hover:underline"
-                >
-                  {t.restaurants.tryAgain}
+            <div style={{ fontSize: '13.5px', color: '#16182A', opacity: .7, lineHeight: 1.5, marginTop: '8px' }}>Chatita finds nearby places and points you to the dishes that sit easy with your blood sugar.</div>
+            <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {MODES.map(m => (
+                <button key={m.id} onClick={() => handleModeChange(m.id)} style={{ cursor: 'pointer', textAlign: 'center', padding: '12px 8px', borderRadius: '13px', fontSize: '13.5px', fontWeight: 600, border: 'none', background: mode === m.id ? '#012374' : '#F7EFE1', color: mode === m.id ? '#FFFDF9' : '#012374', transition: 'all .15s' }}>
+                  {m.label}
                 </button>
-              )}
+              ))}
             </div>
-
-            {restaurants.map((restaurant) => (
-              <div key={restaurant.id} className="bg-white rounded-card shadow-card p-6 space-y-4">
-                {/* Restaurant Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold flex items-center gap-2">
-                      <Utensils className="w-5 h-5 text-primary" />
-                      {restaurant.name}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {restaurant.cuisine}
-                      {restaurant.distance && ` • ${restaurant.distance}`}
-                    </p>
-                    {restaurant.address && (
-                      <p className="text-xs text-gray-500 mt-1">{restaurant.address}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0 ml-3">
-                    {/* Favorite Button */}
-                    <button
-                      onClick={() => toggleFavorite(restaurant)}
-                      className={`p-2 rounded-full transition-all ${
-                        favoriteIds.has(restaurant.id)
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500'
-                      }`}
-                      title={favoriteIds.has(restaurant.id) ? 'Remove from favorites' : 'Add to favorites'}
-                    >
-                      <Heart
-                        className={`w-5 h-5 ${favoriteIds.has(restaurant.id) ? 'fill-red-600' : ''}`}
-                      />
-                    </button>
-                    {/* Rating */}
-                    {restaurant.rating && (
-                      <div className="flex items-center gap-1 bg-warning/10 px-2 py-1 rounded-lg">
-                        <Star className="w-4 h-4 text-warning fill-warning" />
-                        <span className="text-sm font-medium">{restaurant.rating}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Badges */}
-                <div className="flex flex-wrap gap-2">
-                  {restaurant.hasDish && (
-                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                      🍽️ {t.restaurants.serves} {restaurant.hasDish}
-                    </div>
-                  )}
-                  {restaurant.diabetesFriendly && (
-                    <div className="inline-flex items-center gap-2 bg-success/10 text-success px-3 py-1 rounded-full text-sm font-medium">
-                      ✓ {t.restaurants.diabetesFriendly}
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Add Button */}
-                <button
-                  onClick={() => {
-                    recordRestaurantVisit(restaurant);
-                    const params = new URLSearchParams({
-                      restaurant: restaurant.name,
-                      ...(restaurant.address && { restaurantAddress: restaurant.address }),
-                      restaurantPlaceId: restaurant.id,
-                    });
-                    router.push(`/add-meal?${params.toString()}`);
-                  }}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg font-medium hover:from-primary-dark hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Quick Add Meal from Here</span>
-                </button>
-
-                {/* ── Dynamic Menu (AI-generated or $0 fallback) ──────── */}
-                {loadingMenu[restaurant.id] ? (
-                  /* skeleton while menu loads */
-                  <div className="space-y-3">
-                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                        <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
-                        <div className="h-3 w-56 bg-gray-100 rounded animate-pulse" />
+            {mode === 'dish' && (
+              <div style={{ marginTop: '14px', display: 'flex', gap: '8px' }}>
+                <input value={dishQuery} onChange={e => setDishQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchByDish()} placeholder="e.g. grilled salmon…" style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.12)', borderRadius: '11px', padding: '12px 14px', fontFamily: 'inherit', fontSize: '14px', color: '#16182A', outline: 'none' }} />
+                <button onClick={searchByDish} style={{ padding: '12px 16px', borderRadius: '11px', background: '#012374', color: '#FFFDF9', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Go</button>
+              </div>
+            )}
+            {mode === 'name' && (
+              <div style={{ marginTop: '14px', position: 'relative' }}>
+                <input value={nameQuery} onChange={e => handleNameQueryChange(e.target.value)} placeholder="Restaurant name…" style={{ width: '100%', background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.12)', borderRadius: '11px', padding: '12px 14px', fontFamily: 'inherit', fontSize: '14px', color: '#16182A', outline: 'none', boxSizing: 'border-box' }} />
+                {suggestions.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#FFFDF9', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.12)', boxShadow: '0 10px 24px -8px rgba(1,35,116,.25)', marginTop: '4px', zIndex: 10, overflow: 'hidden' }}>
+                    {suggestions.map(s => (
+                      <div key={s.id} onClick={() => handleSuggestionSelect(s)} style={{ padding: '12px 14px', cursor: 'pointer', fontSize: '14px', color: '#012374', fontWeight: 500 }}>
+                        <div>{s.name}</div>
+                        <div style={{ fontSize: '12px', opacity: .6, marginTop: '2px' }}>{s.cuisine}</div>
                       </div>
                     ))}
                   </div>
-                ) : menuItems[restaurant.id]?.length ? (
-                  <div className="space-y-4">
-                    {/* ── Top Picks (top 3 "great" dishes) ──── */}
-                    {(() => {
-                      const greatDishes = menuItems[restaurant.id].filter((i) => i.score === 'great').slice(0, 3);
-                      return greatDishes.length > 0 ? (
-                        <div className="bg-success/5 border border-success/20 rounded-lg p-3">
-                          <p className="text-xs font-semibold text-success mb-2">{t.restaurants.topPicks}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {greatDishes.map((dish, idx) => (
-                              <span key={idx} className="inline-flex items-center gap-1 bg-white border border-success/30 text-gray-800 text-sm px-3 py-1 rounded-full">
-                                <span className="text-success">✓</span> {dish.name}
-                                <span className="text-xs text-gray-500 ml-1">({dish.carbEstimate})</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null;
-                    })()}
-
-                    {/* group by category */}
-                    {(() => {
-                      const items = menuItems[restaurant.id];
-                      const categories = [...new Set(items.map((i) => i.category))];
-                      return categories.map((cat) => (
-                        <div key={cat}>
-                          <h5 className="font-semibold text-sm mb-2 text-gray-700">{cat}</h5>
-                          <div className="space-y-2">
-                            {items
-                              .filter((i) => i.category === cat)
-                              .map((item, idx) => (
-                                <div
-                                  key={idx}
-                                  className={`rounded-lg p-3 border ${
-                                    item.score === 'great'
-                                      ? 'bg-success/5 border-success/20'
-                                      : item.score === 'moderate'
-                                      ? 'bg-warning/5 border-warning/20'
-                                      : 'bg-danger/5 border-danger/20'
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                      <span className="text-xs text-gray-500">{item.carbEstimate} carbs</span>
-                                      <span
-                                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                          item.score === 'great'
-                                            ? 'bg-success/10 text-success'
-                                            : item.score === 'moderate'
-                                            ? 'bg-warning/10 text-warning'
-                                            : 'bg-danger/10 text-danger'
-                                        }`}
-                                      >
-                                        {item.score === 'great' ? '✓ Great' : item.score === 'moderate' ? '⚠ Moderate' : '⚡ Caution'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs text-gray-600 mt-1">💡 {item.tip}</p>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      ));
-                    })()}
-
-                    {/* ── Personalised tips section ─────────────────── */}
-                    <div className="border-t border-gray-200 pt-4">
-                      <button
-                        onClick={() => setSelectedRestaurant(selectedRestaurant === restaurant.id ? null : restaurant.id)}
-                        className="w-full text-left text-sm font-medium text-primary hover:underline flex items-center justify-between"
-                      >
-                        <span>🎯 {t.restaurants.selectDishes}</span>
-                        <span className="text-xs">{selectedRestaurant === restaurant.id ? '▼' : '▶'}</span>
-                      </button>
-
-                      {selectedRestaurant === restaurant.id && (
-                        <div className="mt-4 space-y-4">
-                          {/* chips from menu */}
-                          <div>
-                            <p className="text-xs text-gray-600 mb-2">{t.restaurants.selectWhatYouConsidering}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {menuItems[restaurant.id].map((item, idx) => {
-                                const isSelected = selectedDishes[restaurant.id]?.includes(item.name) || false;
-                                return (
-                                  <button
-                                    key={idx}
-                                    onClick={() => toggleDishSelection(restaurant.id, item.name)}
-                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                                      isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                                  >
-                                    {isSelected && '✓ '}
-                                    {item.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* free-text: "I want the …" */}
-                          <div>
-                            <p className="text-xs text-gray-600 mb-2">{t.restaurants.orTypeDish}</p>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={customDishInput[restaurant.id] || ''}
-                                onChange={(e) =>
-                                  setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: e.target.value }))
-                                }
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    const val = (customDishInput[restaurant.id] || '').trim();
-                                    if (val) {
-                                      toggleDishSelection(restaurant.id, val);
-                                      setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: '' }));
-                                    }
-                                  }
-                                }}
-                                placeholder={t.restaurants.typeDishPlaceholder}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                              <button
-                                onClick={() => {
-                                  const val = (customDishInput[restaurant.id] || '').trim();
-                                  if (val) {
-                                    toggleDishSelection(restaurant.id, val);
-                                    setCustomDishInput((prev) => ({ ...prev, [restaurant.id]: '' }));
-                                  }
-                                }}
-                                className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Get tips button */}
-                          {(selectedDishes[restaurant.id]?.length || 0) > 0 && (
-                            <button
-                              onClick={() => getCustomTips(restaurant.id, restaurant.name, restaurant.cuisine)}
-                              disabled={gettingTips}
-                              className="w-full py-2 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              {gettingTips ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  <span>{t.restaurants.gettingTips}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>🤖</span>
-                                  <span>{t.restaurants.getPersonalizedTips}</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-
-                          {/* AI tips result */}
-                          {customTips[restaurant.id] && (
-                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                              <h5 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
-                                <span>✨</span>
-                                <span>{t.restaurants.personalizedTips}</span>
-                              </h5>
-
-                              {customTips[restaurant.id].dishTips?.map((tipSet: any, idx: number) => (
-                                <div key={idx} className="bg-white rounded-lg p-3 space-y-2">
-                                  <p className="font-medium text-sm text-gray-900">🍽️ {tipSet.dish}</p>
-                                  <ul className="space-y-1">
-                                    {tipSet.tips.map((tip: string, i: number) => (
-                                      <li key={i} className="text-xs text-gray-700 flex items-start gap-2">
-                                        <span className="text-blue-500">•</span>
-                                        <span>{tip}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ))}
-
-                              {customTips[restaurant.id].overallAdvice && (
-                                <div className="bg-blue-100 rounded-lg p-3">
-                                  <p className="text-xs text-blue-900 font-medium mb-1">💡 {t.restaurants.overallAdvice}</p>
-                                  <p className="text-xs text-blue-800">{customTips[restaurant.id].overallAdvice}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* ── Save as Meal button ─────────────── */}
-                          {customTips[restaurant.id] && (
-                            <button
-                              onClick={() => {
-                                const dishes = selectedDishes[restaurant.id] || [];
-                                const params = new URLSearchParams({
-                                  restaurant: restaurant.name,
-                                  restaurantAddress: restaurant.address || '',
-                                  restaurantPlaceId: restaurant.id,
-                                  ...(dishes.length > 0 && { foods: dishes.join(',') }),
-                                });
-                                router.push(`/add-meal?${params.toString()}`);
-                              }}
-                              className="w-full py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
-                            >
-                              <span>📝</span>
-                              <span>{t.restaurants.saveAsMeal}</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
+                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
 
-        {/* Empty State (location / dish modes only) */}
-        {!loading && location && restaurants.length === 0 && (searchMode === 'location' || searchMode === 'dish') && (
-          <div className="bg-white rounded-card shadow-card p-8 text-center">
-            <Utensils className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold mb-2">{t.restaurants.noRestaurantsFound}</h3>
-            <p className="text-gray-600 text-sm mb-4">{t.restaurants.noRestaurantsMessage}</p>
-            <button onClick={getCurrentLocation} className="text-primary font-medium hover:underline">
-              {t.restaurants.tryAgain}
-            </button>
+          {/* Restaurant list */}
+          <div style={{ marginTop: '22px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div className="font-serif-italic" style={{ fontSize: '22px', color: '#012374' }}>Recommended for you</div>
+            <button onClick={detectNearby} style={{ fontSize: '13px', fontWeight: 600, color: '#012374', background: 'none', border: 'none', cursor: 'pointer' }}>Refresh</button>
           </div>
-        )}
 
-        {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-          <p className="text-sm text-gray-700">⚠️ {t.restaurants.disclaimer}</p>
+          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
+            {loadingPlaces ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(1,35,116,0.5)', fontSize: '14px' }}>Finding restaurants…</div>
+            ) : error ? (
+              <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(181,86,46,0.1)', color: '#B5562E', fontSize: '13px' }}>{error}</div>
+            ) : places.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: 'rgba(1,35,116,0.5)', fontSize: '14px' }}>No restaurants found. Try refreshing.</div>
+            ) : (
+              places.map(place => (
+                <PlaceListCard
+                  key={place.id}
+                  place={place}
+                  mobile
+                  onSelect={() => {
+                    if (expandedId === place.id) {
+                      setExpandedId(null);
+                    } else {
+                      setExpandedId(place.id);
+                      loadMenu(place);
+                    }
+                  }}
+                />
+              ))
+            )}
+          </div>
+
+          <Disclaimer />
         </div>
-      </div>
 
-      <BottomNav />
-    </div>
+        <BottomNav />
+      </div>
+    </>
   );
 }
-

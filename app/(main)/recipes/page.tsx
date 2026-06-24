@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, X, ChevronDown, ChevronUp, Camera, Upload, Bookmark, BookmarkCheck } from 'lucide-react';
+import { useState, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
-import { useTranslation } from '@/lib/i18n/context';
+import BackButton from '@/components/back-button';
+import WebNav from '@/components/web-nav';
 import { compressImage } from '@/lib/compress-image';
 
 interface Recipe {
@@ -20,476 +19,491 @@ interface Recipe {
   servings: number;
 }
 
-export default function RecipesPage() {
-  const router = useRouter();
-  const { t } = useTranslation();
+const COMMON_PAIRINGS = [
+  'spinach', 'lentils', 'paneer', 'tomato', 'ginger', 'cumin',
+  'onion', 'garlic', 'zucchini', 'chickpeas', 'okra', 'eggplant',
+];
 
-  // Input modes
-  const [inputMode, setInputMode] = useState<'type' | 'photo'>('type');
-  const [ingredientInput, setIngredientInput] = useState('');
-  const [ingredients, setIngredients] = useState<string[]>([]);
-  const [fridgePhoto, setFridgePhoto] = useState<string | null>(null);
+const IMPACT = {
+  low: { label: 'Gentle on blood sugar', color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)', dot: '#1C7A4F' },
+  moderate: { label: 'Enjoy mindfully', color: '#9A6F18', bg: 'rgba(200,147,43,0.18)', dot: '#C8932B' },
+  high: { label: 'Save for a special occasion', color: '#B5562E', bg: 'rgba(181,86,46,0.13)', dot: '#B5562E' },
+};
 
-  // Results
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [expandedRecipe, setExpandedRecipe] = useState<number | null>(null);
-  const [savingRecipe, setSavingRecipe] = useState<number | null>(null);
-  const [savedRecipes, setSavedRecipes] = useState<Set<number>>(new Set());
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function InputPanel({
+  tab, setTab, draft, setDraft, ingredients, setIngredients,
+  fridgePhoto, setFridgePhoto, onSearch, loading, web,
+}: {
+  tab: 'type' | 'photo';
+  setTab: (t: 'type' | 'photo') => void;
+  draft: string;
+  setDraft: (v: string) => void;
+  ingredients: string[];
+  setIngredients: (v: string[]) => void;
+  fridgePhoto: string | null;
+  setFridgePhoto: (v: string | null) => void;
+  onSearch: () => void;
+  loading: boolean;
+  web?: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const addIngredient = () => {
-    const trimmed = ingredientInput.trim();
-    if (trimmed && !ingredients.includes(trimmed.toLowerCase())) {
-      setIngredients([...ingredients, trimmed.toLowerCase()]);
-      setIngredientInput('');
+    const v = draft.trim().toLowerCase();
+    if (v && !ingredients.includes(v)) {
+      setIngredients([...ingredients, v]);
+      setDraft('');
     }
   };
 
-  const removeIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
-
-  const handleFridgePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const { base64 } = await compressImage(file);
       setFridgePhoto(base64);
-    } catch (err) {
-      console.error('Image compression failed:', err);
-      setError(t.recipes.photoError);
-    }
+    } catch { /* silent */ }
   };
 
+  const suggestions = COMMON_PAIRINGS.filter(x => !ingredients.includes(x)).slice(0, 6);
+
+  const tabStyle = (active: boolean) => ({
+    flex: 1 as const,
+    textAlign: 'center' as const,
+    cursor: 'pointer' as const,
+    padding: web ? '12px 0' : '11px 0',
+    borderRadius: '10px',
+    fontSize: web ? '14px' : '13.5px',
+    fontWeight: 600 as const,
+    border: 'none' as const,
+    background: active ? '#012374' : 'transparent',
+    color: active ? '#FFFDF9' : '#012374',
+    transition: 'all .15s',
+  });
+
+  return (
+    <div style={{
+      background: '#FFFDF9',
+      borderRadius: web ? '22px' : '20px',
+      padding: web ? '24px' : '20px',
+      border: '1px solid rgba(1,35,116,0.07)',
+      boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)',
+    }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '6px', background: '#F7EFE1', borderRadius: '14px', padding: '5px' }}>
+        <button style={tabStyle(tab === 'type')} onClick={() => setTab('type')}>
+          Type ingredients
+        </button>
+        <button style={tabStyle(tab === 'photo')} onClick={() => setTab('photo')}>
+          Snap your fridge
+        </button>
+      </div>
+
+      {tab === 'type' ? (
+        <div style={{ marginTop: '16px' }}>
+          <div style={{ display: 'flex', gap: '9px' }}>
+            <input
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addIngredient()}
+              placeholder="e.g. chicken, spinach, yogurt…"
+              style={{
+                flex: 1,
+                background: web ? '#F7EFE1' : '#FFFDF9',
+                border: '1px solid rgba(1,35,116,0.14)',
+                borderRadius: '13px',
+                padding: '13px 15px',
+                fontFamily: 'inherit',
+                fontSize: web ? '14.5px' : '14px',
+                color: '#16182A',
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={addIngredient}
+              style={{ width: web ? '50px' : '48px', flexShrink: 0, background: '#012374', borderRadius: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          {ingredients.length > 0 && (
+            <>
+              <div style={{ marginTop: '14px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>In your basket</div>
+              <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {ingredients.map(ing => (
+                  <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: '999px', fontSize: web ? '14px' : '13.5px', fontWeight: 500 }}>
+                    {ing}
+                    <span onClick={() => setIngredients(ingredients.filter(i => i !== ing))} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {suggestions.length > 0 && (
+            <>
+              <div style={{ marginTop: '18px', fontSize: '12px', color: '#16182A', opacity: .6 }}>Add a common pairing</div>
+              <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {suggestions.map(s => (
+                  <span
+                    key={s}
+                    onClick={() => setIngredients([...ingredients, s])}
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#FFFDF9', color: '#012374', border: '1px solid rgba(1,35,116,0.2)', padding: '9px 13px', borderRadius: '999px', fontSize: web ? '14px' : '13.5px', fontWeight: 500 }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#012374" strokeWidth="2.4" strokeLinecap="round"/></svg>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div style={{ marginTop: '16px' }}>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+          <div
+            onClick={() => fileRef.current?.click()}
+            style={{ border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: '18px', background: web ? '#F7EFE1' : '#FFFDF9', padding: '34px 20px', textAlign: 'center', cursor: 'pointer' }}
+          >
+            {fridgePhoto ? (
+              <>
+                <img src={`data:image/jpeg;base64,${fridgePhoto}`} alt="Fridge" style={{ maxHeight: '160px', borderRadius: '12px', marginBottom: '8px', maxWidth: '100%' }} />
+                <div style={{ fontSize: '13px', color: '#012374', fontWeight: 600 }}>Photo added — tap to change</div>
+              </>
+            ) : (
+              <>
+                <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: 'rgba(1,35,116,0.07)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#012374" strokeWidth="1.7"/><circle cx="12" cy="12.5" r="3.4" stroke="#012374" strokeWidth="1.7"/><path d="M8 6l1.4-2h5.2L16 6" stroke="#012374" strokeWidth="1.7"/></svg>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#012374', marginTop: '12px' }}>Snap your fridge or pantry</div>
+                <div style={{ fontSize: '13px', color: '#16182A', opacity: .62, marginTop: '4px', lineHeight: 1.45 }}>Chatita spots the ingredients for you — you can edit them after.</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={onSearch}
+        disabled={loading}
+        style={{
+          marginTop: '22px', background: loading ? 'rgba(1,35,116,0.5)' : '#012374', color: '#FFFDF9',
+          borderRadius: '15px', padding: '15px', textAlign: 'center', fontSize: '15px', fontWeight: 600,
+          cursor: loading ? 'default' : 'pointer', boxShadow: '0 12px 26px -14px rgba(1,35,116,.6)',
+          border: 'none', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+        }}
+      >
+        {loading ? (
+          <>
+            <svg style={{ animation: 'spin 1s linear infinite' }} width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round"/>
+            </svg>
+            Finding recipes…
+          </>
+        ) : 'Find gentle recipes'}
+      </button>
+    </div>
+  );
+}
+
+function RecipeCard({ r, idx, expanded, onToggle, saved, onSave, web }: {
+  r: Recipe; idx: number; expanded: boolean; onToggle: () => void;
+  saved: boolean; onSave: () => void; web?: boolean;
+}) {
+  const imp = IMPACT[r.bloodSugarImpact] ?? IMPACT.moderate;
+  const px = web ? '24px' : '16px';
+  const py = web ? '22px 24px' : '16px';
+
+  return (
+    <div style={{ background: '#FFFDF9', borderRadius: web ? '20px' : '18px', border: '1px solid rgba(1,35,116,0.08)', overflow: 'hidden', boxShadow: '0 14px 30px -24px rgba(1,35,116,.4)' }}>
+      {/* Header */}
+      <div onClick={onToggle} style={{ cursor: 'pointer', padding: py }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <div className="font-serif-italic" style={{ fontSize: web ? '22px' : '18px', color: '#012374', lineHeight: 1.15 }}>{r.title}</div>
+            <div style={{ fontSize: web ? '14.5px' : '13px', color: '#16182A', opacity: .72, lineHeight: 1.5, marginTop: web ? '8px' : '7px' }}>{r.description}</div>
+            <div style={{ marginTop: web ? '14px' : '12px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600, background: imp.bg, color: imp.color }}>
+                <span style={{ width: web ? '8px' : '7px', height: web ? '8px' : '7px', borderRadius: '50%', background: imp.dot, flexShrink: 0 }} />
+                {imp.label}
+              </span>
+              <span style={{ background: '#F7EFE1', color: '#012374', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600 }}>{r.carbEstimate} carbs</span>
+              <span style={{ background: '#F7EFE1', color: '#012374', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600 }}>{r.prepTime}</span>
+            </div>
+          </div>
+          <div style={{ flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <svg width={web ? 22 : 18} height={web ? 22 : 18} viewBox="0 0 24 24" fill="none">
+              <path d="M6 9l6 6 6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ padding: `0 ${px} ${px}` }}>
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: web ? '12px' : '8px', paddingTop: web ? '6px' : '13px', borderTop: '1px solid rgba(1,35,116,0.07)' }}>
+            {[
+              { label: 'carbs / serving', value: r.carbEstimate },
+              { label: 'cal / serving', value: r.calorieEstimate || '—' },
+              { label: 'servings', value: String(r.servings) },
+            ].map(s => (
+              <div key={s.label} style={{ flex: 1, background: '#F7EFE1', borderRadius: web ? '14px' : '12px', padding: web ? '14px 16px' : '11px 12px' }}>
+                <div className="font-serif-italic" style={{ fontSize: web ? '22px' : '18px', color: '#012374' }}>{s.value}</div>
+                <div style={{ fontSize: '11px', color: '#16182A', opacity: .55, marginTop: '2px' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {web ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '28px', marginTop: '22px' }}>
+              {/* Left: ingredients + why gentle */}
+              <div>
+                <div style={{ fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>You&apos;ll use</div>
+                <div style={{ marginTop: '11px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {r.ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#16182A', padding: '7px 12px', borderRadius: '999px', fontSize: '13px' }}>{ing}</span>)}
+                </div>
+                <div style={{ marginTop: '20px', background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', letterSpacing: '.06em', color: '#9A6F18', fontWeight: 700, textTransform: 'uppercase' }}>Why it&apos;s gentle</div>
+                  <div style={{ marginTop: '9px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {r.tips.map((tip, i) => <div key={i} style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.45 }}>• {tip}</div>)}
+                  </div>
+                </div>
+              </div>
+              {/* Right: steps + save */}
+              <div>
+                <div style={{ fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Steps</div>
+                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
+                  {r.steps.map((step, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start' }}>
+                      <span style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', background: '#012374', color: '#FFFDF9', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                      <span style={{ fontSize: '14.5px', color: '#16182A', lineHeight: 1.5 }}>{step}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={onSave}
+                  style={{ marginTop: '22px', borderRadius: '14px', padding: '14px', textAlign: 'center', fontSize: '14.5px', fontWeight: 600, cursor: 'pointer', border: 'none', width: '100%', background: saved ? 'rgba(28,122,79,0.12)' : '#012374', color: saved ? '#1C7A4F' : '#FFFDF9' }}
+                >
+                  {saved ? '✓ Saved to your recipes' : 'Save this recipe'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ marginTop: '16px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>You&apos;ll use</div>
+              <div style={{ marginTop: '9px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                {r.ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#16182A', padding: '6px 11px', borderRadius: '999px', fontSize: '12.5px' }}>{ing}</span>)}
+              </div>
+              <div style={{ marginTop: '16px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Steps</div>
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                {r.steps.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
+                    <span style={{ flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#012374', color: '#FFFDF9', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '1px' }}>{i + 1}</span>
+                    <span style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.5 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '16px', background: 'rgba(200,147,43,0.12)', borderRadius: '13px', padding: '14px' }}>
+                <div style={{ fontSize: '12px', letterSpacing: '.06em', color: '#9A6F18', fontWeight: 700, textTransform: 'uppercase' }}>Why it&apos;s gentle</div>
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                  {r.tips.map((tip, i) => <div key={i} style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.45 }}>• {tip}</div>)}
+                </div>
+              </div>
+              <button
+                onClick={onSave}
+                style={{ marginTop: '14px', borderRadius: '13px', padding: '13px', textAlign: 'center', fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none', width: '100%', background: saved ? 'rgba(28,122,79,0.12)' : '#012374', color: saved ? '#1C7A4F' : '#FFFDF9' }}
+              >
+                {saved ? '✓ Saved to your recipes' : 'Save this recipe'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function RecipesPage() {
+  const [tab, setTab] = useState<'type' | 'photo'>('type');
+  const [draft, setDraft] = useState('');
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [fridgePhoto, setFridgePhoto] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [saved, setSaved] = useState<Set<number>>(new Set());
+
   const generateRecipes = async () => {
-    if (ingredients.length === 0 && !fridgePhoto) {
-      setError(t.recipes.noInputError);
+    if (!ingredients.length && !fridgePhoto) {
+      setError('Add at least one ingredient first.');
       return;
     }
-
     setLoading(true);
     setError('');
     setRecipes([]);
-    setExpandedRecipe(null);
-
+    setExpanded(null);
+    setSearched(false);
     try {
-      const response = await fetch('/api/recipes', {
+      const res = await fetch('/api/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ingredients,
-          ...(fridgePhoto && { photoBase64: fridgePhoto }),
-        }),
+        body: JSON.stringify({ ingredients, photoBase64: fridgePhoto }),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRecipes(data.recipes || []);
-      } else {
-        setError(t.recipes.generateError);
-      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setRecipes(data.recipes || []);
+      setSearched(true);
     } catch {
-      setError(t.recipes.generateError);
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'low': return 'bg-success/10 text-success border-success/30';
-      case 'moderate': return 'bg-warning/10 text-warning border-warning/30';
-      case 'high': return 'bg-danger/10 text-danger border-danger/30';
-      default: return 'bg-gray-100 text-gray-600 border-gray-200';
-    }
-  };
-
-  const getImpactLabel = (impact: string) => {
-    switch (impact) {
-      case 'low': return t.recipes.impactLow;
-      case 'moderate': return t.recipes.impactModerate;
-      case 'high': return t.recipes.impactHigh;
-      default: return impact;
-    }
-  };
-
-  const saveRecipe = async (recipe: Recipe, index: number) => {
-    setSavingRecipe(index);
+  const saveRecipe = async (idx: number) => {
+    const r = recipes[idx];
+    if (!r || saved.has(idx)) return;
     try {
-      // Parse carbs and calories from estimates (e.g., "15-20g" -> 17.5)
-      const parseNutrient = (estimate: string): number => {
-        const numbers = estimate.match(/\d+/g);
-        if (!numbers || numbers.length === 0) return 0;
-        if (numbers.length === 1) return parseFloat(numbers[0]);
-        // Average if range
-        return (parseFloat(numbers[0]) + parseFloat(numbers[1])) / 2;
-      };
-
-      const carbsValue = parseNutrient(recipe.carbEstimate);
-      const caloriesValue = parseNutrient(recipe.calorieEstimate);
-
-      const response = await fetch('/api/recipes/saved', {
+      await fetch('/api/recipes/saved', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: recipe.title,
-          description: recipe.description,
-          servings: recipe.servings,
-          prepTime: parseInt(recipe.prepTime) || null,
-          ingredients: recipe.ingredients,
-          instructions: recipe.steps,
-          calories: caloriesValue,
-          carbs: carbsValue,
-          protein: 0, // Not provided in generated recipes
-          fat: 0,
-          diabetesTips: recipe.tips.join('\n'),
-          tags: [recipe.bloodSugarImpact],
-          isPublic: false,
+          name: r.title,
+          description: r.description,
+          ingredients: r.ingredients.map(name => ({ name, amount: '' })),
+          instructions: r.steps,
+          servings: r.servings || 2,
+          diabetesTips: r.tips,
+          tags: ['generated', r.bloodSugarImpact],
         }),
       });
-
-      if (response.ok) {
-        setSavedRecipes(new Set([...savedRecipes, index]));
-      } else {
-        setError('Failed to save recipe');
-      }
-    } catch (err) {
-      console.error('Failed to save recipe:', err);
-      setError('Failed to save recipe');
-    } finally {
-      setSavingRecipe(null);
-    }
+      setSaved(prev => new Set([...prev, idx]));
+    } catch { /* silent */ }
   };
 
+  const resetSearch = () => { setSearched(false); setRecipes([]); setExpanded(null); };
+
+  const inputProps = { tab, setTab, draft, setDraft, ingredients, setIngredients, fridgePhoto, setFridgePhoto, onSearch: generateRecipes, loading };
+
+  const Disclaimer = () => (
+    <div style={{ marginTop: '16px', background: 'rgba(200,147,43,0.1)', borderRadius: '13px', padding: '13px 15px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
+        <path d="M12 3l9 16H3L12 3z" stroke="#9A6F18" strokeWidth="1.7" strokeLinejoin="round"/>
+        <path d="M12 10v4M12 16.5v.5" stroke="#9A6F18" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+      <div style={{ fontSize: '12px', color: '#16182A', opacity: .72, lineHeight: 1.45 }}>Recipes are gentle suggestions, not medical advice. Your healthcare provider knows your numbers best.</div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center">
-          <button onClick={() => router.back()} className="text-primary hover:underline mr-4">
-            ← {t.common.back}
-          </button>
-          <h1 className="text-2xl font-bold">{t.recipes.title}</h1>
-        </div>
-      </div>
+    <>
+      {/* ── Desktop (lg+) ── */}
+      <div className="hidden lg:flex min-h-screen" style={{ background: '#F7EFE1' }}>
+        <WebNav />
 
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
-        {/* Info card */}
-        <div className="bg-primary/5 border border-primary/20 rounded-card p-6">
-          <div className="text-4xl mb-3 text-center">👨‍🍳</div>
-          <h2 className="font-semibold text-lg mb-2 text-center">{t.recipes.subtitle}</h2>
-          <p className="text-sm text-gray-600 text-center">{t.recipes.description}</p>
-        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+          <div style={{ fontSize: '12px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes · from your kitchen</div>
+          <div className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', lineHeight: 1.05, marginTop: '6px' }}>Let&apos;s cook something kind.</div>
+          <div style={{ fontSize: '16px', color: '#16182A', opacity: .72, marginTop: '4px' }}>Add what you have on hand. Chatita keeps it gentle — no scores, no judgment.</div>
 
-        {/* Input mode toggle */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setInputMode('type')}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                inputMode === 'type' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              ✍️ {t.recipes.typeIngredients}
-            </button>
-            <button
-              onClick={() => setInputMode('photo')}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                inputMode === 'photo' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📸 {t.recipes.photoFridge}
-            </button>
-          </div>
+          <div style={{ marginTop: '26px', display: 'grid', gridTemplateColumns: '400px 1fr', gap: '24px', alignItems: 'start' }}>
+            <InputPanel {...inputProps} web />
 
-          {/* Type ingredients mode */}
-          {inputMode === 'type' && (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={ingredientInput}
-                  onChange={(e) => setIngredientInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addIngredient();
-                    }
-                  }}
-                  placeholder={t.recipes.ingredientPlaceholder}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button
-                  onClick={addIngredient}
-                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Ingredient chips */}
-              {ingredients.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {ingredients.map((ing, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                      {ing}
-                      <button onClick={() => removeIngredient(idx)} className="text-primary/60 hover:text-primary">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-xs text-gray-500">💡 {t.recipes.ingredientTip}</p>
-            </div>
-          )}
-
-          {/* Photo fridge mode */}
-          {inputMode === 'photo' && (
-            <div className="space-y-3">
-              {fridgePhoto ? (
-                <div className="relative">
-                  <img src={fridgePhoto} alt="Fridge" className="w-full rounded-lg max-h-64 object-cover" />
-                  <button
-                    onClick={() => setFridgePhoto(null)}
-                    className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:bg-gray-100"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+            <div>
+              {!searched ? (
+                <div style={{ background: '#FFFDF9', border: '1px dashed rgba(1,35,116,0.16)', borderRadius: '22px', padding: '60px 40px', textAlign: 'center', minHeight: '420px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: '#F7EFE1', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#012374" strokeWidth="1.5"/><path d="M3 19h18" stroke="#012374" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </div>
+                  <div className="font-serif-italic" style={{ fontSize: '25px', color: '#012374', marginTop: '18px' }}>Your recipe ideas will appear here</div>
+                  <div style={{ fontSize: '14.5px', color: '#16182A', opacity: .65, marginTop: '6px', maxWidth: '360px', lineHeight: 1.5 }}>
+                    Add a few ingredients and press <strong style={{ color: '#012374' }}>Find gentle recipes</strong>. Every suggestion comes with carb ranges and a kind tip.
+                  </div>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Camera className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-3">{t.recipes.uploadFridgePhoto}</p>
-                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                    <label className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg cursor-pointer hover:bg-primary-dark transition-colors text-sm font-medium">
-                      <Camera className="w-4 h-4" />
-                      {t.recipes.takePhoto}
-                      <input type="file" accept="image/*" capture="environment" onChange={handleFridgePhoto} className="hidden" />
-                    </label>
-                    <label className="inline-flex items-center gap-2 bg-white border-2 border-primary text-primary px-5 py-2.5 rounded-lg cursor-pointer hover:bg-primary/10 transition-colors text-sm font-medium">
-                      <Upload className="w-4 h-4" />
-                      {t.recipes.choosePhoto}
-                      <input type="file" accept="image/*" onChange={handleFridgePhoto} className="hidden" />
-                    </label>
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                    <div className="font-serif-italic" style={{ fontSize: '26px', color: '#012374' }}>A few gentle ideas for you</div>
+                    <button onClick={resetSearch} style={{ cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#012374', background: 'none', border: 'none' }}>Edit ingredients</button>
                   </div>
-                </div>
-              )}
-
-              {/* Also allow adding typed ingredients alongside photo */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={ingredientInput}
-                  onChange={(e) => setIngredientInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addIngredient();
-                    }
-                  }}
-                  placeholder={t.recipes.addMoreIngredients}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                />
-                <button
-                  onClick={addIngredient}
-                  className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              {ingredients.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {ingredients.map((ing, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                      {ing}
-                      <button onClick={() => removeIngredient(idx)} className="text-primary/60 hover:text-primary">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {recipes.map((r, i) => (
+                      <RecipeCard key={i} r={r} idx={i} expanded={expanded === i} onToggle={() => setExpanded(expanded === i ? null : i)} saved={saved.has(i)} onSave={() => saveRecipe(i)} web />
+                    ))}
+                  </div>
+                  <Disclaimer />
+                </>
               )}
             </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="mt-3 bg-red-50 border border-danger/30 text-danger p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Generate button */}
-          <button
-            onClick={generateRecipes}
-            disabled={loading || (ingredients.length === 0 && !fridgePhoto)}
-            className="mt-4 w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{t.recipes.generating}</span>
-              </>
-            ) : (
-              <>
-                <span>🤖</span>
-                <span>{t.recipes.generateButton}</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Recipe results */}
-        {recipes.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t.recipes.resultsTitle}</h3>
-
-            {recipes.map((recipe, idx) => (
-              <div key={idx} className="bg-white rounded-card shadow-card overflow-hidden">
-                {/* Recipe header (always visible) */}
-                <button
-                  onClick={() => setExpandedRecipe(expandedRecipe === idx ? null : idx)}
-                  className="w-full text-left p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg">{recipe.title}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{recipe.description}</p>
-                    </div>
-                    {expandedRecipe === idx ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" />
-                    )}
-                  </div>
-
-                  {/* Quick stats row */}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getImpactColor(recipe.bloodSugarImpact)}`}>
-                      🩸 {getImpactLabel(recipe.bloodSugarImpact)}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                      🌾 {recipe.carbEstimate} {t.recipes.carbs}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                      ⏱️ {recipe.prepTime}
-                    </span>
-                  </div>
-                </button>
-
-                {/* Expanded recipe details */}
-                {expandedRecipe === idx && (
-                  <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
-                    {/* Nutrition summary */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-gray-50 rounded-lg p-3 text-center">
-                        <div className="text-sm font-bold text-primary">{recipe.carbEstimate}</div>
-                        <div className="text-xs text-gray-500">{t.recipes.carbs}</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-3 text-center">
-                        <div className="text-sm font-bold text-gray-700">{recipe.calorieEstimate}</div>
-                        <div className="text-xs text-gray-500">{t.recipes.calories}</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-3 text-center">
-                        <div className="text-sm font-bold text-gray-700">{recipe.servings}</div>
-                        <div className="text-xs text-gray-500">{t.recipes.servings}</div>
-                      </div>
-                    </div>
-
-                    {/* Ingredients */}
-                    <div>
-                      <h5 className="font-semibold text-sm mb-2">{t.recipes.ingredientsLabel}</h5>
-                      <div className="flex flex-wrap gap-2">
-                        {recipe.ingredients.map((ing, i) => (
-                          <span key={i} className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full text-sm">
-                            {ing}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Steps */}
-                    <div>
-                      <h5 className="font-semibold text-sm mb-2">{t.recipes.stepsLabel}</h5>
-                      <ol className="space-y-2">
-                        {recipe.steps.map((step, i) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-medium">
-                              {i + 1}
-                            </span>
-                            <span className="text-sm text-gray-700">{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-
-                    {/* Diabetes tips */}
-                    {recipe.tips.length > 0 && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h5 className="font-semibold text-sm text-blue-900 mb-2 flex items-center gap-2">
-                          <span>💡</span>
-                          {t.recipes.diabetesTips}
-                        </h5>
-                        <ul className="space-y-1">
-                          {recipe.tips.map((tip, i) => (
-                            <li key={i} className="text-xs text-blue-800 flex items-start gap-2">
-                              <span className="text-blue-500">•</span>
-                              <span>{tip}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Save button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveRecipe(recipe, idx);
-                      }}
-                      disabled={savingRecipe === idx || savedRecipes.has(idx)}
-                      className={`w-full py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                        savedRecipes.has(idx)
-                          ? 'bg-success/10 text-success border-2 border-success'
-                          : 'bg-primary text-white hover:bg-primary-dark'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {savingRecipe === idx ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Saving...</span>
-                        </>
-                      ) : savedRecipes.has(idx) ? (
-                        <>
-                          <BookmarkCheck className="w-4 h-4" />
-                          <span>Saved to Library</span>
-                        </>
-                      ) : (
-                        <>
-                          <Bookmark className="w-4 h-4" />
-                          <span>Save Recipe</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
-        )}
-
-        {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-          <p className="text-sm text-gray-700">
-            ⚠️ {t.recipes.disclaimer}
-          </p>
         </div>
       </div>
 
-      <BottomNav />
-    </div>
+      {/* ── Mobile (< lg) ── */}
+      <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
+        {/* Navy hero */}
+        <div style={{ background: '#012374', padding: '0 24px 72px', position: 'relative' }}>
+          <div style={{ paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#FFFDF9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)' }}>
+              <BackButton href="/home" />
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', letterSpacing: '.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
+              <div className="font-serif-italic" style={{ fontSize: '23px', color: '#FFFDF9', lineHeight: 1 }}>From your kitchen</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: '640px', margin: '0 auto', marginTop: '-60px', padding: '0 20px' }}>
+          {!searched ? (
+            <>
+              <div className="font-serif-italic" style={{ fontSize: '27px', color: '#012374', lineHeight: 1.1, marginBottom: '16px' }}>Let&apos;s cook something kind.</div>
+              <div style={{ fontSize: '14px', color: '#16182A', opacity: .7, lineHeight: 1.5, marginBottom: '18px' }}>Tell Chatita what you have — no full list needed, no judgment.</div>
+              <InputPanel {...inputProps} />
+              <div style={{ marginTop: '10px', fontSize: '12px', color: '#16182A', opacity: .5, textAlign: 'center' }}>No scores, no judgment — just ideas that feel good.</div>
+            </>
+          ) : (
+            <>
+              <div style={{ background: '#FFFDF9', borderRadius: '16px', border: '1px solid rgba(1,35,116,0.08)', padding: '14px 16px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '12px', letterSpacing: '.14em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Cooking with</div>
+                  <button onClick={resetSearch} style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#012374', background: 'none', border: 'none' }}>Edit</button>
+                </div>
+                <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                  {ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#012374', padding: '7px 11px', borderRadius: '999px', fontSize: '13px', fontWeight: 500 }}>{ing}</span>)}
+                </div>
+              </div>
+
+              <div className="font-serif-italic" style={{ fontSize: '24px', color: '#012374', marginBottom: '14px' }}>A few gentle ideas for you</div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '13px' }}>
+                {recipes.map((r, i) => (
+                  <RecipeCard key={i} r={r} idx={i} expanded={expanded === i} onToggle={() => setExpanded(expanded === i ? null : i)} saved={saved.has(i)} onSave={() => saveRecipe(i)} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {error && <div style={{ marginTop: '12px', padding: '12px', borderRadius: '12px', background: 'rgba(181,86,46,0.1)', color: '#B5562E', fontSize: '13px' }}>{error}</div>}
+
+          <Disclaimer />
+        </div>
+
+        <BottomNav />
+      </div>
+    </>
   );
 }
