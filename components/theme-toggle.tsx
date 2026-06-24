@@ -3,22 +3,28 @@
 import { useTheme } from '@/lib/theme-context';
 import { Sun, Moon } from 'lucide-react';
 
-export default function ThemeToggle({ className = '' }: { className?: string }) {
+export default function ThemeToggle({ onDark = false }: { onDark?: boolean }) {
   const { theme, toggle } = useTheme();
 
   return (
     <button
       onClick={toggle}
       aria-label="Toggle theme"
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-chip text-xs font-semibold transition-all active:scale-95 ${className}`}
+      className="flex items-center gap-1 transition-all active:scale-95"
       style={{
-        background: theme === 'dark' ? 'rgba(255,253,249,0.13)' : 'rgba(1,35,116,0.08)',
-        color: theme === 'dark' ? '#FFFDF9' : '#012374',
-        border: '1px solid ' + (theme === 'dark' ? 'rgba(255,253,249,0.22)' : 'rgba(1,35,116,0.15)'),
+        padding: '6px 10px',
+        borderRadius: '99px',
+        fontSize: '11px',
+        fontWeight: 600,
+        background: onDark || theme === 'dark' ? 'rgba(255,253,249,0.13)' : 'rgba(1,35,116,0.08)',
+        color: onDark || theme === 'dark' ? '#FFFDF9' : '#012374',
+        border: '1px solid ' + (onDark || theme === 'dark' ? 'rgba(255,253,249,0.2)' : 'rgba(1,35,116,0.15)'),
       }}
     >
-      {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-      {theme === 'dark' ? 'Light' : 'Dark'}
+      {theme === 'dark'
+        ? <><Sun className="w-3 h-3" /> Light</>
+        : <><Moon className="w-3 h-3" /> Dark</>
+      }
     </button>
   );
 }

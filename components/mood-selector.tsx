@@ -7,142 +7,201 @@ interface MoodSelectorProps {
   onSave?: (mood: Mood, stressLevel: number) => void;
 }
 
-const MOOD_COLORS: Record<string, string> = {
-  happy:    '#C8932B',
-  grateful: '#C8932B',
-  calm:     '#7C86AB',
-  neutral:  '#7C86AB',
-  tired:    '#34508C',
-  anxious:  '#34508C',
-  sad:      '#001A4D',
+// Mood groups matching the design HTML exactly
+const MOOD_GROUPS = [
+  {
+    label: 'Bright',
+    dotColor: '#C8932B',
+    moods: [
+      { value: 'happy' as Mood, label: 'Great' },
+      { value: 'grateful' as Mood, label: 'Grateful' },
+      { value: 'calm' as Mood, label: 'Calm' },
+    ],
+  },
+  {
+    label: 'In-between',
+    dotColor: 'rgba(1,35,116,0.4)',
+    moods: [
+      { value: 'neutral' as Mood, label: 'Okay' },
+      { value: 'tired' as Mood, label: 'Tired' },
+    ],
+  },
+  {
+    label: 'Heavy',
+    dotColor: '#E3171A',
+    moods: [
+      { value: 'anxious' as Mood, label: 'Anxious' },
+      { value: 'sad' as Mood, label: 'Down' },
+    ],
+  },
+];
+
+// Orb colors by mood — from the design file
+const ORB_COLORS: Record<string, { from: string; to: string; shadow: string }> = {
+  happy:    { from: '#E5BC5E', to: '#C8932B', shadow: '#C8932B' },
+  grateful: { from: '#D8A53E', to: '#B07C1C', shadow: '#B07C1C' },
+  calm:     { from: '#7C86AB', to: '#5C77AE', shadow: '#5C77AE' },
+  neutral:  { from: '#A4ACC6', to: '#7C86AB', shadow: '#7C86AB' },
+  tired:    { from: '#5C77AE', to: '#34508C', shadow: '#34508C' },
+  anxious:  { from: '#34508C', to: '#001A4D', shadow: '#001A4D' },
+  sad:      { from: '#34508C', to: '#001A4D', shadow: '#001A4D' },
 };
+
+const STRESS_LEVELS = ['Easy', 'Mild', 'Some', 'Heavy', 'A lot'];
+const STRESS_VALUES: Record<string, number> = { Easy: 2, Mild: 4, Some: 6, Heavy: 8, 'A lot': 10 };
 
 export default function MoodSelector({ onSave }: MoodSelectorProps) {
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
-  const [stressLevel, setStressLevel] = useState(5);
+  const [selectedStress, setSelectedStress] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
-  const moods: { value: Mood; emoji: string; label: string }[] = [
-    { value: 'happy',    emoji: '😊', label: 'Great' },
-    { value: 'grateful', emoji: '🥰', label: 'Grateful' },
-    { value: 'calm',     emoji: '😌', label: 'Calm' },
-    { value: 'neutral',  emoji: '😐', label: 'Okay' },
-    { value: 'tired',    emoji: '😴', label: 'Tired' },
-    { value: 'anxious',  emoji: '😟', label: 'Anxious' },
-    { value: 'sad',      emoji: '😞', label: 'Down' },
-  ];
+  const handleSave = (mood: Mood) => {
+    setSelectedMood(mood);
+    const stressVal = selectedStress ? STRESS_VALUES[selectedStress] : 5;
+    onSave?.(mood, stressVal);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
-  const handleSave = () => {
+  const handleStressSelect = (level: string) => {
+    setSelectedStress(level);
     if (selectedMood) {
-      onSave?.(selectedMood, stressLevel);
-      setSelectedMood(null);
-      setStressLevel(5);
+      const stressVal = STRESS_VALUES[level];
+      onSave?.(selectedMood, stressVal);
     }
   };
 
-  const orbColor = selectedMood ? MOOD_COLORS[selectedMood] : '#7C86AB';
+  const orb = selectedMood ? ORB_COLORS[selectedMood] : { from: '#A4ACC6', to: '#7C86AB', shadow: '#7C86AB' };
 
   return (
-    <div
-      className="p-5"
-      style={{
-        background: 'var(--bg-card)',
-        borderRadius: '22px',
-        border: '1px solid var(--border-card)',
-        boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
-      }}
-    >
-      <p
-        className="text-[11px] font-semibold uppercase tracking-[0.16em] mb-4"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        How do you feel?
-      </p>
+    <div>
+      {/* Section header matching design */}
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="font-serif-italic" style={{ fontSize: '24px', color: '#012374', lineHeight: '1.1' }}>
+          How do you feel?
+        </h2>
+        <span style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700 }}>¿Cómo te sientes?</span>
+      </div>
 
-      {/* Mood orb + pills row */}
-      <div className="flex items-center gap-4 mb-5">
-        {/* Mood orb */}
+      {/* Mood orb */}
+      <div className="flex items-center gap-5 mb-5">
         <div
-          className="shrink-0 w-[72px] h-[72px] rounded-full transition-all duration-300"
+          className="shrink-0 transition-all duration-500"
           style={{
-            background: `radial-gradient(circle at 35% 30%, ${orbColor}99, ${orbColor})`,
-            boxShadow: `0 12px 30px -8px ${orbColor}88`,
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle at 35% 30%, ${orb.from}, ${orb.to})`,
+            boxShadow: `0 14px 32px -10px ${orb.shadow}88`,
           }}
         />
+        <div>
+          {selectedMood ? (
+            <>
+              <p className="font-serif-italic" style={{ fontSize: '20px', color: '#012374', lineHeight: '1.1' }}>
+                {MOOD_GROUPS.flatMap(g => g.moods).find(m => m.value === selectedMood)?.label}
+              </p>
+              {saved && (
+                <p style={{ fontSize: '11px', color: '#C8932B', fontWeight: 600, marginTop: '2px' }}>Saved</p>
+              )}
+            </>
+          ) : (
+            <p style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)' }}>
+              Choose how you feel today
+            </p>
+          )}
+        </div>
+      </div>
 
-        {/* Mood pills */}
-        <div className="flex flex-wrap gap-2">
-          {moods.map((mood) => {
-            const selected = selectedMood === mood.value;
-            return (
-              <button
-                key={mood.value}
-                onClick={() => setSelectedMood(mood.value)}
-                className="flex items-center gap-1.5 transition-all"
+      {/* Grouped mood pills — NO emojis */}
+      <div className="space-y-3">
+        {MOOD_GROUPS.map((group) => (
+          <div key={group.label}>
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="w-[6px] h-[6px] rounded-full shrink-0"
+                style={{ background: group.dotColor }}
+              />
+              <span
                 style={{
-                  padding: '7px 13px',
-                  borderRadius: '99px',
-                  fontSize: '12.5px',
+                  fontSize: '10px',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: '#16182A',
+                  opacity: 0.6,
                   fontWeight: 600,
-                  background: selected ? '#012374' : 'var(--bg-card-alt)',
-                  color: selected ? '#FFFDF9' : 'var(--text-primary)',
-                  border: `1px solid ${selected ? '#012374' : 'rgba(1,35,116,0.22)'}`,
                 }}
               >
-                <span>{mood.emoji}</span>
-                <span>{mood.label}</span>
+                {group.label}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-[6px]">
+              {group.moods.map((mood) => {
+                const isSelected = selectedMood === mood.value;
+                return (
+                  <button
+                    key={mood.value}
+                    onClick={() => handleSave(mood.value)}
+                    className="transition-all active:scale-95"
+                    style={{
+                      padding: '7px 13px',
+                      borderRadius: '99px',
+                      fontSize: '12.5px',
+                      fontWeight: 500,
+                      background: isSelected ? '#012374' : 'var(--bg-card)',
+                      color: isSelected ? '#FFFDF9' : '#012374',
+                      border: isSelected ? '1px solid #012374' : '1px solid rgba(1,35,116,0.25)',
+                    }}
+                  >
+                    {mood.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Stress segmented selector */}
+      <div
+        className="mt-4"
+        style={{
+          background: 'var(--bg-card)',
+          borderRadius: '18px',
+          padding: '14px 16px',
+          border: '1px solid rgba(1,35,116,0.06)',
+        }}
+      >
+        <p style={{ fontSize: '13px', color: '#16182A' }}>
+          <span className="font-serif-italic" style={{ fontSize: '16px', color: '#012374' }}>
+            Stress today is
+          </span>
+        </p>
+        <div className="flex gap-1 mt-3">
+          {STRESS_LEVELS.map((level) => {
+            const isSelected = selectedStress === level;
+            return (
+              <button
+                key={level}
+                onClick={() => handleStressSelect(level)}
+                className="flex-1 transition-all"
+                style={{
+                  textAlign: 'center',
+                  padding: '8px 0',
+                  fontSize: '11.5px',
+                  borderRadius: '10px',
+                  fontWeight: isSelected ? 600 : 400,
+                  background: isSelected ? '#012374' : 'transparent',
+                  color: isSelected ? '#FFFDF9' : '#012374',
+                  border: isSelected ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)',
+                }}
+              >
+                {level}
               </button>
             );
           })}
         </div>
       </div>
-
-      {/* Stress slider */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <label
-            className="text-xs font-semibold"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Stress level
-          </label>
-          <span
-            className="text-xs font-bold px-2 py-0.5 rounded-chip"
-            style={{ background: 'rgba(1,35,116,0.08)', color: '#012374' }}
-          >
-            {stressLevel} / 10
-          </span>
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={stressLevel}
-          onChange={(e) => setStressLevel(parseInt(e.target.value))}
-          className="w-full mood-slider"
-        />
-        <div
-          className="flex justify-between text-[10px] font-semibold mt-1.5"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <span>Low</span>
-          <span>High</span>
-        </div>
-      </div>
-
-      {selectedMood && (
-        <button
-          onClick={handleSave}
-          className="w-full py-2.5 text-sm font-semibold transition-all"
-          style={{
-            borderRadius: '12px',
-            background: '#012374',
-            color: '#FFFDF9',
-            boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
-          }}
-        >
-          Save Mood
-        </button>
-      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
 
@@ -20,61 +19,59 @@ interface GlucoseWidgetProps {
   onUpdate?: (value: number, context?: GlucoseContext, relatedMealId?: string, notes?: string) => void;
 }
 
-export default function GlucoseWidget({
-  currentValue,
-  minRange,
-  maxRange,
-  onUpdate,
-}: GlucoseWidgetProps) {
+const CONTEXT_LABELS: Record<GlucoseContext, string> = {
+  fasting:    'Fasting',
+  'pre-meal': 'Before meal',
+  'post-meal':'After meal',
+  bedtime:    'Bedtime',
+  random:     'Random',
+};
+
+function getTimeString() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpdate }: GlucoseWidgetProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(currentValue?.toString() || '');
+  const [inputValue, setInputValue] = useState('');
   const [context, setContext] = useState<GlucoseContext>('random');
   const [notes, setNotes] = useState('');
   const [recentMeals, setRecentMeals] = useState<RecentMeal[]>([]);
   const [selectedMealId, setSelectedMealId] = useState<string | undefined>();
   const [loadingMeals, setLoadingMeals] = useState(false);
+  const [timeStr] = useState(getTimeString);
 
-  const getStatus = (value?: number) => {
-    if (!value) return { label: 'No reading', color: 'gray' };
-    if (value < minRange) return { label: 'Low', color: 'danger' };
-    if (value > maxRange) return { label: 'High', color: 'warning' };
-    return { label: 'In Range', color: 'success' };
+  const getStatus = (v?: number) => {
+    if (!v) return null;
+    if (v < minRange) return { label: 'Below range', color: '#D0021B', bg: 'rgba(208,2,27,0.12)' };
+    if (v > maxRange) return { label: 'A bit above range · that\'s okay', color: '#9A6F18', bg: 'rgba(200,147,43,0.16)' };
+    return { label: 'In range', color: '#4A8C00', bg: 'rgba(126,211,33,0.15)' };
   };
 
   const status = getStatus(currentValue);
 
-  const statusStyle = {
-    success: { background: 'rgba(126,211,33,0.15)', color: '#4A8C00' },
-    danger:  { background: 'rgba(208,2,27,0.12)', color: '#D0021B' },
-    warning: { background: 'rgba(245,166,35,0.15)', color: '#9A6F18' },
-    gray:    { background: 'rgba(1,35,116,0.08)', color: 'rgba(1,35,116,0.6)' },
-  }[status.color];
+  // Range bar: target zone left% and right%, current dot left%
+  // Scale: 40–300 mg/dL → 0–100%
+  const toPercent = (v: number) => Math.min(100, Math.max(0, ((v - 40) / 260) * 100));
+  const targetLeft = toPercent(minRange);
+  const targetRight = 100 - toPercent(maxRange);
+  const dotLeft = currentValue ? toPercent(currentValue) : null;
 
   useEffect(() => {
     if (isEditing && (context === 'post-meal' || context === 'pre-meal')) {
-      fetchRecentMeals();
+      setLoadingMeals(true);
+      fetch('/api/meals?limit=10')
+        .then(r => r.ok ? r.json() : { meals: [] })
+        .then(d => setRecentMeals(d.meals || []))
+        .catch(console.error)
+        .finally(() => setLoadingMeals(false));
     }
   }, [isEditing, context]);
 
-  const fetchRecentMeals = async () => {
-    setLoadingMeals(true);
-    try {
-      const res = await fetch('/api/meals?limit=10');
-      if (res.ok) {
-        const data = await res.json();
-        setRecentMeals(data.meals || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch recent meals:', error);
-    } finally {
-      setLoadingMeals(false);
-    }
-  };
-
   const handleSave = () => {
-    const value = parseFloat(inputValue);
-    if (!isNaN(value) && value > 0) {
-      onUpdate?.(value, context, selectedMealId, notes.trim() || undefined);
+    const v = parseFloat(inputValue);
+    if (!isNaN(v) && v > 0) {
+      onUpdate?.(v, context, selectedMealId, notes.trim() || undefined);
       setIsEditing(false);
       setInputValue('');
       setContext('random');
@@ -82,17 +79,6 @@ export default function GlucoseWidget({
       setSelectedMealId(undefined);
       setRecentMeals([]);
     }
-  };
-
-  const getContextLabel = (ctx: GlucoseContext) => {
-    const labels: Record<GlucoseContext, { emoji: string; label: string }> = {
-      fasting:    { emoji: '🌅', label: 'Fasting' },
-      'pre-meal': { emoji: '🍽️', label: 'Before meal' },
-      'post-meal':{ emoji: '⏱️', label: 'After meal' },
-      bedtime:    { emoji: '🌙', label: 'Bedtime' },
-      random:     { emoji: '📊', label: 'Random' },
-    };
-    return labels[ctx];
   };
 
   const getMealSummary = (meal: RecentMeal) => {
@@ -104,163 +90,132 @@ export default function GlucoseWidget({
     return `${meal.mealType} meal`;
   };
 
-  const getTimeAgo = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const diffMs = Date.now() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return date.toLocaleDateString();
+  const getTimeAgo = (d: string) => {
+    const diff = Date.now() - new Date(d).getTime();
+    const m = Math.floor(diff / 60000);
+    return m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
   };
-
-  // Range bar position (40–400 mg/dL scale)
-  const rangePercent = currentValue
-    ? Math.min(100, Math.max(0, ((currentValue - 40) / 360) * 100))
-    : null;
 
   return (
     <div
-      className="p-5 transition-all"
       style={{
-        background: 'var(--bg-card)',
+        background: '#FFFDF9',
         borderRadius: '22px',
-        border: '1px solid var(--border-card)',
-        boxShadow: '0 12px 28px -10px rgba(1,35,116,0.22)',
+        padding: '18px 18px 16px',
+        boxShadow: '0 12px 28px -10px rgba(1,35,116,0.28)',
+        border: '1px solid rgba(1,35,116,0.07)',
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <p
-          className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          Blood Glucose
-        </p>
-        {currentValue && (
-          <span
-            className="text-[11px] font-semibold px-2.5 py-1 rounded-chip"
-            style={statusStyle}
-          >
-            {status.label}
-          </span>
-        )}
-      </div>
-
       {isEditing ? (
+        /* ── Edit mode ── */
         <div className="space-y-4">
-          {/* Number input */}
+          {/* Value input */}
           <div>
             <label
-              className="block text-xs font-semibold mb-2"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, display: 'block', marginBottom: '8px' }}
             >
               Blood Glucose (mg/dL)
             </label>
             <input
               type="number"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="w-full px-4 py-3 text-sm focus:outline-none focus:ring-2"
+              onChange={e => setInputValue(e.target.value)}
+              autoFocus
+              placeholder="e.g. 120"
+              className="w-full focus:outline-none"
               style={{
+                padding: '12px 14px',
                 borderRadius: '12px',
                 border: '1px solid rgba(1,35,116,0.15)',
-                background: 'var(--bg-card-alt)',
-                color: 'var(--text-primary)',
+                background: '#F7EFE1',
+                fontSize: '14px',
+                color: '#001A4D',
               }}
-              placeholder="e.g. 120"
-              autoFocus
             />
           </div>
 
-          {/* Context selector */}
+          {/* Context pills */}
           <div>
-            <label
-              className="block text-xs font-semibold mb-2"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              When did you measure?
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['fasting', 'pre-meal', 'post-meal', 'bedtime', 'random'] as GlucoseContext[]).map((ctx) => {
-                const { emoji, label } = getContextLabel(ctx);
-                const selected = context === ctx;
-                return (
-                  <button
-                    key={ctx}
-                    type="button"
-                    onClick={() => setContext(ctx)}
-                    className="px-2 py-2.5 text-xs font-semibold transition-all"
-                    style={{
-                      borderRadius: '10px',
-                      border: `1px solid ${selected ? '#012374' : 'rgba(1,35,116,0.15)'}`,
-                      background: selected ? '#012374' : 'var(--bg-card-alt)',
-                      color: selected ? '#FFFDF9' : 'var(--text-primary)',
-                    }}
-                  >
-                    <span className="block text-base mb-0.5">{emoji}</span>
-                    {label}
-                  </button>
-                );
-              })}
+            <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
+              When?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(CONTEXT_LABELS) as [GlucoseContext, string][]).map(([ctx, label]) => (
+                <button
+                  key={ctx}
+                  onClick={() => setContext(ctx)}
+                  style={{
+                    padding: '7px 13px',
+                    borderRadius: '99px',
+                    fontSize: '12.5px',
+                    fontWeight: 500,
+                    background: context === ctx ? '#012374' : 'transparent',
+                    color: context === ctx ? '#FFFDF9' : '#012374',
+                    border: `1px solid ${context === ctx ? '#012374' : 'rgba(1,35,116,0.22)'}`,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Meal linking */}
           {context === 'post-meal' && (
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
-                <Clock className="w-3.5 h-3.5" />
-                Link to recent meal (optional)
-              </label>
+              <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
+                Link to meal (optional)
+              </p>
               {loadingMeals ? (
-                <div className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>Loading meals…</div>
+                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>Loading…</p>
               ) : recentMeals.length > 0 ? (
-                <div className="space-y-2">
-                  {recentMeals.slice(0, 5).map((meal) => (
+                <div className="space-y-1.5">
+                  {recentMeals.slice(0, 5).map(meal => (
                     <button
                       key={meal.id}
-                      type="button"
                       onClick={() => setSelectedMealId(meal.id === selectedMealId ? undefined : meal.id)}
-                      className="w-full text-left px-3 py-2.5 text-sm transition-all"
+                      className="w-full text-left"
                       style={{
+                        padding: '10px 12px',
                         borderRadius: '12px',
                         border: `1px solid ${selectedMealId === meal.id ? '#012374' : 'rgba(1,35,116,0.12)'}`,
-                        background: selectedMealId === meal.id ? 'rgba(1,35,116,0.06)' : 'var(--bg-card-alt)',
+                        background: selectedMealId === meal.id ? 'rgba(1,35,116,0.06)' : '#F7EFE1',
                       }}
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>{meal.mealType}</p>
-                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{getMealSummary(meal)}</p>
+                          <p style={{ fontSize: '13px', fontWeight: 600, color: '#001A4D', textTransform: 'capitalize' }}>{meal.mealType}</p>
+                          <p style={{ fontSize: '11.5px', color: 'rgba(22,24,42,0.6)', marginTop: '1px' }}>{getMealSummary(meal)}</p>
                         </div>
-                        <span className="text-[10px] ml-2 shrink-0" style={{ color: 'var(--text-muted)' }}>{getTimeAgo(meal.eatenAt)}</span>
+                        <span style={{ fontSize: '11px', color: 'rgba(1,35,116,0.5)', marginLeft: '8px', whiteSpace: 'nowrap' }}>{getTimeAgo(meal.eatenAt)}</span>
                       </div>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>No recent meals found</p>
+                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>No recent meals found</p>
               )}
             </div>
           )}
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
               Notes (optional)
-            </label>
+            </p>
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={e => setNotes(e.target.value)}
               placeholder="How are you feeling? Any symptoms?"
               rows={2}
-              className="w-full px-3 py-2.5 text-sm focus:outline-none resize-none"
+              className="w-full resize-none focus:outline-none"
               style={{
+                padding: '10px 12px',
                 borderRadius: '12px',
                 border: '1px solid rgba(1,35,116,0.15)',
-                background: 'var(--bg-card-alt)',
-                color: 'var(--text-primary)',
+                background: '#F7EFE1',
+                fontSize: '13px',
+                color: '#001A4D',
               }}
             />
           </div>
@@ -270,31 +225,30 @@ export default function GlucoseWidget({
             <button
               onClick={handleSave}
               disabled={!inputValue || parseFloat(inputValue) <= 0}
-              className="flex-1 py-2.5 text-sm font-semibold transition-all disabled:opacity-50"
+              className="flex-1 transition-all disabled:opacity-40"
               style={{
+                padding: '11px',
                 borderRadius: '12px',
                 background: '#012374',
                 color: '#FFFDF9',
+                fontSize: '14px',
+                fontWeight: 600,
                 boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
               }}
             >
               Save Reading
             </button>
             <button
-              onClick={() => {
-                setIsEditing(false);
-                setInputValue(currentValue?.toString() || '');
-                setContext('random');
-                setNotes('');
-                setSelectedMealId(undefined);
-                setRecentMeals([]);
-              }}
-              className="flex-1 py-2.5 text-sm font-semibold transition-all"
+              onClick={() => { setIsEditing(false); setInputValue(''); setContext('random'); setNotes(''); setSelectedMealId(undefined); setRecentMeals([]); }}
+              className="flex-1 transition-all"
               style={{
+                padding: '11px',
                 borderRadius: '12px',
                 border: '1px solid rgba(1,35,116,0.2)',
                 background: 'transparent',
-                color: 'var(--text-primary)',
+                color: '#001A4D',
+                fontSize: '14px',
+                fontWeight: 600,
               }}
             >
               Cancel
@@ -302,97 +256,125 @@ export default function GlucoseWidget({
           </div>
         </div>
       ) : (
+        /* ── Display mode — matching exact HTML design ── */
         <>
-          {/* Large serif number display */}
-          <div className="flex items-end gap-2 mb-5">
+          {/* Header row */}
+          <div className="flex items-baseline justify-between">
+            <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#001A4D', opacity: 0.6, fontWeight: 600 }}>
+              Today&apos;s Glucose
+            </span>
+            <button
+              onClick={() => setIsEditing(true)}
+              style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700 }}
+            >
+              + {currentValue ? 'Update' : 'Add reading'}
+            </button>
+          </div>
+
+          {/* Big serif number */}
+          <div className="flex items-baseline gap-[10px]" style={{ marginTop: '6px' }}>
             <span
-              className="leading-none font-serif"
-              style={{ fontSize: '64px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
+              className="font-serif"
+              style={{ fontSize: '60px', color: '#012374', lineHeight: 0.85 }}
             >
               {currentValue ?? '—'}
             </span>
-            <span
-              className="text-sm font-medium mb-2"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              mg/dL
+            <span style={{ fontSize: '14px', color: '#16182A', opacity: 0.55, paddingBottom: '8px' }}>
+              {currentValue ? 'mg/dL' : 'mg/dL · no data yet'}
             </span>
           </div>
 
-          {/* Range bar */}
-          <div className="mb-5">
+          {/* Status pill */}
+          {status && (
             <div
-              className="relative h-2 rounded-full overflow-visible"
-              style={{ background: '#F7EFE1' }}
+              style={{
+                marginTop: '12px',
+                display: 'inline-block',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                background: status.bg,
+                color: status.color,
+                fontSize: '12.5px',
+                fontWeight: 600,
+              }}
             >
-              {/* Fill bar */}
-              {rangePercent !== null && (
-                <div
-                  className="absolute top-0 left-0 h-full rounded-full"
-                  style={{
-                    width: `${rangePercent}%`,
-                    background: status.color === 'success'
-                      ? 'rgba(1,35,116,0.5)'
-                      : status.color === 'danger'
-                      ? '#D0021B'
-                      : '#F5A623',
-                    transition: 'width 0.4s ease',
-                  }}
-                />
-              )}
-              {/* Indicator dot */}
-              {rangePercent !== null && (
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full"
-                  style={{
-                    left: `calc(${rangePercent}% - 9px)`,
-                    background: '#C8932B',
-                    border: '3px solid #FFFDF9',
-                    boxShadow: '0 2px 8px rgba(200,147,43,0.5)',
-                  }}
-                />
-              )}
+              {status.label}
             </div>
+          )}
+
+          {/* Range bar with target zone */}
+          <div style={{ marginTop: '16px', position: 'relative', height: '9px', background: '#F7EFE1', borderRadius: '99px' }}>
+            {/* Target zone band */}
             <div
-              className="flex justify-between text-[10px] font-semibold mt-2"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              <span>Low</span>
-              <span>{minRange}–{maxRange} mg/dL target</span>
-              <span>High</span>
-            </div>
+              style={{
+                position: 'absolute',
+                left: `${targetLeft}%`,
+                right: `${targetRight}%`,
+                top: 0,
+                bottom: 0,
+                background: 'rgba(1,35,116,0.5)',
+                borderRadius: '99px',
+              }}
+            />
+            {/* Current value dot */}
+            {dotLeft !== null && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${dotLeft}%`,
+                  top: '-4px',
+                  width: '17px',
+                  height: '17px',
+                  borderRadius: '50%',
+                  background: '#C8932B',
+                  border: '3px solid #FFFDF9',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+            )}
+          </div>
+          <div
+            className="flex justify-between"
+            style={{ marginTop: '6px', fontSize: '11px', color: '#16182A', opacity: 0.65 }}
+          >
+            <span>Low</span>
+            <span>{minRange} – {maxRange} mg/dL</span>
+            <span>High</span>
           </div>
 
-          {/* Clinical safety banners — deterministic, non-dismissible */}
+          {/* Clinical safety banners — non-dismissible */}
           {currentValue !== undefined && currentValue < 54 && (
             <div
-              className="p-3 text-sm font-semibold rounded-[12px] mb-4"
-              style={{ background: 'rgba(208,2,27,0.1)', border: '1px solid #D0021B', color: '#D0021B' }}
+              style={{
+                marginTop: '14px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(208,2,27,0.1)',
+                border: '1px solid rgba(208,2,27,0.3)',
+                color: '#D0021B',
+                fontSize: '12.5px',
+                fontWeight: 600,
+              }}
             >
               ⚠️ This reading may be an emergency. Seek medical care immediately.
             </div>
           )}
           {currentValue !== undefined && currentValue > 250 && (
             <div
-              className="p-3 text-sm font-semibold rounded-[12px] mb-4"
-              style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid #F5A623', color: '#9A6F18' }}
+              style={{
+                marginTop: '14px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(200,147,43,0.12)',
+                border: '1px solid rgba(200,147,43,0.4)',
+                color: '#9A6F18',
+                fontSize: '12.5px',
+                fontWeight: 600,
+              }}
             >
               ⚠️ This is a very high reading. Contact your healthcare provider.
             </div>
           )}
-
-          <button
-            onClick={() => setIsEditing(true)}
-            className="w-full py-2.5 text-sm font-semibold transition-all"
-            style={{
-              borderRadius: '12px',
-              border: '1px solid rgba(1,35,116,0.2)',
-              background: 'transparent',
-              color: '#012374',
-            }}
-          >
-            {currentValue ? 'Update Reading' : 'Add Reading'}
-          </button>
         </>
       )}
     </div>

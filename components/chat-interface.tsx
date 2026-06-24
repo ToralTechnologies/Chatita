@@ -19,33 +19,33 @@ interface Message {
 
 function getGreeting(ctx?: UserContext): string {
   if (ctx?.feelingOverwhelmed) {
-    return "Hi dear, I see you're feeling a bit overwhelmed. 💙 That's okay — let's take it one step at a time. How can I help you right now?";
+    return "Hi. I can see you're feeling a bit overwhelmed — that's okay. Let's take it one step at a time. How can I help you right now?";
   }
   if (ctx?.notFeelingWell) {
-    return "Hey there. I see you're not feeling well today. 🤒 I'm here to help — just take things easy. What do you need?";
+    return "I see you're not feeling well today. I'm here to help — take things easy. What do you need?";
   }
   if (ctx?.mood === 'anxious') {
-    return "Hi dear, I can see you're feeling anxious today. 💛 That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to chat with?";
+    return "I can see you're feeling anxious today. That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to talk with?";
   }
   if (ctx?.mood === 'sad') {
-    return "Hey there. I'm sorry you're feeling down today. 💙 I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
+    return "I'm sorry you're feeling down today. I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
   }
   if (ctx?.mood === 'tired') {
-    return "Hi! I see you're feeling tired today. 😴 Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
+    return "I see you're feeling tired today. Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
   }
   if (ctx?.onPeriod || ctx?.havingCravings) {
-    return "Hi! I see you've got some cravings going on. 💛 Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
+    return "I see you've got some cravings going on. Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
   }
   if (ctx?.mood === 'grateful') {
-    return "Hi! Love that you're feeling grateful today! 🥰 That positive energy helps everything. What can I help you with?";
+    return "Glad you're feeling grateful today — that positive energy helps everything. What can I help you with?";
   }
   if (ctx?.mood === 'calm') {
-    return "Hey there! Glad you're feeling calm today. 😌 Let's keep that good energy going. What can I help you with?";
+    return "Glad you're feeling calm today. Let's keep that good energy going. What can I help you with?";
   }
   if (ctx?.mood === 'happy') {
-    return "Hi! So happy to see you're in a great mood today! 😊 Let's keep it going — what can I help you with?";
+    return "Great to see you're in a good mood today. Let's keep it going — what can I help you with?";
   }
-  return "Hello! I'm Chatita, here to help you. 💙\n\nWhat would you like to talk about today?";
+  return "Hello, I'm Chatita.\n\nI'm here to help you understand your food, blood sugar, and daily choices. What would you like to talk about today?";
 }
 
 function getInitialSuggestions(ctx?: UserContext): string[] {
@@ -56,6 +56,24 @@ function getInitialSuggestions(ctx?: UserContext): string[] {
   if (ctx?.mood === 'tired') return ['Something quick', 'Need something quick', 'What should I eat?'];
   if (ctx?.onPeriod || ctx?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
   return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
+}
+
+function ContextChip({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        padding: '5px 10px',
+        borderRadius: '99px',
+        fontSize: '11px',
+        fontWeight: 500,
+        background: 'var(--bg-card)',
+        color: '#012374',
+        border: '1px solid rgba(1,35,116,0.18)',
+      }}
+    >
+      {label}
+    </span>
+  );
 }
 
 export default function ChatInterface({ userContext, onClose }: ChatInterfaceProps) {
@@ -229,16 +247,16 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           className="px-4 py-2 flex flex-wrap gap-1.5"
           style={{ borderBottom: '1px solid rgba(1,35,116,0.08)', background: 'rgba(1,35,116,0.04)' }}
         >
-          {userContext.mood === 'happy' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😊 Feeling great</span>}
-          {userContext.mood === 'grateful' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🥰 Grateful</span>}
-          {userContext.mood === 'calm' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😌 Feeling calm</span>}
-          {userContext.mood === 'tired' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😴 Feeling tired</span>}
-          {userContext.mood === 'anxious' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😟 Feeling anxious</span>}
-          {userContext.mood === 'sad' && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😞 Feeling down</span>}
-          {userContext.notFeelingWell && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🤒 Not feeling well</span>}
-          {userContext.onPeriod && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🩸 On my period</span>}
-          {userContext.feelingOverwhelmed && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>😰 Overwhelmed</span>}
-          {userContext.havingCravings && <span className="text-[11px] font-medium rounded-chip px-2 py-1" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>🍫 Cravings</span>}
+          {userContext.mood === 'happy' && <ContextChip label="Feeling great" />}
+          {userContext.mood === 'grateful' && <ContextChip label="Grateful" />}
+          {userContext.mood === 'calm' && <ContextChip label="Feeling calm" />}
+          {userContext.mood === 'tired' && <ContextChip label="Feeling tired" />}
+          {userContext.mood === 'anxious' && <ContextChip label="Feeling anxious" />}
+          {userContext.mood === 'sad' && <ContextChip label="Feeling down" />}
+          {userContext.notFeelingWell && <ContextChip label="Not feeling well" />}
+          {userContext.onPeriod && <ContextChip label="On my period" />}
+          {userContext.feelingOverwhelmed && <ContextChip label="Overwhelmed" />}
+          {userContext.havingCravings && <ContextChip label="Having cravings" />}
         </div>
       )}
 
@@ -377,7 +395,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           </button>
         </div>
         <p className="text-[10px] text-center mt-2" style={{ color: 'var(--text-muted)' }}>
-          💙 Chatita provides general guidance. Always consult your doctor for medical advice.
+          Chatita provides general guidance. Always consult your doctor for medical advice.
         </p>
       </form>
     </div>
