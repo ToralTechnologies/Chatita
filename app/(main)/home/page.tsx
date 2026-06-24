@@ -12,6 +12,7 @@ import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import ThemeToggle from '@/components/theme-toggle';
+import WebHomeLayout from '@/components/web-home-layout';
 import { Mood, UserContext } from '@/types';
 import { MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
@@ -162,7 +163,22 @@ export default function HomePage() {
   const isDark = theme === 'dark';
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
+    <>
+    {/* ── Desktop layout (lg+) ── */}
+    <div className="hidden lg:block">
+      <WebHomeLayout
+        firstName={firstName}
+        currentGlucose={currentGlucose}
+        userData={userData}
+        userContext={userContext}
+        onGlucoseUpdate={handleGlucoseUpdate}
+        onMoodSave={handleMoodSave}
+        onContextSave={handleContextSave}
+      />
+    </div>
+
+    {/* ── Mobile layout (< lg) ── */}
+    <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
 
       {/* ── Navy hero band ── */}
       <div
@@ -352,5 +368,6 @@ export default function HomePage() {
 
       <BottomNav />
     </div>
+    </>
   );
 }
