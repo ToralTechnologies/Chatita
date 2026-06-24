@@ -139,13 +139,13 @@ export default function HomePage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleMoodSave = async (mood: Mood, stressLevel: number) => {
+  const handleMoodSave = async (mood: Mood, stressLevel: number, notes?: string) => {
     setUserContext(prev => ({ ...prev, mood }));
     try {
       await fetch('/api/mood', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mood, stressLevel }),
+        body: JSON.stringify({ mood, stressLevel, notes }),
       });
     } catch (err) { console.error(err); }
   };
@@ -259,11 +259,6 @@ export default function HomePage() {
         className="max-w-2xl mx-auto"
         style={{ marginTop: '-60px', padding: '0 20px' }}
       >
-        {/* Meal follow-up */}
-        <div style={{ marginBottom: '10px' }}>
-          <MealFollowUpBanner />
-        </div>
-
         {/* Glucose card — overlapping the navy */}
         <GlucoseWidget
           currentValue={currentGlucose}
@@ -271,6 +266,11 @@ export default function HomePage() {
           maxRange={userData?.targetGlucoseMax || 180}
           onUpdate={handleGlucoseUpdate}
         />
+
+        {/* Meal follow-up */}
+        <div style={{ marginTop: '10px' }}>
+          <MealFollowUpBanner />
+        </div>
 
         {/* ── Feature grid ── */}
         <div
