@@ -48,6 +48,7 @@ const STRESS_LABELS = ['Easy', 'Mild', 'Some', 'Heavy', 'A lot'];
 const NAV_LINKS = [
   { href: '/home', label: 'Home', active: true },
   { href: '/meal-history', label: 'Meal history' },
+  { href: '/mood-log', label: 'Mood log' },
   { href: '/recipes', label: 'Recipes' },
   { href: '/restaurant-finder', label: 'Restaurants' },
   { href: '/insights', label: 'Insights' },
@@ -89,7 +90,21 @@ export default function WebHomeLayout({
   onMoodSave,
   onContextSave,
 }: WebHomeLayoutProps) {
-  const [selectedMood, setSelectedMood] = useState<string>(userContext.mood || '');
+  const MOOD_SLIDER_POS: Record<string, number> = {
+    sad: 8, anxious: 22, tired: 38, calm: 55, grateful: 72, happy: 88,
+  };
+  const sliderToMood = (v: number): string => {
+    if (v <= 15) return 'sad';
+    if (v <= 30) return 'anxious';
+    if (v <= 48) return 'tired';
+    if (v <= 63) return 'calm';
+    if (v <= 78) return 'grateful';
+    return 'happy';
+  };
+
+  const initMood = userContext.mood || '';
+  const [selectedMood, setSelectedMood] = useState<string>(initMood);
+  const [sliderValue, setSliderValue] = useState<number>(MOOD_SLIDER_POS[initMood] ?? 50);
   const [stressIndex, setStressIndex] = useState(2);
   const [moodSaved, setMoodSaved] = useState(false);
   const [showAddReading, setShowAddReading] = useState(false);
@@ -354,7 +369,10 @@ export default function WebHomeLayout({
                 {moods.map(m => (
                   <button
                     key={m.value}
-                    onClick={() => setSelectedMood(m.value)}
+                    onClick={() => {
+                      setSelectedMood(m.value);
+                      setSliderValue(MOOD_SLIDER_POS[m.value] ?? 50);
+                    }}
                     style={{
                       padding: '5px 11px',
                       borderRadius: 99,
@@ -373,6 +391,25 @@ export default function WebHomeLayout({
                 ))}
               </div>
             ))}
+          </div>
+
+          {/* Pleasant ↔ Unpleasant slider */}
+          <div style={{ marginTop: 16 }}>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={sliderValue}
+              onChange={e => {
+                const v = Number(e.target.value);
+                setSliderValue(v);
+                setSelectedMood(sliderToMood(v));
+              }}
+              className="mood-slider"
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, opacity: 0.65 }}>
+              <span>Very unpleasant</span><span>Neutral</span><span>Very pleasant</span>
+            </div>
           </div>
 
           {/* Stress selector */}

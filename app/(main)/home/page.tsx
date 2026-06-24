@@ -86,6 +86,17 @@ const FEATURE_CARDS = [
       </svg>
     ),
   },
+  {
+    href: '/mood-log',
+    title: 'Mood log',
+    subtitle: 'Your mood history',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.6" />
+        <path d="M8.5 14s1 1.5 3.5 1.5 3.5-1.5 3.5-1.5M9 9.5h.01M15 9.5h.01" stroke="#012374" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 function getDayLabel() {

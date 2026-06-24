@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 import { Trophy, Lock } from 'lucide-react';
 
 export default function RewardsPage() {
@@ -49,11 +50,12 @@ export default function RewardsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <BackButton href="/home" />
+          <h1 className="text-2xl font-bold flex items-center gap-2 mt-2">
             <Trophy className="w-6 h-6 text-warning" />
             Your Milestones
           </h1>
-          <p className="text-gray-600 text-sm mt-1">Keep up the great work! 🌟</p>
+          <p className="text-gray-600 text-sm mt-1">Keep up the great work!</p>
         </div>
       </div>
 

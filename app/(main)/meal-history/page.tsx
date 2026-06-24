@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Filter } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 import MealCard from '@/components/meal-card';
 import ExportButton from '@/components/export-button';
 import MealCardSkeleton from '@/components/skeletons/meal-card-skeleton';
@@ -90,7 +91,8 @@ export default function MealHistoryPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+          <BackButton href="/home" />
+          <div className="flex items-center justify-between mb-4 mt-2">
             <h1 className="text-2xl font-bold">{t.mealHistory.title}</h1>
             <ExportButton
               onExportPDF={() => exportMealsToPDF(filteredMeals)}

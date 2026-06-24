@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 import ExportButton from '@/components/export-button';
 import CardSkeleton from '@/components/skeletons/card-skeleton';
 import ChartSkeleton from '@/components/skeletons/chart-skeleton';
@@ -124,7 +125,8 @@ export default function InsightsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-3">
+          <BackButton href="/home" />
+          <div className="flex items-center justify-between mb-3 mt-2">
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-primary" />
               Insights & Analytics

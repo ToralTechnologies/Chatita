@@ -112,9 +112,12 @@ export default function BottomNav() {
           </div>
         </Link>
 
-        {/* Rewards */}
-        <Link href="/rewards" className="flex items-center justify-center w-10 h-10" style={{ opacity: isDark && pathname !== '/rewards' ? 0.5 : 1 }}>
-          <RewardsIcon active={pathname === '/rewards'} />
+        {/* Mood log */}
+        <Link href="/mood-log" className="flex items-center justify-center w-10 h-10" style={{ opacity: isDark && pathname !== '/mood-log' ? 0.5 : 1 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="#001A4D" strokeWidth="1.6" opacity={pathname === '/mood-log' ? 1 : 0.45}/>
+            <path d="M8.5 14s1 1.5 3.5 1.5 3.5-1.5 3.5-1.5M9 9.5h.01M15 9.5h.01" stroke="#001A4D" strokeWidth="1.8" strokeLinecap="round" opacity={pathname === '/mood-log' ? 1 : 0.45}/>
+          </svg>
         </Link>
 
         {/* Settings */}

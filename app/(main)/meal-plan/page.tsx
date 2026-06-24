@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 import { Calendar, ChefHat, TrendingUp, Loader2, AlertCircle, Download } from 'lucide-react';
 
 interface MealPlanDay {
@@ -84,7 +85,8 @@ export default function MealPlanPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <BackButton href="/home" />
+          <h1 className="text-2xl font-bold flex items-center gap-2 mt-2">
             <ChefHat className="w-6 h-6 text-primary" />
             Meal Plan Generator
           </h1>

@@ -8,6 +8,7 @@ import BottomNav from '@/components/bottom-nav';
 import LanguageSwitcher from '@/components/language-switcher';
 import HealthProfileCard from '@/components/health-profile-card';
 import ThemeToggle from '@/components/theme-toggle';
+import BackButton from '@/components/back-button';
 import { useTranslation } from '@/lib/i18n/context';
 import { Mail, Send, Activity, Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
@@ -311,6 +312,9 @@ function SettingsContent() {
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--bg-page)' }}>
       <div className="max-w-2xl mx-auto px-5 py-6">
+        <div style={{ marginBottom: 6 }}>
+          <BackButton href="/home" />
+        </div>
         <div className="flex items-center justify-between mb-6">
           <h1
             className="text-[30px] leading-[1.1] font-serif-italic"
