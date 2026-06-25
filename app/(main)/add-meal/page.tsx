@@ -374,7 +374,7 @@ export default function AddMealPage() {
     <div className="lg:hidden" style={{ background: '#F7EFE1', minHeight: '100vh', paddingBottom: '96px' }}>
       <style>{SCAN_STYLE}</style>
 
-      <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <BackButton href="/meal-history" />
           <div>

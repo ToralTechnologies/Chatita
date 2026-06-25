@@ -229,7 +229,7 @@ export default function MenuScannerPage() {
   const MobileLayout = (
     <div className="lg:hidden" style={{ background: '#F7EFE1', minHeight: '100vh', paddingBottom: '96px' }}>
       <style>{SCAN_STYLE}</style>
-      <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
         <BackButton href="/restaurant-finder" />
         <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginTop: '16px' }}>EATING OUT</p>
         <h1 className="font-serif-italic" style={{ fontSize: '30px', color: '#012374', marginTop: '2px', lineHeight: 1.1 }}>Menu scanner</h1>

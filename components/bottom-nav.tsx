@@ -76,7 +76,7 @@ export default function BottomNav() {
       style={{
         background: navBg,
         borderTop: `1px solid ${isDark ? 'rgba(255,253,249,0.12)' : 'rgba(200,147,43,0.3)'}`,
-        height: '68px',
+        height: 'calc(68px + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div className="flex items-center justify-around h-full max-w-2xl mx-auto px-5">

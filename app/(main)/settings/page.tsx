@@ -509,7 +509,7 @@ function SettingsContent() {
     <>
       {/* ─── Mobile ─── */}
       <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <BackButton href="/home" />
             <ThemeToggle />

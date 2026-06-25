@@ -218,7 +218,7 @@ export default function MoodLogPage() {
     <>
       {/* ─── Mobile ─── */}
       <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
-        <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               onClick={() => router.back()}

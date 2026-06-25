@@ -195,14 +195,17 @@ export default function HomePage() {
       <div
         style={{
           background: '#012374',
-          padding: '0 24px 72px',
+          paddingLeft: '24px',
+          paddingRight: '24px',
+          paddingBottom: '72px',
+          paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
           position: 'relative',
         }}
       >
         {/* Header row */}
         <div
           className="flex items-center justify-between"
-          style={{ paddingTop: '16px', paddingBottom: '0' }}
+          style={{ paddingBottom: '0' }}
         >
           <Image
             src="/logo-horizontal.svg"
