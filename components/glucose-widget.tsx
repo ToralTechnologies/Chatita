@@ -342,7 +342,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
             <span>High</span>
           </div>
 
-          {/* Clinical safety banners — non-dismissible */}
+          {/* ADA-aligned clinical safety banners — non-dismissible */}
           {currentValue !== undefined && currentValue < 54 && (
             <div
               style={{
@@ -356,10 +356,26 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ This reading may be an emergency. Seek medical care immediately.
+              ⚠️ Very low — treat immediately. If you feel confused or cannot swallow safely, call 911.
             </div>
           )}
-          {currentValue !== undefined && currentValue > 250 && (
+          {currentValue !== undefined && currentValue >= 54 && currentValue < 70 && (
+            <div
+              style={{
+                marginTop: '14px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(208,2,27,0.07)',
+                border: '1px solid rgba(208,2,27,0.2)',
+                color: '#D0021B',
+                fontSize: '12.5px',
+                fontWeight: 600,
+              }}
+            >
+              ⚠️ Low — treat now with 15g fast-acting carbs. Recheck in 15 minutes.
+            </div>
+          )}
+          {currentValue !== undefined && currentValue >= 240 && currentValue < 300 && (
             <div
               style={{
                 marginTop: '14px',
@@ -372,7 +388,23 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ This is a very high reading. Contact your healthcare provider.
+              ⚠️ High — check ketones if you have strips. Follow your care plan or contact your care team.
+            </div>
+          )}
+          {currentValue !== undefined && currentValue >= 300 && (
+            <div
+              style={{
+                marginTop: '14px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(208,2,27,0.1)',
+                border: '1px solid rgba(208,2,27,0.3)',
+                color: '#D0021B',
+                fontSize: '12.5px',
+                fontWeight: 600,
+              }}
+            >
+              ⚠️ Very high — please contact your care team or seek urgent care.
             </div>
           )}
         </>

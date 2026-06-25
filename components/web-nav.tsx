@@ -68,16 +68,15 @@ export default function WebNav() {
         padding: '26px 18px',
       }}
     >
-      {/* Logo — white mark on navy per brand guidelines */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '0 8px' }}>
+      {/* Logo — white reversed mark on navy per brand guidelines */}
+      <div style={{ padding: '0 8px' }}>
         <Image
-          src="/logo-icon.svg"
+          src="/chatita-horizontal.svg"
           alt="Chatita"
-          width={34}
-          height={34}
-          style={{ filter: 'brightness(0) invert(1)', flexShrink: 0 }}
+          width={148}
+          height={36}
+          style={{ filter: 'brightness(0) invert(1)', display: 'block' }}
         />
-        <span className="font-serif-italic" style={{ fontSize: '23px' }}>Chatita</span>
       </div>
 
       {/* Nav items */}

@@ -1,403 +1,525 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Camera, Upload, Plus, X, CheckCircle } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
-import { analyzeMenu } from '@/lib/menu-scanner';
-import { MenuRecommendation } from '@/types';
-import { compressImage } from '@/lib/compress-image';
+import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
-export default function MenuScannerPage() {
-  const router = useRouter();
-  const [menuPhoto, setMenuPhoto] = useState<string | null>(null);
-  const [menuItems, setMenuItems] = useState<string[]>([]);
-  const [itemInput, setItemInput] = useState('');
-  const [recommendations, setRecommendations] = useState<MenuRecommendation[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
-  const [overallAdvice, setOverallAdvice] = useState<string>('');
+// ── Types ────────────────────────────────────────────────────────────────────
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+type Phase = 'idle' | 'scanning' | 'done';
+type Rating = 'great' | 'mindful' | 'later';
 
-    try {
-      const { base64 } = await compressImage(file);
-      setMenuPhoto(base64);
+interface ManualItem {
+  name: string;
+  rating: Rating;
+}
 
-      // Automatically analyze the photo with AI
-      await analyzeMenuPhoto(base64);
-    } catch (err) {
-      console.error('Image compression failed:', err);
-    }
-  };
+// ── Rating logic ─────────────────────────────────────────────────────────────
 
-  const analyzeMenuPhoto = async (photoBase64: string) => {
-    setAnalyzingPhoto(true);
-    setRecommendations([]);
-    setOverallAdvice('');
+function rate(name: string): Rating {
+  const n = name.toLowerCase();
+  if (/(fried|crispy|breaded|pasta|spaghetti|risotto|fries|burger|pizza|cake|tiramisu|bread|rice bowl|noodle|dumpling|tempura)/.test(n)) return 'later';
+  if (/(grilled|salmon|chicken|salad|greens|fish|shrimp|tofu|egg|soup|kebab|steak|broccoli|avocado|veg)/.test(n)) return 'great';
+  return 'mindful';
+}
 
-    try {
-      const response = await fetch('/api/analyze-menu-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoBase64 }),
-      });
+// ── Hardcoded scan results ────────────────────────────────────────────────────
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.mode === 'ai' && data.dishes) {
-          // Convert AI response to MenuRecommendation format
-          const aiRecommendations: MenuRecommendation[] = data.dishes.map((dish: any) => ({
-            name: dish.name,
-            score: dish.score,
-            reason: dish.reason,
-            estimatedCarbs: dish.estimatedCarbs,
-            estimatedCalories: dish.estimatedCalories,
-            tips: dish.tips || [],
-          }));
+interface DishResult {
+  name: string;
+  carbs: string;
+  tip: string;
+}
+interface DishGroup {
+  title: string;
+  dot: string;
+  color: string;
+  rowBg: string;
+  rowBorder: string;
+  dishes: DishResult[];
+}
 
-          setRecommendations(aiRecommendations);
-          setOverallAdvice(data.overallAdvice || '');
-          setShowResults(true);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to analyze menu photo:', error);
-    } finally {
-      setAnalyzingPhoto(false);
-    }
-  };
+const DEMO_RESULTS = {
+  venueName: 'Casa del Sol',
+  summaryLine: '3 dishes sit easy with your blood sugar, 2 are worth noting, and 2 are best saved for a special occasion.',
+  groups: [
+    {
+      title: 'Great choices',
+      dot: '#1C7A4F',
+      color: '#1C7A4F',
+      rowBg: 'rgba(28,122,79,0.07)',
+      rowBorder: 'rgba(28,122,79,0.18)',
+      dishes: [
+        { name: 'Grilled Chicken Tacos', carbs: '~20g', tip: 'Ask for corn tortillas and extra veg. Start with any beans or slaw on the side.' },
+        { name: 'Ceviche', carbs: '~8g', tip: 'Excellent start to the meal — high protein, low carb.' },
+        { name: 'Ensalada de Nopales', carbs: '~6g', tip: 'Cactus salad is fiber-rich. A great opener.' },
+      ],
+    },
+    {
+      title: 'Enjoy mindfully',
+      dot: '#C8932B',
+      color: '#9A6F18',
+      rowBg: 'rgba(200,147,43,0.09)',
+      rowBorder: 'rgba(200,147,43,0.22)',
+      dishes: [
+        { name: 'Black Bean Soup', carbs: '~30g', tip: 'Beans are slow-digesting — fine if this is your main carb source. Pair with protein.' },
+        { name: 'Arroz con Pollo', carbs: '~45g', tip: 'Eat the chicken first, then the rice. Ask for a smaller portion of rice.' },
+      ],
+    },
+    {
+      title: 'Save for later',
+      dot: '#B5562E',
+      color: '#B5562E',
+      rowBg: 'rgba(181,86,46,0.07)',
+      rowBorder: 'rgba(181,86,46,0.18)',
+      dishes: [
+        { name: 'Churros con Chocolate', carbs: '~55g', tip: 'A special-occasion treat. If you go for it, share and take a walk after.' },
+        { name: 'Pozole Rojo', carbs: '~50g', tip: 'Hominy is high-carb. Enjoy a small bowl and fill up on protein sides.' },
+      ],
+    },
+  ] as DishGroup[],
+};
 
-  const addMenuItem = () => {
-    if (itemInput.trim()) {
-      setMenuItems([...menuItems, itemInput.trim()]);
-      setItemInput('');
-    }
-  };
+// ── What Chatita promises ─────────────────────────────────────────────────────
 
-  const removeMenuItem = (index: number) => {
-    setMenuItems(menuItems.filter((_, i) => i !== index));
-  };
+const PROMISES = [
+  'Sorts every dish into Great, Mindful, and Save-for-later',
+  'Gives you a gentle tip for each one',
+  'Never calls food "bad" — just helps you choose with confidence',
+];
 
-  const analyzeMenuItems = () => {
-    const results = analyzeMenu(menuItems);
-    setRecommendations(results);
-    setShowResults(true);
-  };
+// ── Badge config ──────────────────────────────────────────────────────────────
 
-  const getScoreColor = (score: string) => {
-    switch (score) {
-      case 'great':
-        return 'bg-success/10 text-success border-success';
-      case 'moderate':
-        return 'bg-warning/10 text-warning border-warning';
-      case 'caution':
-        return 'bg-danger/10 text-danger border-danger';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
-  };
+const BADGE_CONFIG: Record<Rating, { bg: string; color: string; label: string }> = {
+  great:   { bg: 'rgba(28,122,79,0.12)',   color: '#1C7A4F', label: 'Great' },
+  mindful: { bg: 'rgba(200,147,43,0.14)',  color: '#9A6F18', label: 'Mindful' },
+  later:   { bg: 'rgba(181,86,46,0.10)',   color: '#B5562E', label: 'Save for later' },
+};
 
-  const getScoreLabel = (score: string) => {
-    switch (score) {
-      case 'great':
-        return 'Great Choice';
-      case 'moderate':
-        return 'Moderate';
-      case 'caution':
-        return 'Caution';
-      default:
-        return 'Unknown';
-    }
-  };
-
-  if (showResults) {
-    return (
-      <div className="min-h-screen bg-gray-background pb-24">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Menu Recommendations</h1>
-            <button
-              onClick={() => {
-                setShowResults(false);
-                setMenuItems([]);
-                setMenuPhoto(null);
-              }}
-              className="text-primary hover:underline text-sm"
-            >
-              Scan Again
-            </button>
-          </div>
-        </div>
-
-        {/* Menu Photo */}
-        {menuPhoto && (
-          <div className="max-w-2xl mx-auto px-6 pt-6">
-            <img
-              src={menuPhoto}
-              alt="Menu"
-              className="w-full rounded-lg shadow-card max-h-64 object-cover"
-            />
-          </div>
-        )}
-
-        {/* Recommendations */}
-        <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
-          {overallAdvice && (
-            <div className="bg-blue-50 border border-primary/30 rounded-lg p-4">
-              <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                <span>🤖</span>
-                AI Menu Analysis
-              </h3>
-              <p className="text-sm text-gray-700">{overallAdvice}</p>
-            </div>
-          )}
-
-          <div className="bg-blue-50 border border-primary/30 rounded-lg p-4">
-            <p className="text-sm text-gray-700">
-              💙 Found {recommendations.length} menu item{recommendations.length !== 1 ? 's' : ''} - ranked from best to okay for diabetes
-            </p>
-          </div>
-
-          {recommendations.map((rec, index) => (
-            <div key={index} className="bg-white rounded-card shadow-card p-6">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-lg flex-1">{rec.name}</h3>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getScoreColor(rec.score)}`}>
-                  {getScoreLabel(rec.score)}
-                </span>
-              </div>
-
-              <p className="text-gray-700 mb-4 text-sm">{rec.reason}</p>
-
-              {(rec.estimatedCarbs || rec.estimatedCalories) && (
-                <div className="flex gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-                  {rec.estimatedCalories && (
-                    <div>
-                      <div className="text-sm text-gray-500">Est. Calories</div>
-                      <div className="font-semibold text-primary">{rec.estimatedCalories}</div>
-                    </div>
-                  )}
-                  {rec.estimatedCarbs && (
-                    <div>
-                      <div className="text-sm text-gray-500">Est. Carbs</div>
-                      <div className="font-semibold text-primary">{rec.estimatedCarbs}g</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {rec.tips && rec.tips.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-success" />
-                    Tips for ordering:
-                  </h4>
-                  <ul className="space-y-1">
-                    {rec.tips.map((tip, tipIndex) => (
-                      <li key={tipIndex} className="text-sm text-gray-600 flex items-start gap-2">
-                        <span className="text-success">•</span>
-                        {tip}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Disclaimer */}
-          <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-            <p className="text-sm text-gray-700">
-              ⚠️ These are rough estimates based on typical ingredients. Actual nutrition may vary.
-              Always ask your server about preparation methods and ingredients.
-            </p>
-          </div>
-        </div>
-
-        <BottomNav />
-      </div>
-    );
-  }
-
+function RatingBadge({ rating }: { rating: Rating }) {
+  const cfg = BADGE_CONFIG[rating];
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center">
-          <button
-            onClick={() => router.back()}
-            className="text-primary hover:underline mr-4"
-          >
-            ← Back
-          </button>
-          <h1 className="text-2xl font-bold">Menu Scanner</h1>
+    <span
+      style={{
+        background: cfg.bg,
+        color: cfg.color,
+        borderRadius: '999px',
+        padding: '5px 10px',
+        fontSize: '12px',
+        fontWeight: 600,
+      }}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+// ── Scanning animation CSS ────────────────────────────────────────────────────
+
+const SCAN_STYLE = `
+@keyframes scanline { 0%{top:6%} 50%{top:90%} 100%{top:6%} }
+@keyframes pulsedot { 0%,100%{opacity:.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+`;
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function ScanningBox() {
+  return (
+    <div
+      style={{
+        height: '180px',
+        borderRadius: '14px',
+        background: 'repeating-linear-gradient(135deg,#EFE4D2,#EFE4D2 12px,#F4EBDC 12px,#F4EBDC 24px)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        paddingBottom: '18px',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: 'linear-gradient(90deg,transparent,#C8932B,transparent)',
+          animation: 'scanline 1.4s ease-in-out infinite',
+          top: '6%',
+        }}
+      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {[0, 0.2, 0.4].map((delay, i) => (
+          <div
+            key={i}
+            style={{
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              background: '#012374',
+              animation: 'pulsedot 1.2s infinite',
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PhotoUploadZone({ onScan }: { onScan: () => void }) {
+  return (
+    <div
+      style={{
+        border: '2px dashed rgba(1,35,116,0.2)',
+        borderRadius: '14px',
+        padding: '24px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+        background: '#F7EFE1',
+      }}
+    >
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="7" width="20" height="14" rx="3" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+        <circle cx="12" cy="14" r="3" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+        <path d="M8 7l1.5-2h5L16 7" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+      </svg>
+      <button
+        onClick={onScan}
+        style={{ padding: '10px 24px', borderRadius: '999px', background: '#012374', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+      >
+        Take photo
+      </button>
+      <button
+        onClick={onScan}
+        style={{ padding: '10px 24px', borderRadius: '999px', background: 'transparent', color: '#012374', fontSize: '14px', fontWeight: 600, border: '1px solid rgba(1,35,116,0.25)', cursor: 'pointer' }}
+      >
+        Choose from gallery
+      </button>
+    </div>
+  );
+}
+
+function PromisesList() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {PROMISES.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            background: '#FFFDF9',
+            borderRadius: '13px',
+            padding: '12px 14px',
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'flex-start',
+            border: '1px solid rgba(1,35,116,0.06)',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '2px' }}>
+            <circle cx="12" cy="12" r="10" fill="rgba(28,122,79,0.12)"/>
+            <path d="M8 12l3 3 5-5" stroke="#1C7A4F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.4 }}>{p}</span>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function ResultsView({ web }: { web?: boolean }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: web ? '20px' : '16px' }}>
+      <div>
+        <p
+          style={{
+            fontSize: '11px',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'rgba(1,35,116,0.5)',
+            fontWeight: 700,
+            marginBottom: '4px',
+          }}
+        >
+          {DEMO_RESULTS.venueName}
+        </p>
+        <p className="font-serif-italic" style={{ fontSize: web ? '22px' : '18px', color: '#012374', lineHeight: 1.2 }}>
+          Here&apos;s how the menu reads
+        </p>
+        <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '6px', lineHeight: 1.5 }}>
+          {DEMO_RESULTS.summaryLine}
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
-        {/* Info Card */}
-        <div className="bg-primary/5 border border-primary/20 rounded-card p-6">
-          <div className="text-4xl mb-3 text-center">🍽️</div>
-          <h2 className="font-semibold text-lg mb-2 text-center">AI-Powered Menu Scanner</h2>
-          <p className="text-sm text-gray-600 text-center mb-3">
-            Take a photo of any restaurant menu and AI will automatically:
-          </p>
-          <ul className="text-sm text-gray-600 space-y-1 max-w-sm mx-auto">
-            <li className="flex items-start gap-2">
-              <span className="text-success">✓</span>
-              <span>Identify all menu items from the photo</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-success">✓</span>
-              <span>Rank dishes by diabetes-friendliness</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-success">✓</span>
-              <span>Provide ordering tips for each dish</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Photo Upload */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <h3 className="font-semibold mb-4">📸 Upload Menu Photo</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Take or upload a photo of the menu and AI will automatically suggest the best diabetes-friendly dishes!
-          </p>
-          {analyzingPhoto ? (
-            <div className="border-2 border-dashed border-primary rounded-lg p-8 text-center">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-primary font-medium">🤖 AI is analyzing the menu...</p>
-              <p className="text-sm text-gray-500 mt-1">Finding diabetes-friendly options for you</p>
-            </div>
-          ) : menuPhoto ? (
-            <div className="relative">
-              <img src={menuPhoto} alt="Menu" className="w-full rounded-lg" />
-              <button
-                onClick={() => {
-                  setMenuPhoto(null);
-                  setRecommendations([]);
-                  setShowResults(false);
-                }}
-                className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {DEMO_RESULTS.groups.map((group) => (
+        <div key={group.title}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: group.dot, flexShrink: 0 }} />
+            <span style={{ fontSize: '13px', fontWeight: 700, color: group.color }}>{group.title}</span>
+          </div>
+          {web ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {group.dishes.map((dish, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: group.rowBg,
+                    border: `1px solid ${group.rowBorder}`,
+                    borderRadius: '13px',
+                    padding: '13px 14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{dish.name}</span>
+                    <span style={{ fontSize: '11px', color: group.color, fontWeight: 600, flexShrink: 0 }}>{dish.carbs}</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)', lineHeight: 1.4 }}>{dish.tip}</p>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2 font-medium">Take or Upload Menu Photo</p>
-              <p className="text-sm text-gray-500 mb-4">AI will analyze and suggest best options</p>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {/* Camera Button */}
-                <label className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-button cursor-pointer hover:bg-primary-dark transition-colors">
-                  <Camera className="w-5 h-5" />
-                  Take Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Gallery Button */}
-                <label className="inline-flex items-center gap-2 bg-white border-2 border-primary text-primary px-6 py-3 rounded-button cursor-pointer hover:bg-primary/10 transition-colors">
-                  <Upload className="w-5 h-5" />
-                  Choose from Gallery
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {group.dishes.map((dish, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: group.rowBg,
+                    border: `1px solid ${group.rowBorder}`,
+                    borderRadius: '13px',
+                    padding: '12px 14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{dish.name}</span>
+                    <span style={{ fontSize: '11px', color: group.color, fontWeight: 600 }}>{dish.carbs}</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)', marginTop: '4px', lineHeight: 1.4 }}>{dish.tip}</p>
+                </div>
+              ))}
             </div>
           )}
         </div>
+      ))}
 
-        {/* Manual Menu Items Input (Optional) */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <h3 className="font-semibold mb-2">✍️ Or Type Menu Items Manually</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            If you prefer, you can manually type menu items for comparison
-          </p>
-          <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              value={itemInput}
-              onChange={(e) => setItemInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addMenuItem();
-                }
+      {/* Disclaimer */}
+      <p style={{ fontSize: '11.5px', color: 'rgba(22,24,42,0.45)', lineHeight: 1.5 }}>
+        Readings are gentle guidance, not medical advice. Ask about ingredients and portions, and check with your provider for what&apos;s right for you.
+      </p>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function MenuScannerPage() {
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [draft, setDraft] = useState('');
+  const [manual, setManual] = useState<ManualItem[]>([]);
+
+  const startScan = () => {
+    setPhase('scanning');
+    setTimeout(() => setPhase('done'), 2200);
+  };
+
+  const addManual = () => {
+    if (draft.trim()) {
+      setManual((prev) => [...prev, { name: draft.trim(), rating: rate(draft.trim()) }]);
+      setDraft('');
+    }
+  };
+
+  const removeManual = (i: number) => setManual((prev) => prev.filter((_, j) => j !== i));
+
+  const InputAndList = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && addManual()}
+          placeholder="e.g. Grilled Salmon"
+          style={{ flex: 1, padding: '10px 13px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: '#F7EFE1', fontSize: '13px', color: '#001A4D', outline: 'none' }}
+        />
+        <button
+          onClick={addManual}
+          style={{ padding: '10px 16px', borderRadius: '12px', background: '#012374', color: '#FFFDF9', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+        >
+          Add
+        </button>
+      </div>
+      {manual.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {manual.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                background: '#FFFDF9',
+                borderRadius: '12px',
+                padding: '10px 13px',
+                border: '1px solid rgba(1,35,116,0.06)',
               }}
-              placeholder="Type a menu item (e.g., Grilled Salmon)"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              onClick={addMenuItem}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
-              Add
-            </button>
-          </div>
-
-          {menuItems.length > 0 && (
-            <>
-              <div className="space-y-2 mb-4">
-                {menuItems.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
-                  >
-                    <span className="text-gray-700">{item}</span>
-                    <button
-                      onClick={() => removeMenuItem(index)}
-                      className="text-gray-400 hover:text-danger transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                <RatingBadge rating={item.rating} />
+                <span style={{ fontSize: '13px', color: '#16182A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item.name}
+                </span>
               </div>
-
               <button
-                onClick={analyzeMenuItems}
-                className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-dark transition-colors"
+                onClick={() => removeManual(i)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(22,24,42,0.35)', fontSize: '18px', lineHeight: 1, flexShrink: 0 }}
               >
-                Analyze {menuItems.length} Item{menuItems.length !== 1 ? 's' : ''}
+                ×
               </button>
-            </>
-          )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-          {menuItems.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-4">
-              Optional: Add items manually to compare with photo analysis
+  // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
+
+  const MobileLayout = (
+    <div className="lg:hidden" style={{ background: '#F7EFE1', minHeight: '100vh', paddingBottom: '96px' }}>
+      <style>{SCAN_STYLE}</style>
+
+      <div style={{ padding: '20px 20px 0' }}>
+        <BackButton href="/home" />
+        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginTop: '16px' }}>
+          EATING OUT
+        </p>
+        <h1 className="font-serif-italic" style={{ fontSize: '30px', color: '#012374', marginTop: '2px', lineHeight: 1.1 }}>
+          Menu scanner
+        </h1>
+      </div>
+
+      <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+        {phase !== 'done' ? (
+          <>
+            <p className="font-serif-italic" style={{ fontSize: '20px', color: '#012374' }}>
+              Let Chatita read it for you.
             </p>
-          )}
-        </div>
+            <PromisesList />
 
-        {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-          <p className="text-sm text-gray-700">
-            💡 <strong>Tip:</strong> Take a photo of the menu for instant AI analysis! AI will identify all dishes and rank them by diabetes-friendliness.
-          </p>
-        </div>
+            {/* Photo zone */}
+            {phase === 'idle' ? (
+              <PhotoUploadZone onScan={startScan} />
+            ) : (
+              <ScanningBox />
+            )}
+
+            {/* Manual input */}
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374', marginBottom: '8px' }}>
+                Or type menu items yourself
+              </p>
+              <InputAndList />
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{DEMO_RESULTS.venueName}</p>
+              <button
+                onClick={() => setPhase('idle')}
+                style={{ fontSize: '13px', color: '#C8932B', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Rescan
+              </button>
+            </div>
+            <ResultsView />
+          </>
+        )}
       </div>
 
       <BottomNav />
     </div>
+  );
+
+  // ── WEB LAYOUT ────────────────────────────────────────────────────────────
+
+  const WebLayout = (
+    <div className="hidden lg:flex" style={{ minHeight: '100vh', background: '#F7EFE1' }}>
+      <style>{SCAN_STYLE}</style>
+      <WebNav />
+
+      <main style={{ flex: 1, padding: '34px 44px', overflowY: 'auto' }}>
+        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700 }}>
+          EATING OUT · MENU SCANNER
+        </p>
+        <h1 className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', marginTop: '4px', lineHeight: 1.1 }}>
+          Smart menu reading.
+        </h1>
+        <p style={{ fontSize: '14px', color: 'rgba(22,24,42,0.55)', marginTop: '6px', marginBottom: '28px' }}>
+          Point Chatita at any menu and get gentle, personalized recommendations.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: '22px' }}>
+          {/* Left card */}
+          <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <PromisesList />
+
+            {phase === 'idle' ? (
+              <PhotoUploadZone onScan={startScan} />
+            ) : phase === 'scanning' ? (
+              <ScanningBox />
+            ) : (
+              <div style={{ background: '#F7EFE1', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+                <p style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', marginBottom: '8px' }}>Menu scanned</p>
+                <button
+                  onClick={() => setPhase('idle')}
+                  style={{ fontSize: '13px', color: '#012374', background: 'none', border: '1px solid rgba(1,35,116,0.25)', borderRadius: '999px', padding: '7px 18px', cursor: 'pointer' }}
+                >
+                  Rescan
+                </button>
+              </div>
+            )}
+
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374', marginBottom: '8px' }}>
+                Or type menu items manually
+              </p>
+              <InputAndList />
+            </div>
+          </div>
+
+          {/* Right panel */}
+          <div>
+            {phase !== 'done' ? (
+              <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '2px dashed rgba(1,35,116,0.12)', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 6h16M4 12h16M4 18h10" stroke="#012374" strokeWidth="1.5" strokeLinecap="round" opacity={0.3}/>
+                </svg>
+                <p style={{ fontSize: '14px', color: 'rgba(1,35,116,0.35)', fontWeight: 500 }}>
+                  Menu recommendations will appear here
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', padding: '24px' }}>
+                <ResultsView web />
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+
+  return (
+    <>
+      {MobileLayout}
+      {WebLayout}
+    </>
   );
 }

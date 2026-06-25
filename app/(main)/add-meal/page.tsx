@@ -1,753 +1,650 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Clock, MapPin, Navigation } from 'lucide-react';
+import { useState } from 'react';
 import BottomNav from '@/components/bottom-nav';
-import MealPhotoUpload from '@/components/meal-photo-upload';
-import MealConfirmation from '@/components/meal-confirmation';
-import EditDrawer from '@/components/edit-drawer';
-import SuccessScreen from '@/components/success-screen';
-import { useTranslation } from '@/lib/i18n/context';
-import { ExifData } from '@/lib/exif';
+import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
-type FlowState = 'photo' | 'confirmation' | 'editing' | 'success';
+// ── Meal presets ─────────────────────────────────────────────────────────────
 
-/** Restaurant suggestion returned by /api/restaurants/search nearby mode */
-interface NearbyRestaurant {
-  id: string;
-  name: string;
-  address: string;
-  cuisine: string;
+type MealKey = 'pupusa' | 'salmon' | 'burger';
+type Tone = 'great' | 'mindful' | 'treat';
+type TipIcon = 'leaf' | 'walk' | 'water' | 'heart';
+
+interface MealOrder {
+  label: string;
+  note: string;
+}
+interface MealTip {
+  icon: TipIcon;
+  text: string;
+}
+interface MealPreset {
+  label: string;
+  confidence: number;
+  foods: string[];
+  summary: string;
+  tone: Tone;
+  kicker: string;
+  headline: string;
+  order: MealOrder[];
+  tips: MealTip[];
 }
 
-interface MenuItem {
-  name: string;
-  category: string;
-  score: 'great' | 'moderate' | 'caution';
-  carbEstimate: string;
-  tip: string;
-}
+const MEALS: Record<MealKey, MealPreset> = {
+  pupusa: {
+    label: 'Pupusas & curtido',
+    confidence: 81,
+    foods: ['Pupusas', 'Curtido slaw', 'Tomato salsa'],
+    summary: 'pupusas, curtido slaw and tomato salsa',
+    tone: 'mindful',
+    kicker: 'Looks delicious',
+    headline: "Yum — let's keep it gentle.",
+    order: [
+      { label: 'Curtido slaw first', note: 'the cabbage and fiber slow everything that follows' },
+      { label: 'Any beans or cheese', note: 'a little protein steadies your blood sugar' },
+      { label: 'Then the pupusa', note: 'the masa carbs land softer after fiber and protein' },
+    ],
+    tips: [
+      { icon: 'leaf', text: 'Start with a big forkful of the curtido before the pupusa — fiber first makes a real difference.' },
+      { icon: 'walk', text: 'A 10–15 minute walk after helps your body use the carbs.' },
+      { icon: 'water', text: 'Sip water alongside rather than a sweet drink.' },
+    ],
+  },
+  salmon: {
+    label: 'Salmon plate',
+    confidence: 88,
+    foods: ['Grilled salmon', 'Roasted vegetables', 'Quinoa'],
+    summary: 'grilled salmon, roasted vegetables and quinoa',
+    tone: 'great',
+    kicker: 'Great choice',
+    headline: 'That looks like a delicious, balanced plate!',
+    order: [
+      { label: 'Vegetables first', note: 'fiber lays a steady foundation' },
+      { label: 'Then the salmon', note: 'protein and omega-3s keep you full' },
+      { label: 'Quinoa last', note: 'whole-grain carbs land gently after the rest' },
+    ],
+    tips: [
+      { icon: 'heart', text: "You're set — eat your veg and protein first, then the quinoa, and enjoy every bite." },
+      { icon: 'water', text: 'Sip water through the meal to stay comfortable and full.' },
+    ],
+  },
+  burger: {
+    label: 'Burger & fries',
+    confidence: 84,
+    foods: ['Cheeseburger', 'French fries'],
+    summary: 'a cheeseburger and french fries',
+    tone: 'treat',
+    kicker: 'A tasty treat',
+    headline: "Let's see how we can balance it out.",
+    order: [
+      { label: 'Any salad or veg first', note: 'add a side of greens if you can and start there' },
+      { label: 'The patty next', note: 'eat the protein before the carbs to soften the spike' },
+      { label: 'Bun & fries last', note: 'enjoy them once protein and fiber are in' },
+    ],
+    tips: [
+      { icon: 'leaf', text: 'Swap half the fries for a side salad, or share them with someone.' },
+      { icon: 'walk', text: 'A 15–20 minute walk after a meal like this works wonders for your blood sugar.' },
+      { icon: 'water', text: 'Choose water or unsweetened iced tea instead of soda.' },
+    ],
+  },
+};
 
-export default function AddMealPage() {
+// ── Tone styles ───────────────────────────────────────────────────────────────
+
+const TONE_STYLE: Record<Tone, { cardBg: string; border: string; accent: string }> = {
+  great:   { cardBg: 'rgba(28,122,79,0.10)',   border: 'rgba(28,122,79,0.22)',   accent: '#1C7A4F' },
+  mindful: { cardBg: 'rgba(200,147,43,0.13)',  border: 'rgba(200,147,43,0.28)',  accent: '#9A6F18' },
+  treat:   { cardBg: 'rgba(181,86,46,0.10)',   border: 'rgba(181,86,46,0.24)',   accent: '#B5562E' },
+};
+
+// ── Tip icons ─────────────────────────────────────────────────────────────────
+
+function TipIconSvg({ icon }: { icon: TipIcon }) {
+  if (icon === 'leaf') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M12 22C6 22 3 16 3 10c0-4 4-7 9-7s9 3 9 7-3 12-9 12z" stroke="#1C7A4F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 10c3 2 6 2 9 0" stroke="#1C7A4F" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  );
+  if (icon === 'walk') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="13" cy="4" r="1.5" stroke="#012374" strokeWidth="1.6"/>
+      <path d="M9 8l2 2 3-3 2 5h3M9 14l1 6M14 11l1 4-3 1" stroke="#012374" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  if (icon === 'water') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L5.5 10a7 7 0 1 0 13 0L12 2z" stroke="#2A6FA8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
   return (
-    <Suspense fallback={null}>
-      <AddMealPageInner />
-    </Suspense>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z" stroke="#1C7A4F" strokeWidth="1.6"/>
+    </svg>
   );
 }
 
-function AddMealPageInner() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { t } = useTranslation();
+// ── Scanning animation CSS ────────────────────────────────────────────────────
 
-  const [flowState, setFlowState] = useState<FlowState>('photo');
-  const [photoBase64, setPhotoBase64] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [analysis, setAnalysis] = useState<any>(null);
-  const [savedMeal, setSavedMeal] = useState<any>(null);
+const SCAN_STYLE = `
+@keyframes scanline { 0%{top:6%} 50%{top:90%} 100%{top:6%} }
+@keyframes pulsedot { 0%,100%{opacity:.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+`;
 
-  // Dish selection state (for multiple dishes)
-  const [showDishSelection, setShowDishSelection] = useState(false);
-  const [allDetectedDishes, setAllDetectedDishes] = useState<string[]>([]);
-  const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
+// ── Page state types ──────────────────────────────────────────────────────────
 
-  // EXIF-derived state
-  const [exifDate, setExifDate] = useState<Date | null>(null);
-  const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurant[]>([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<NearbyRestaurant | null>(null);
+type Phase = 'idle' | 'scanning' | 'detected';
+type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 
-  // Menu items for the selected restaurant (for "What did you order?" selector)
-  const [restaurantMenu, setRestaurantMenu] = useState<MenuItem[]>([]);
-  const [menuSelectedDishes, setMenuSelectedDishes] = useState<string[]>([]);
-  const [loadingMenu, setLoadingMenu] = useState(false);
+interface PageState {
+  phase: Phase;
+  meal: MealKey;
+  mealType: MealType;
+  extraFoods: string[];
+  draft: string;
+  feeling: string;
+  saved: boolean;
+}
 
-  // Restaurant fallback state (when AI analysis fails)
-  const [showRestaurantFallback, setShowRestaurantFallback] = useState(false);
-  const [fallbackStep, setFallbackStep] = useState<'prompt' | 'locating' | 'select-restaurant' | 'select-dishes'>('prompt');
+// ── Sub-components ────────────────────────────────────────────────────────────
 
-  // ── Read query params from restaurant-finder "Save as Meal" ────
-  useEffect(() => {
-    const restaurantName = searchParams.get('restaurant');
-    const restaurantAddress = searchParams.get('restaurantAddress');
-    const restaurantPlaceId = searchParams.get('restaurantPlaceId');
-    const foods = searchParams.get('foods');
-
-    if (restaurantName && restaurantPlaceId) {
-      const restaurant: NearbyRestaurant = {
-        id: restaurantPlaceId,
-        name: restaurantName,
-        address: restaurantAddress || '',
-        cuisine: '',
-      };
-      setSelectedRestaurant(restaurant);
-      // Pre-populate foods from query params
-      if (foods) {
-        setMenuSelectedDishes(foods.split(',').filter(Boolean));
-      }
-      // Fetch the menu so user can adjust their selection
-      fetchRestaurantMenu(restaurant);
-    }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Fetch menu when restaurant is picked from nearby chips ────
-  useEffect(() => {
-    if (selectedRestaurant && restaurantMenu.length === 0 && !loadingMenu) {
-      fetchRestaurantMenu(selectedRestaurant);
-    }
-  }, [selectedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── When nearby restaurants arrive during fallback, advance to selection ────
-  useEffect(() => {
-    if (showRestaurantFallback && fallbackStep === 'locating' && nearbyRestaurants.length > 0) {
-      setFallbackStep('select-restaurant');
-    }
-  }, [nearbyRestaurants, showRestaurantFallback, fallbackStep]);
-
-  /** Fetch nearby restaurants using GPS from EXIF or live geolocation */
-  const fetchNearbyFromGps = async (lat: number, lng: number) => {
-    try {
-      const res = await fetch('/api/restaurants/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'nearby', lat, lng }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.suggestions && data.suggestions.length > 0) {
-          setNearbyRestaurants(data.suggestions);
-        }
-      }
-    } catch {
-      // GPS restaurant lookup is best-effort — fail silently
-    }
-  };
-
-  /** Share current device location (used when EXIF GPS is not available) */
-  const handleShareLocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        fetchNearbyFromGps(latitude, longitude);
-      },
-      () => {
-        setError('Unable to retrieve your location. Please enable location services.');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  /** Fetch the menu for a restaurant so the user can pick what they ordered */
-  const fetchRestaurantMenu = async (restaurant: NearbyRestaurant) => {
-    setLoadingMenu(true);
-    try {
-      // Derive cuisine from the restaurant object; if empty, pass a generic hint
-      const res = await fetch('/api/restaurants/menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantName: restaurant.name, cuisine: restaurant.cuisine || 'general' }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRestaurantMenu(data.dishes || []);
-      }
-    } catch {
-      console.error('Failed to fetch restaurant menu');
-    } finally {
-      setLoadingMenu(false);
-    }
-  };
-
-  /** Toggle a dish in the "What did you order?" selector */
-  const toggleMenuDish = (dish: string) => {
-    setMenuSelectedDishes((prev) =>
-      prev.includes(dish) ? prev.filter((d) => d !== dish) : [...prev, dish]
-    );
-  };
-
-  const handlePhotoCapture = async (base64: string, exif: ExifData) => {
-    setPhotoBase64(base64);
-    setAnalyzing(true);
-    setError('');
-    setAnalysis(null);
-    setExifDate(null);
-    setNearbyRestaurants([]);
-    setSelectedRestaurant(null);
-
-    // Store EXIF date and kick off GPS restaurant lookup (both non-blocking)
-    if (exif.date) setExifDate(exif.date);
-    if (exif.gps) fetchNearbyFromGps(exif.gps.lat, exif.gps.lng);
-
-    try {
-      const response = await fetch('/api/analyze-meal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoBase64: base64 }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        // Check if user needs to select which dishes are theirs
-        if (data.needsSelection && data.allDetectedDishes && data.allDetectedDishes.length > 1) {
-          setAllDetectedDishes(data.allDetectedDishes);
-          setSelectedDishes(data.detectedFoods || []); // Pre-select AI's best guess
-          setShowDishSelection(true);
-        } else if (data.mode === 'ai' && data.detectedFoods.length > 0) {
-          // Check confidence threshold
-          if (data.confidence < 40) {
-            // Low confidence -- offer restaurant fallback
-            setAnalysis(data);
-            setShowRestaurantFallback(true);
-            setFallbackStep('prompt');
-          } else {
-            // AI analysis successful - move to confirmation
-            setAnalysis(data);
-            setFlowState('confirmation');
-          }
-        } else {
-          // AI disabled or no foods detected - offer restaurant fallback
-          setShowRestaurantFallback(true);
-          setFallbackStep('prompt');
-        }
-      } else {
-        // HTTP error - offer restaurant fallback
-        setShowRestaurantFallback(true);
-        setFallbackStep('prompt');
-      }
-    } catch (err) {
-      console.error('AI analysis error:', err);
-      setShowRestaurantFallback(true);
-      setFallbackStep('prompt');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  const toggleDishSelection = (dish: string) => {
-    setSelectedDishes(prev =>
-      prev.includes(dish)
-        ? prev.filter(d => d !== dish)
-        : [...prev, dish]
-    );
-  };
-
-  const confirmDishSelection = () => {
-    // Create analysis with only selected dishes
-    setAnalysis({
-      detectedFoods: selectedDishes,
-      aiSummary: selectedDishes.join(', '),
-      nutrition: {},
-      confidence: 70,
-      mode: 'ai',
-    });
-    setShowDishSelection(false);
-    setFlowState('confirmation');
-  };
-
-  const handleQuickSave = async () => {
-    setSaving(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/meals/quick-save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          photoBase64,
-          ...(exifDate && { eatenAt: exifDate.toISOString() }),
-          ...(selectedRestaurant && {
-            restaurantName: selectedRestaurant.name,
-            restaurantAddress: selectedRestaurant.address,
-            restaurantPlaceId: selectedRestaurant.id,
-          }),
-          ...(menuSelectedDishes.length > 0 && { detectedFoods: menuSelectedDishes }),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to save meal');
-      }
-
-      const data = await response.json();
-      setSavedMeal(data.meal);
-      setFlowState('success');
-    } catch (err: any) {
-      setError(err.message || 'Failed to save meal. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEditSubmit = async (formData: any) => {
-    setSaving(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/meals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          photoBase64: photoBase64 || null,
-          aiSummary: analysis?.aiSummary,
-          aiConfidence: analysis?.confidence,
-          aiMode: analysis?.mode,
-          nutritionSource: 'user-edited',
-          // Pre-fill restaurant from EXIF GPS if the user didn't type one in the form
-          ...(selectedRestaurant && !formData.restaurantName && {
-            restaurantName: selectedRestaurant.name,
-            restaurantAddress: selectedRestaurant.address,
-            restaurantPlaceId: selectedRestaurant.id,
-          }),
-          ...(exifDate && { eatenAt: exifDate.toISOString() }),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to save meal');
-      }
-
-      const data = await response.json();
-      setSavedMeal(data.meal);
-      setFlowState('success');
-    } catch (err: any) {
-      setError(err.message || 'Failed to save meal. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Success Screen
-  if (flowState === 'success' && savedMeal) {
-    return <SuccessScreen meal={savedMeal} />;
-  }
-
+function ScanningBox() {
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center">
-          <button
-            onClick={() => router.back()}
-            className="text-primary hover:underline mr-4"
-          >
-            ← {t.common.back}
-          </button>
-          <h1 className="text-2xl font-bold">{t.addMeal.title}</h1>
+    <div
+      style={{
+        height: '200px',
+        borderRadius: '14px',
+        background: 'repeating-linear-gradient(135deg,#EFE4D2,#EFE4D2 12px,#F4EBDC 12px,#F4EBDC 24px)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: '18px',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: 'linear-gradient(90deg,transparent,#C8932B,transparent)',
+          animation: 'scanline 1.4s ease-in-out infinite',
+          top: '6%',
+        }}
+      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {[0, 0.2, 0.4].map((delay, i) => (
+          <div
+            key={i}
+            style={{
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              background: '#012374',
+              animation: `pulsedot 1.2s infinite`,
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IdlePhotoZone({ onScan }: { onScan: () => void }) {
+  return (
+    <div
+      style={{
+        border: '2px dashed rgba(1,35,116,0.2)',
+        borderRadius: '14px',
+        padding: '28px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+        background: '#F7EFE1',
+      }}
+    >
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="7" width="20" height="14" rx="3" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+        <circle cx="12" cy="14" r="3" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+        <path d="M8 7l1.5-2h5L16 7" stroke="#012374" strokeWidth="1.6" opacity={0.4}/>
+      </svg>
+      <button
+        onClick={onScan}
+        style={{
+          padding: '10px 24px',
+          borderRadius: '999px',
+          background: '#012374',
+          color: '#FFFDF9',
+          fontSize: '14px',
+          fontWeight: 600,
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        Take photo
+      </button>
+      <button
+        onClick={onScan}
+        style={{
+          padding: '10px 24px',
+          borderRadius: '999px',
+          background: 'transparent',
+          color: '#012374',
+          fontSize: '14px',
+          fontWeight: 600,
+          border: '1px solid rgba(1,35,116,0.25)',
+          cursor: 'pointer',
+        }}
+      >
+        Choose from gallery
+      </button>
+    </div>
+  );
+}
+
+function GuidanceCard({ preset, web }: { preset: MealPreset; web?: boolean }) {
+  const ts = TONE_STYLE[preset.tone];
+  const toneEmoji = preset.tone === 'great' ? '✅' : preset.tone === 'mindful' ? '🌿' : '🎉';
+  return (
+    <div
+      style={{
+        background: ts.cardBg,
+        border: `1px solid ${ts.border}`,
+        borderRadius: '16px',
+        padding: web ? '20px' : '16px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+        <span style={{ fontSize: '18px' }}>{toneEmoji}</span>
+        <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: ts.accent, fontWeight: 700 }}>
+          {preset.kicker}
+        </span>
+      </div>
+      <p className="font-serif-italic" style={{ fontSize: web ? '20px' : '17px', color: '#012374', marginBottom: '14px', lineHeight: 1.25 }}>
+        {preset.headline}
+      </p>
+
+      {web ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+          <div>
+            <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>
+              Eat it in this order
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {preset.order.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ts.accent, color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{step.label}</p>
+                    <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)' }}>{step.note}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>
+              Tips
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {preset.tips.map((tip, i) => (
+                <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <TipIconSvg icon={tip.icon} />
+                  <p style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.4 }}>{tip.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+      ) : (
+        <>
+          <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>
+            Eat it in this order
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+            {preset.order.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ts.accent, color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {i + 1}
+                </span>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{step.label}</p>
+                  <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)' }}>{step.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {preset.tips.map((tip, i) => (
+              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <TipIconSvg icon={tip.icon} />
+                <p style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.4 }}>{tip.text}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function AddMealPage() {
+  const [state, setState] = useState<PageState>({
+    phase: 'idle',
+    meal: 'pupusa',
+    mealType: 'Lunch',
+    extraFoods: [],
+    draft: '',
+    feeling: '',
+    saved: false,
+  });
+
+  const update = (patch: Partial<PageState>) => setState((s) => ({ ...s, ...patch }));
+
+  const preset = MEALS[state.meal];
+  const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
+  const startScan = () => {
+    update({ phase: 'scanning', saved: false });
+    setTimeout(() => update({ phase: 'detected' }), 2000);
+  };
+
+  const handleSave = () => {
+    update({ saved: true });
+    fetch('/api/analyze-meal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        foods: [...preset.foods, ...state.extraFoods],
+        mealType: state.mealType,
+        notes: state.feeling,
+      }),
+    }).catch(() => {});
+  };
+
+  const addFood = () => {
+    if (state.draft.trim()) {
+      update({ extraFoods: [...state.extraFoods, state.draft.trim()], draft: '' });
+    }
+  };
+
+  const DemoSwitcher = () => (
+    <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+      {(Object.keys(MEALS) as MealKey[]).map((key) => (
+        <button
+          key={key}
+          onClick={() => update({ meal: key, saved: false })}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: state.meal === key ? 600 : 500,
+            background: state.meal === key ? '#012374' : '#FFFDF9',
+            color: state.meal === key ? '#FFFDF9' : '#012374',
+            border: state.meal === key ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
+            cursor: 'pointer',
+          }}
+        >
+          {MEALS[key].label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const ChatitaSeesCard = () => (
+    <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '16px' }}>
+      <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700 }}>
+        Chatita sees
+      </p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '6px 0' }}>
+        <span className="font-serif-italic" style={{ fontSize: '22px', color: '#012374' }}>{preset.confidence}% sure</span>
+      </div>
+      <p style={{ fontSize: '13px', color: '#16182A' }}>Looks like {preset.summary}!</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+        {[...preset.foods, ...state.extraFoods].map((f, i) => (
+          <span key={i} style={{ background: '#F7EFE1', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', color: '#012374', fontWeight: 500 }}>
+            {f}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  const MealTypeSelector = () => (
+    <div>
+      <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginBottom: '8px' }}>
+        Meal type
+      </p>
+      <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+        {MEAL_TYPES.map((t) => (
+          <button
+            key={t}
+            onClick={() => update({ mealType: t })}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '999px',
+              fontSize: '13px',
+              fontWeight: state.mealType === t ? 600 : 500,
+              background: state.mealType === t ? '#012374' : '#FFFDF9',
+              color: state.mealType === t ? '#FFFDF9' : '#012374',
+              border: state.mealType === t ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
+              cursor: 'pointer',
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const FoodEditor = ({ bgInput }: { bgInput: string }) => (
+    <div>
+      <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginBottom: '8px' }}>
+        Add foods
+      </p>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          type="text"
+          value={state.draft}
+          onChange={(e) => update({ draft: e.target.value })}
+          onKeyDown={(e) => e.key === 'Enter' && addFood()}
+          placeholder="e.g. grilled chicken"
+          style={{ flex: 1, padding: '10px 13px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: bgInput, fontSize: '13px', color: '#001A4D', outline: 'none' }}
+        />
+        <button
+          onClick={addFood}
+          style={{ padding: '10px 16px', borderRadius: '12px', background: '#012374', color: '#FFFDF9', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+        >
+          Add
+        </button>
+      </div>
+      {state.extraFoods.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+          {state.extraFoods.map((f, i) => (
+            <span key={i} style={{ background: '#012374', color: '#FFFDF9', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              {f}
+              <button onClick={() => update({ extraFoods: state.extraFoods.filter((_, j) => j !== i) })} style={{ background: 'none', border: 'none', color: '#FFFDF9', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const FeelingInput = ({ bgInput }: { bgInput: string }) => (
+    <div>
+      <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginBottom: '8px' }}>
+        How are you feeling?
+      </p>
+      <textarea
+        value={state.feeling}
+        onChange={(e) => update({ feeling: e.target.value })}
+        placeholder="Optional — anything on your mind before this meal?"
+        rows={2}
+        style={{ width: '100%', padding: '10px 13px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: bgInput, fontSize: '13px', color: '#001A4D', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+      />
+    </div>
+  );
+
+  // ── MOBILE ─────────────────────────────────────────────────────────────────
+
+  const MobileLayout = (
+    <div className="lg:hidden" style={{ background: '#F7EFE1', minHeight: '100vh', paddingBottom: '96px' }}>
+      <style>{SCAN_STYLE}</style>
+
+      <div style={{ padding: '20px 20px 0' }}>
+        <BackButton href="/meal-history" />
+        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginTop: '16px' }}>
+          LOG
+        </p>
+        <h1 className="font-serif-italic" style={{ fontSize: '30px', color: '#012374', marginTop: '2px', lineHeight: 1.1 }}>
+          Add a meal
+        </h1>
       </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
-        {error && (
-          <div className="bg-red-50 border border-danger/30 text-danger p-4 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {/* Photo Upload (Initial State) */}
-        {flowState === 'photo' && (
-          <div className="bg-white rounded-card shadow-card p-6">
-            <h2 className="text-lg font-semibold mb-4">{t.addMeal.photoTitle}</h2>
-            <MealPhotoUpload onPhotoCapture={handlePhotoCapture} />
-
-            {analyzing && (
-              <div className="mt-4 text-center">
-                <div className="inline-flex items-center gap-2 text-primary">
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">{t.addMeal.analyzingPhoto}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Dish Selection UI */}
-            {showDishSelection && (
-              <div className="mt-4 p-4 bg-purple-50 border border-purple-300 rounded-lg">
-                <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                  <span>👥</span>
-                  Multiple dishes detected! Which ones are yours?
-                </h3>
-                <p className="text-xs text-gray-600 mb-3">
-                  Select all the items YOU ate (tap to toggle):
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {allDetectedDishes.map((dish, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => toggleDishSelection(dish)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedDishes.includes(dish)
-                          ? 'bg-primary text-white border-2 border-primary'
-                          : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-primary'
-                      }`}
-                    >
-                      {selectedDishes.includes(dish) && '✓ '}
-                      {dish}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={confirmDishSelection}
-                  disabled={selectedDishes.length === 0}
-                  className="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Confirm Selection ({selectedDishes.length} item{selectedDishes.length !== 1 ? 's' : ''})
-                </button>
-              </div>
-            )}
-
-            {/* Restaurant Fallback (when AI analysis fails) */}
-            {showRestaurantFallback && (
-              <div className="mt-4 space-y-4">
-                {/* Step 1: Prompt */}
-                {fallbackStep === 'prompt' && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h3 className="font-semibold text-sm mb-2">
-                      {t.addMeal.troubleIdentifying || 'Having trouble identifying this meal'}
-                    </h3>
-                    <p className="text-xs text-gray-600 mb-4">
-                      {t.addMeal.areYouAtRestaurant || 'Are you at a restaurant? We can look up the menu to help identify your meal.'}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          if (nearbyRestaurants.length > 0) {
-                            setFallbackStep('select-restaurant');
-                          } else {
-                            setFallbackStep('locating');
-                            handleShareLocation();
-                          }
-                        }}
-                        className="flex-1 bg-primary text-white py-2 rounded-lg font-medium text-sm hover:bg-primary-dark transition-colors"
-                      >
-                        {t.addMeal.yesFindRestaurant || 'Yes, find my restaurant'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowRestaurantFallback(false);
-                          setFlowState('editing');
-                        }}
-                        className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
-                      >
-                        {t.addMeal.noEnterManually || 'No, enter manually'}
-                      </button>
-                    </div>
-                    {/* If we have a low-confidence AI result, offer to use it anyway */}
-                    {analysis && (
-                      <button
-                        onClick={() => {
-                          setShowRestaurantFallback(false);
-                          setFlowState('confirmation');
-                        }}
-                        className="w-full mt-2 text-xs text-primary hover:underline"
-                      >
-                        {t.addMeal.useAiAnyway || 'Use AI result anyway (low confidence)'}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Step 2: Locating / Restaurant selection */}
-                {(fallbackStep === 'locating' || fallbackStep === 'select-restaurant') && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      {t.addMeal.selectYourRestaurant || 'Select your restaurant'}
-                    </h4>
-                    {nearbyRestaurants.length > 0 ? (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {nearbyRestaurants.map((r) => (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedRestaurant(r);
-                              setRestaurantMenu([]);
-                              setMenuSelectedDishes([]);
-                              setFallbackStep('select-dishes');
-                            }}
-                            className="px-3 py-1.5 rounded-full text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:border-primary transition-all"
-                          >
-                            {r.name}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        <span>{t.addMeal.findingNearby || 'Finding nearby restaurants...'}</span>
-                      </div>
-                    )}
-                    {nearbyRestaurants.length === 0 && fallbackStep !== 'locating' && (
-                      <button
-                        type="button"
-                        onClick={handleShareLocation}
-                        className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark mt-2"
-                      >
-                        <Navigation className="w-4 h-4" />
-                        <span>{t.addMeal.shareLocation}</span>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setShowRestaurantFallback(false);
-                        setFlowState('editing');
-                      }}
-                      className="w-full mt-3 text-xs text-gray-500 hover:underline"
-                    >
-                      {t.addMeal.skipEnterManually || 'Skip, enter manually instead'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Step 3: Menu item selection */}
-                {fallbackStep === 'select-dishes' && selectedRestaurant && (
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-purple-900">
-                        {(t.addMeal.whatDidYouOrderAt || 'What did you order at {restaurant}?').replace('{restaurant}', selectedRestaurant.name)}
-                      </h4>
-                    </div>
-                    {loadingMenu ? (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        <span>{t.addMeal.loadingMenu || 'Loading menu...'}</span>
-                      </div>
-                    ) : restaurantMenu.length > 0 ? (
-                      <>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {restaurantMenu.map((item, idx) => {
-                            const isSelected = menuSelectedDishes.includes(item.name);
-                            return (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => toggleMenuDish(item.name)}
-                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                                  isSelected
-                                    ? 'bg-primary text-white border-primary'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
-                                }`}
-                              >
-                                {isSelected && '+ '}{item.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {menuSelectedDishes.length > 0 && (
-                          <button
-                            onClick={() => {
-                              setAnalysis({
-                                detectedFoods: menuSelectedDishes,
-                                aiSummary: menuSelectedDishes.join(', '),
-                                nutrition: {},
-                                confidence: 60,
-                                mode: 'ai',
-                              });
-                              setShowRestaurantFallback(false);
-                              setFlowState('confirmation');
-                            }}
-                            className="w-full bg-primary text-white py-2 rounded-lg font-medium text-sm hover:bg-primary-dark transition-colors"
-                          >
-                            {(t.addMeal.continueWith || 'Continue with {count} item(s)').replace('{count}', String(menuSelectedDishes.length))}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-gray-500">{t.addMeal.noMenuAvailable}</p>
-                    )}
-                    <button
-                      onClick={() => {
-                        setSelectedRestaurant(null);
-                        setRestaurantMenu([]);
-                        setMenuSelectedDishes([]);
-                        setFallbackStep('select-restaurant');
-                      }}
-                      className="w-full mt-2 text-xs text-gray-500 hover:underline"
-                    >
-                      {t.addMeal.backToRestaurants || 'Back to restaurant selection'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Confirmation State (Fast Path) */}
-        {flowState === 'confirmation' && analysis && (
+      <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {state.phase === 'idle' && (
           <>
-            {/* EXIF hints — shown as small badges above the confirmation card */}
-            {(exifDate || nearbyRestaurants.length > 0) && (
-              <div className="bg-white rounded-card shadow-card p-4 space-y-3">
-                {exifDate && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span>
-                      {t.exifHints.timeFromPhoto}{' '}
-                      <span className="font-semibold text-primary">
-                        {exifDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
-                        {exifDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </span>
-                  </div>
-                )}
-
-                {nearbyRestaurants.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      <span>{t.exifHints.restaurantFromPhoto}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {nearbyRestaurants.map((r) => (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => {
-                            if (selectedRestaurant?.id === r.id) {
-                              setSelectedRestaurant(null);
-                              setRestaurantMenu([]);
-                              setMenuSelectedDishes([]);
-                            } else {
-                              setSelectedRestaurant(r);
-                              setRestaurantMenu([]);
-                              setMenuSelectedDishes([]);
-                            }
-                          }}
-                          className={`px-3 py-1 rounded-full text-sm font-medium transition-all border ${
-                            selectedRestaurant?.id === r.id
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-primary'
-                          }`}
-                        >
-                          {r.name}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{t.exifHints.tapToTag}</p>
-                  </div>
-                )}
-
-                {/* ── Share location button (when no GPS available) ── */}
-                {nearbyRestaurants.length === 0 && !selectedRestaurant && (
-                  <button
-                    type="button"
-                    onClick={handleShareLocation}
-                    className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark transition-colors"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    <span>{t.addMeal.shareLocation}</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* ── What did you order? (menu chip selector) ──── */}
-            {selectedRestaurant && (
-              <div className="mt-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-purple-900 flex items-center gap-2">
-                    <span>🍽️</span>
-                    <span>{t.addMeal.whatDidYouOrder}</span>
-                  </h4>
-                  <span className="text-xs text-purple-600">{selectedRestaurant.name}</span>
-                </div>
-
-                {loadingMenu ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>{t.common.loading}</span>
-                  </div>
-                ) : restaurantMenu.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {restaurantMenu.map((item, idx) => {
-                      const isSelected = menuSelectedDishes.includes(item.name);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleMenuDish(item.name)}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                            isSelected
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary'
-                          }`}
-                        >
-                          {isSelected && '✓ '}{item.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500">{t.addMeal.noMenuAvailable}</p>
-                )}
-
-                {menuSelectedDishes.length > 0 && (
-                  <p className="text-xs text-purple-700 mt-2">
-                    {t.addMeal.selectedCount.replace('{count}', String(menuSelectedDishes.length))}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <MealConfirmation
-              photo={photoBase64}
-              analysis={analysis}
-              onSave={handleQuickSave}
-              onEdit={() => setFlowState('editing')}
-              loading={saving}
-            />
-          </>
-        )}
-
-        {/* Manual Entry Option */}
-        {flowState === 'photo' && !analyzing && !showDishSelection && (
-          <div className="text-center">
+            <p className="font-serif-italic" style={{ fontSize: '20px', color: '#012374' }}>
+              What are you having?
+            </p>
+            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)' }}>
+              Take a photo and Chatita will read your plate and give you a gentle eating plan.
+            </p>
+            <IdlePhotoZone onScan={startScan} />
             <button
-              onClick={() => setFlowState('editing')}
-              className="text-primary hover:underline text-sm font-medium"
+              onClick={() => update({ phase: 'detected' })}
+              style={{ fontSize: '13px', color: '#012374', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textAlign: 'left', padding: 0 }}
             >
               Or add meal details manually →
             </button>
-          </div>
+          </>
         )}
 
-        {/* Disclaimer */}
-        {flowState === 'photo' && (
-          <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-            <p className="text-sm text-gray-700">
-              💡 <strong>{t.common.tip}:</strong> {t.addMeal.trackingTip}
-            </p>
-          </div>
+        {state.phase === 'scanning' && <ScanningBox />}
+
+        {state.phase === 'detected' && (
+          <>
+            <DemoSwitcher />
+            <ChatitaSeesCard />
+            <GuidanceCard preset={preset} />
+            <MealTypeSelector />
+            <FoodEditor bgInput="#FFFDF9" />
+            <FeelingInput bgInput="#FFFDF9" />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => update({ phase: 'idle', saved: false })}
+                style={{ flex: 1, padding: '12px', borderRadius: '999px', background: 'transparent', color: '#012374', fontSize: '14px', fontWeight: 600, border: '1px solid rgba(1,35,116,0.25)', cursor: 'pointer' }}
+              >
+                Retake
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={state.saved}
+                style={{ flex: 2, padding: '12px', borderRadius: '999px', background: state.saved ? '#1C7A4F' : '#012374', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: state.saved ? 'default' : 'pointer' }}
+              >
+                {state.saved ? '✓ Meal saved' : 'Save meal'}
+              </button>
+            </div>
+          </>
         )}
+
+        <div style={{ background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '13px 14px' }}>
+          <p style={{ fontSize: '12.5px', color: '#9A6F18', lineHeight: 1.5 }}>
+            Tracking what you eat helps you spot patterns in how your body responds to different meals.
+          </p>
+        </div>
       </div>
-
-      {/* Edit Drawer (Slides up when user wants to edit) */}
-      <EditDrawer
-        isOpen={flowState === 'editing'}
-        onClose={() => {
-          if (analysis) {
-            setFlowState('confirmation');
-          } else {
-            setFlowState('photo');
-          }
-        }}
-        onSubmit={handleEditSubmit}
-        loading={saving}
-        initialData={analysis}
-      />
 
       <BottomNav />
     </div>
+  );
+
+  // ── WEB ────────────────────────────────────────────────────────────────────
+
+  const WebLayout = (
+    <div className="hidden lg:flex" style={{ minHeight: '100vh', background: '#F7EFE1' }}>
+      <style>{SCAN_STYLE}</style>
+      <WebNav />
+
+      <main style={{ flex: 1, padding: '34px 44px', overflowY: 'auto' }}>
+        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.5)', fontWeight: 700 }}>
+          MEAL HISTORY · ADD A MEAL
+        </p>
+        <h1 className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', marginTop: '4px', lineHeight: 1.1 }}>
+          Snap your plate, eat with a plan.
+        </h1>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '430px 1fr', gap: '22px', marginTop: '28px' }}>
+          {/* Left card */}
+          <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {state.phase === 'idle' && <IdlePhotoZone onScan={startScan} />}
+            {state.phase === 'scanning' && <ScanningBox />}
+            {state.phase === 'detected' && (
+              <div style={{ background: '#F7EFE1', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
+                <p style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', marginBottom: '8px' }}>Photo analyzed</p>
+                <button
+                  onClick={() => update({ phase: 'idle', saved: false })}
+                  style={{ fontSize: '13px', color: '#012374', background: 'none', border: '1px solid rgba(1,35,116,0.25)', borderRadius: '999px', padding: '7px 18px', cursor: 'pointer' }}
+                >
+                  Retake
+                </button>
+              </div>
+            )}
+            <MealTypeSelector />
+            <FoodEditor bgInput="#F7EFE1" />
+            <FeelingInput bgInput="#F7EFE1" />
+            {state.phase === 'detected' && (
+              <button
+                onClick={handleSave}
+                disabled={state.saved}
+                style={{ padding: '13px', borderRadius: '999px', background: state.saved ? '#1C7A4F' : '#012374', color: '#FFFDF9', fontSize: '15px', fontWeight: 700, border: 'none', cursor: state.saved ? 'default' : 'pointer' }}
+              >
+                {state.saved ? '✓ Meal saved' : 'Save meal'}
+              </button>
+            )}
+          </div>
+
+          {/* Right card */}
+          <div>
+            {state.phase !== 'detected' ? (
+              <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '2px dashed rgba(1,35,116,0.12)', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="2" y="7" width="20" height="14" rx="3" stroke="#012374" strokeWidth="1.4" opacity={0.3}/>
+                  <circle cx="12" cy="14" r="3" stroke="#012374" strokeWidth="1.4" opacity={0.3}/>
+                </svg>
+                <p style={{ fontSize: '14px', color: 'rgba(1,35,116,0.35)', fontWeight: 500 }}>
+                  Your eating guidance will appear here
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <DemoSwitcher />
+                <ChatitaSeesCard />
+                <GuidanceCard preset={preset} web />
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+
+  return (
+    <>
+      {MobileLayout}
+      {WebLayout}
+    </>
   );
 }
