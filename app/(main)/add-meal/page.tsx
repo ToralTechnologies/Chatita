@@ -375,9 +375,13 @@ export default function AddMealPage() {
       <style>{SCAN_STYLE}</style>
 
       <div style={{ padding: '20px 20px 0' }}>
-        <BackButton href="/meal-history" />
-        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginTop: '16px' }}>LOG</p>
-        <h1 className="font-serif-italic" style={{ fontSize: '30px', color: '#012374', marginTop: '2px', lineHeight: 1.1 }}>Add a meal</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <BackButton href="/meal-history" />
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Meal log · Add</div>
+            <h1 className="font-serif-italic" style={{ fontSize: 26, color: '#012374', lineHeight: 1.05 }}>What are you having?</h1>
+          </div>
+        </div>
       </div>
 
       <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column' as const, gap: '14px' }}>
@@ -389,8 +393,6 @@ export default function AddMealPage() {
 
         {state.phase === 'idle' && (
           <>
-            <p className="font-serif-italic" style={{ fontSize: '20px', color: '#012374' }}>What are you having?</p>
-            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)' }}>Take a photo and Chatita will read your plate and give you a gentle eating plan.</p>
             <PhotoZone />
             <button onClick={() => update({ phase: 'manual', error: null })} style={{ fontSize: '13px', color: '#012374', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textAlign: 'left' as const, padding: 0 }}>
               Or add meal details manually →
@@ -466,8 +468,9 @@ export default function AddMealPage() {
       <WebNav />
 
       <main style={{ flex: 1, padding: '34px 44px', overflowY: 'auto' }}>
-        <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700 }}>MEAL HISTORY · ADD A MEAL</p>
-        <h1 className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', marginTop: '4px', lineHeight: 1.1 }}>Snap your plate, eat with a plan.</h1>
+        <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Meal log · Add a meal</div>
+        <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', marginTop: 6, lineHeight: 1.05 }}>Snap your plate, eat with a plan.</h1>
+        <p style={{ fontSize: 16, color: 'rgba(22,24,42,0.65)', marginTop: 4 }}>Take a photo and Chatita will read your plate and build a gentle eating order.</p>
 
         {state.error && (
           <div style={{ marginTop: '16px', background: 'rgba(181,86,46,0.10)', border: '1px solid rgba(181,86,46,0.22)', borderRadius: '12px', padding: '12px 16px' }}>

@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Filter } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
-import BackButton from '@/components/back-button';
+import WebNav from '@/components/web-nav';
 import MealCard from '@/components/meal-card';
-import ExportButton from '@/components/export-button';
 import MealCardSkeleton from '@/components/skeletons/meal-card-skeleton';
+import ExportButton from '@/components/export-button';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { useTranslation } from '@/lib/i18n/context';
 import { exportMealsToCSV, exportMealsToPDF } from '@/lib/export-utils';
+
+const MEAL_TYPES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
 
 export default function MealHistoryPage() {
   const router = useRouter();
@@ -19,7 +20,6 @@ export default function MealHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchMeals();
@@ -41,165 +41,249 @@ export default function MealHistoryPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/meals/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setMeals(meals.filter((m) => m.id !== id));
-      }
+      const response = await fetch(`/api/meals/${id}`, { method: 'DELETE' });
+      if (response.ok) setMeals(meals.filter((m) => m.id !== id));
     } catch (error) {
       console.error('Failed to delete meal:', error);
       throw error;
     }
   };
 
-  // Filter meals
   const filteredMeals = meals.filter((meal) => {
     const matchesSearch =
       searchTerm === '' ||
       meal.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meal.detectedFoods?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesType = filterType === '' || meal.mealType === filterType;
-
+    const matchesType = filterType === '' || meal.mealType?.toLowerCase() === filterType.toLowerCase();
     return matchesSearch && matchesType;
   });
 
-  // Group meals by date
   const groupedMeals: Record<string, any[]> = {};
   filteredMeals.forEach((meal) => {
     const date = parseISO(meal.eatenAt);
-    let dateKey: string;
-
-    if (isToday(date)) {
-      dateKey = t.mealHistory.today;
-    } else if (isYesterday(date)) {
-      dateKey = t.mealHistory.yesterday;
-    } else {
-      dateKey = format(date, 'EEEE, MMM d');
-    }
-
-    if (!groupedMeals[dateKey]) {
-      groupedMeals[dateKey] = [];
-    }
+    const dateKey = isToday(date) ? t.mealHistory.today : isYesterday(date) ? t.mealHistory.yesterday : format(date, 'EEEE, MMM d');
+    if (!groupedMeals[dateKey]) groupedMeals[dateKey] = [];
     groupedMeals[dateKey].push(meal);
   });
 
+  // ── Search + Filter bar ────────────────────────────────────────────────────
+
+  const FilterBar = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Search */}
+      <div style={{ position: 'relative' }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(1,35,116,0.4)' }}>
+          <circle cx="11" cy="11" r="7" stroke="rgba(1,35,116,0.4)" strokeWidth="1.8"/>
+          <path d="M16.5 16.5l4 4" stroke="rgba(1,35,116,0.4)" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={t.mealHistory.searchPlaceholder}
+          style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 13, border: '1px solid rgba(1,35,116,0.13)', background: '#FFFDF9', fontSize: 14, color: '#001A4D', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
+      {/* Type filter pills */}
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {MEAL_TYPES.map((type) => {
+          const active = type === 'All' ? filterType === '' : filterType.toLowerCase() === type.toLowerCase();
+          return (
+            <button
+              key={type}
+              onClick={() => setFilterType(type === 'All' ? '' : type)}
+              style={{ padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: active ? 700 : 500, background: active ? '#012374' : '#FFFDF9', color: active ? '#FFFDF9' : 'rgba(1,35,116,0.7)', border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)', cursor: 'pointer' }}
+            >
+              {type}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ── Meal groups content ────────────────────────────────────────────────────
+
+  const MealGroups = () => {
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <MealCardSkeleton />
+          <MealCardSkeleton />
+          <MealCardSkeleton />
+        </div>
+      );
+    }
+
+    if (filteredMeals.length === 0) {
+      return (
+        <div style={{ padding: '52px 20px', textAlign: 'center', background: '#FFFDF9', borderRadius: 22, border: '1.5px dashed rgba(1,35,116,0.16)' }}>
+          <div style={{ width: 58, height: 58, borderRadius: '50%', background: 'rgba(1,35,116,0.07)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3" stroke="#012374" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/></svg>
+          </div>
+          {meals.length === 0 ? (
+            <>
+              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>No meals yet</p>
+              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8, lineHeight: 1.6 }}>Start tracking to see your meal history and patterns.</p>
+              <button
+                onClick={() => router.push('/add-meal')}
+                style={{ marginTop: 20, padding: '12px 26px', borderRadius: 999, background: '#012374', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+              >
+                Log your first meal
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>No matches</p>
+              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8 }}>Try a different search or filter.</p>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+        {Object.entries(groupedMeals).map(([dateKey, dateMeals]) => (
+          <div key={dateKey}>
+            <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 11 }}>{dateKey}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {dateMeals.map((meal) => (
+                <MealCard key={meal.id} meal={meal} onDelete={handleDelete} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-6 py-4">
-          <BackButton href="/home" />
-          <div className="flex items-center justify-between mb-4 mt-2">
-            <h1 className="text-2xl font-bold">{t.mealHistory.title}</h1>
+    <>
+      {/* ─── Mobile ─── */}
+      <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
+        {/* Header */}
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                onClick={() => router.back()}
+                style={{ width: 38, height: 38, borderRadius: 12, background: '#FFFDF9', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Meal log</div>
+                <h1 className="font-serif-italic" style={{ fontSize: 24, color: '#012374', lineHeight: 1.05 }}>What have you eaten?</h1>
+              </div>
+            </div>
             <ExportButton
               onExportPDF={() => exportMealsToPDF(filteredMeals)}
               onExportCSV={() => exportMealsToCSV(filteredMeals)}
             />
           </div>
+        </div>
 
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t.mealHistory.searchPlaceholder}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+        <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <FilterBar />
+          <MealGroups />
+        </div>
+
+        <BottomNav />
+      </div>
+
+      {/* ─── Web ─── */}
+      <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
+        <WebNav />
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+          {/* Page header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+            <div>
+              <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
+                Meal log · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              </div>
+              <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', lineHeight: 1.05, marginTop: 6 }}>
+                What have you eaten?
+              </h1>
+              <p style={{ fontSize: 16, color: 'rgba(22,24,42,0.65)', marginTop: 4 }}>
+                {meals.length > 0 ? `${meals.length} meal${meals.length === 1 ? '' : 's'} tracked so far.` : 'Start tracking to see patterns.'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+              <ExportButton
+                onExportPDF={() => exportMealsToPDF(filteredMeals)}
+                onExportCSV={() => exportMealsToCSV(filteredMeals)}
+              />
+              <button
+                onClick={() => router.push('/add-meal')}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', borderRadius: 14, background: '#012374', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 8px 18px -8px rgba(1,35,116,.5)' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                Log a meal
+              </button>
+            </div>
           </div>
 
-          {/* Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
-          >
-            <Filter className="w-4 h-4" />
-            {filterType ? `${t.mealHistory.filter}: ${t.mealHistory.types[filterType as keyof typeof t.mealHistory.types]}` : t.mealHistory.filterByType}
-          </button>
-
-          {/* Filters */}
-          {showFilters && (
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setFilterType('')}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  filterType === ''
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                {t.mealHistory.all}
-              </button>
-              {['breakfast', 'lunch', 'dinner', 'snack'].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`px-3 py-1 rounded-full text-sm capitalize ${
-                    filterType === type
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {t.mealHistory.types[type as keyof typeof t.mealHistory.types]}
-                </button>
-              ))}
+          {/* 2-col grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 22, alignItems: 'start' }}>
+            {/* Left: search + meal list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 20, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
+                <FilterBar />
+              </div>
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 24, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
+                <MealGroups />
+              </div>
             </div>
-          )}
+
+            {/* Right: summary */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Stats card */}
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 22, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
+                <div className="font-serif-italic" style={{ fontSize: 21, color: '#012374', marginBottom: 14 }}>Your stats</div>
+                {loading ? (
+                  <div style={{ height: 80, background: '#F7EFE1', borderRadius: 12 }} />
+                ) : meals.length === 0 ? (
+                  <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', lineHeight: 1.6 }}>No meals logged yet. Snap your first plate!</p>
+                ) : (() => {
+                  const counts: Record<string, number> = {};
+                  meals.forEach(m => {
+                    const k = (m.mealType || 'Other').toLowerCase();
+                    counts[k] = (counts[k] || 0) + 1;
+                  });
+                  const typeColors: Record<string, string> = {
+                    breakfast: '#C8932B', lunch: '#012374', dinner: '#5C5290', snack: '#1C7A4F',
+                  };
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {Object.entries(counts).map(([type, count]) => (
+                        <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: typeColors[type] || '#7C86AB', flexShrink: 0 }} />
+                          <span style={{ fontSize: 13.5, fontWeight: 500, color: '#16182A', textTransform: 'capitalize', flex: 1 }}>{type}</span>
+                          <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)', fontWeight: 600 }}>×{count}</span>
+                        </div>
+                      ))}
+                      <div style={{ borderTop: '1px solid rgba(1,35,116,0.07)', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)' }}>Total logged</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#012374' }}>{meals.length}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Tip card */}
+              <div style={{ background: '#012374', borderRadius: 22, padding: 22, color: '#FFFDF9' }}>
+                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700, marginBottom: 10 }}>Chatita tip</div>
+                <p style={{ fontSize: 15, lineHeight: 1.65, opacity: 0.92 }}>
+                  Logging meals consistently — even imperfect ones — helps you spot how different foods affect your glucose and energy.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6">
-        {loading ? (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold mb-3 text-gray-700">Loading...</h2>
-              <div className="space-y-4">
-                <MealCardSkeleton />
-                <MealCardSkeleton />
-                <MealCardSkeleton />
-              </div>
-            </div>
-          </div>
-        ) : filteredMeals.length === 0 ? (
-          <div className="text-center py-12">
-            {meals.length === 0 ? (
-              <>
-                <p className="text-gray-500 mb-4">{t.mealHistory.noMealsYet}</p>
-                <button
-                  onClick={() => router.push('/add-meal')}
-                  className="bg-primary text-white px-6 py-2 rounded-button hover:bg-primary-dark transition-colors"
-                >
-                  {t.mealHistory.logFirstMeal}
-                </button>
-              </>
-            ) : (
-              <p className="text-gray-500">{t.mealHistory.noMatchingMeals}</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedMeals).map(([dateKey, dateMeals]) => (
-              <div key={dateKey}>
-                <h2 className="text-lg font-semibold mb-3 text-gray-700">
-                  {dateKey}
-                </h2>
-                <div className="space-y-4">
-                  {dateMeals.map((meal) => (
-                    <MealCard key={meal.id} meal={meal} onDelete={handleDelete} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <BottomNav />
-    </div>
+    </>
   );
 }
