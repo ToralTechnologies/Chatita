@@ -68,7 +68,7 @@ export default function MealHistoryPage() {
 
   // ── Search + Filter bar ────────────────────────────────────────────────────
 
-  const FilterBar = () => (
+  const renderFilterBar = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* Search */}
       <div style={{ position: 'relative' }}>
@@ -104,7 +104,7 @@ export default function MealHistoryPage() {
 
   // ── Meal groups content ────────────────────────────────────────────────────
 
-  const MealGroups = () => {
+  const renderMealGroups = () => {
     if (loading) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -185,8 +185,8 @@ export default function MealHistoryPage() {
         </div>
 
         <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <FilterBar />
-          <MealGroups />
+          {renderFilterBar()}
+          {renderMealGroups()}
         </div>
 
         <BottomNav />
@@ -230,10 +230,10 @@ export default function MealHistoryPage() {
             {/* Left: search + meal list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 20, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
-                <FilterBar />
+                {renderFilterBar()}
               </div>
               <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 24, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
-                <MealGroups />
+                {renderMealGroups()}
               </div>
             </div>
 

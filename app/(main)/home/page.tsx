@@ -320,6 +320,12 @@ export default function HomePage() {
         {/* ── Mood section (inline, no card wrapper) ── */}
         <div style={{ marginTop: '28px' }}>
           <MoodSelector onSave={handleMoodSave} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <Link href="/mood-log" style={{ fontSize: 12.5, color: '#C8932B', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              View mood log
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#C8932B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Link>
+          </div>
         </div>
 
         {/* ── Context tags ── */}

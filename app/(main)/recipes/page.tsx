@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, RefObject } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 
@@ -270,8 +270,8 @@ export default function RecipesPage() {
 
   const canSearch = ingredients.length > 0 || !!photoBase64;
 
-  // ── Input panel (shared between mobile and web) ──
-  const InputPanel = ({ web }: { web?: boolean }) => (
+  // Defined as a plain render function (not a component) so React doesn't unmount/remount it on state changes, preserving input focus.
+  const renderInputPanel = (web?: boolean) => (
     <div style={{
       background: '#FFFDF9', borderRadius: 22, padding: web ? 24 : 20,
       border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)',
@@ -549,7 +549,7 @@ export default function RecipesPage() {
         </div>
 
         <div style={{ padding: '0 16px' }}>
-          <InputPanel />
+          {renderInputPanel()}
         </div>
 
         {/* Mobile results */}
@@ -616,7 +616,7 @@ export default function RecipesPage() {
 
             {/* LEFT: Input card */}
             <div style={{ position: 'sticky', top: 0, height: 'fit-content' }}>
-              <InputPanel web />
+              {renderInputPanel(true)}
             </div>
 
             {/* RIGHT: Results */}
