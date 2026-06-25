@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import BackButton from '@/components/back-button';
+import WebNav from '@/components/web-nav';
 
 interface MoodEntry {
   id: string;
@@ -18,14 +18,16 @@ interface MoodEntry {
   recordedAt: string;
 }
 
-const ORB_COLORS: Record<string, { from: string; to: string }> = {
-  happy:    { from: '#E5BC5E', to: '#C8932B' },
-  grateful: { from: '#D8A53E', to: '#B07C1C' },
-  calm:     { from: '#7C86AB', to: '#5C77AE' },
-  neutral:  { from: '#A4ACC6', to: '#7C86AB' },
-  tired:    { from: '#5C77AE', to: '#34508C' },
-  anxious:  { from: '#34508C', to: '#001A4D' },
-  sad:      { from: '#34508C', to: '#001A4D' },
+// ── Mood config ────────────────────────────────────────────────────────────────
+
+const ORB_COLORS: Record<string, { from: string; to: string; dot: string }> = {
+  happy:    { from: '#E5BC5E', to: '#C8932B', dot: '#C8932B' },
+  grateful: { from: '#D8A53E', to: '#B07C1C', dot: '#C8932B' },
+  calm:     { from: '#7CBBBF', to: '#2A8A8A', dot: '#2A8A8A' },
+  neutral:  { from: '#A4ACC6', to: '#7C86AB', dot: '#6B7A99' },
+  tired:    { from: '#8A7AB8', to: '#5C5290', dot: '#8A6FB0' },
+  anxious:  { from: '#D07B5B', to: '#B5562E', dot: '#B5562E' },
+  sad:      { from: '#5C77AE', to: '#34508C', dot: '#4A5578' },
 };
 
 const MOOD_LABELS: Record<string, string> = {
@@ -37,6 +39,8 @@ const STRESS_LABELS: Record<number, string> = {
   1: 'Very easy', 2: 'Easy', 3: 'Easy', 4: 'Mild', 5: 'Mild',
   6: 'Some', 7: 'Some', 8: 'Heavy', 9: 'Heavy', 10: 'A lot',
 };
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -53,28 +57,91 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function formatFullDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) +
-    ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
 function groupByDay(entries: MoodEntry[]) {
   const groups: { label: string; entries: MoodEntry[] }[] = [];
   const map = new Map<string, MoodEntry[]>();
 
   for (const entry of entries) {
     const d = new Date(entry.recordedAt);
-    const key = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    const key = diffDays === 0
+      ? 'Today'
+      : diffDays === 1
+      ? 'Yesterday'
+      : d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(entry);
   }
 
-  for (const [label, entries] of map.entries()) {
-    groups.push({ label, entries });
+  for (const [label, es] of map.entries()) {
+    groups.push({ label, entries: es });
   }
   return groups;
 }
+
+// ── Entry card ────────────────────────────────────────────────────────────────
+
+function EntryCard({ entry, web }: { entry: MoodEntry; web?: boolean }) {
+  const orb = ORB_COLORS[entry.mood] ?? ORB_COLORS.neutral;
+  const stressLabel = STRESS_LABELS[entry.stressLevel] ?? '';
+  const tags = [
+    entry.notFeelingWell && 'Not feeling well',
+    entry.onPeriod && 'On period',
+    entry.feelingOverwhelmed && 'Overwhelmed',
+    entry.havingCravings && 'Having cravings',
+  ].filter(Boolean) as string[];
+
+  return (
+    <div style={{
+      background: web ? '#F7EFE1' : '#FFFDF9',
+      borderRadius: 14,
+      padding: web ? '12px 14px' : '13px 15px',
+      border: web ? 'none' : '1px solid rgba(1,35,116,0.07)',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 12,
+    }}>
+      {/* Orb — kept per user instruction */}
+      <div style={{
+        width: 44,
+        height: 44,
+        borderRadius: '50%',
+        background: `radial-gradient(circle at 35% 30%, ${orb.from}, ${orb.to})`,
+        flexShrink: 0,
+        boxShadow: `0 6px 14px -6px ${orb.to}88`,
+      }} />
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#16182A' }}>
+            {MOOD_LABELS[entry.mood] ?? entry.mood}
+          </span>
+          <span style={{ fontSize: 12, color: 'rgba(22,24,42,0.45)', flexShrink: 0 }}>
+            {formatDate(entry.recordedAt)}
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 2 }}>
+          Stress: {stressLabel}
+        </div>
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+            {tags.map(t => (
+              <span key={t} style={{ padding: '3px 9px', borderRadius: 99, fontSize: 11, background: 'rgba(1,35,116,0.07)', color: 'rgba(22,24,42,0.7)' }}>{t}</span>
+            ))}
+          </div>
+        )}
+        {entry.notes && (
+          <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.6)', marginTop: 6, lineHeight: 1.5, fontStyle: 'italic' }}>
+            &ldquo;{entry.notes}&rdquo;
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MoodLogPage() {
   const { data: session, status } = useSession();
@@ -100,165 +167,145 @@ export default function MoodLogPage() {
 
   const grouped = groupByDay(entries);
 
-  return (
-    <div className="min-h-screen pb-24" style={{ background: 'var(--bg-page)' }}>
+  const EmptyState = () => (
+    <div style={{ padding: '52px 20px', textAlign: 'center', background: '#FFFDF9', borderRadius: 22, border: '1.5px dashed rgba(1,35,116,0.16)' }}>
+      <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(1,35,116,0.07)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.5" opacity="0.5"/><path d="M8.5 14s1 1.5 3.5 1.5 3.5-1.5 3.5-1.5M9 9h.01M15 9h.01" stroke="#012374" strokeWidth="1.5" strokeLinecap="round"/></svg>
+      </div>
+      <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>No check-ins yet</p>
+      <p style={{ fontSize: 13, color: 'rgba(22,24,42,0.55)', marginTop: 8, lineHeight: 1.6, maxWidth: 320, margin: '8px auto 0' }}>
+        Your mood check-ins will appear here. Log how you&apos;re feeling from the home screen.
+      </p>
+    </div>
+  );
 
-      {/* Header */}
-      <div style={{
-        background: 'var(--bg-card)',
-        borderBottom: '1px solid rgba(1,35,116,0.08)',
-        padding: '14px 20px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-      }}>
-        <div style={{ maxWidth: 672, margin: '0 auto' }}>
-          <BackButton href="/home" />
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 8 }}>
-            <h1 className="font-serif-italic" style={{ fontSize: 28, color: 'var(--text-primary)', lineHeight: 1.1 }}>
-              State of mind
-            </h1>
-            <span style={{ fontSize: 11, color: '#C8932B', fontWeight: 700 }}>Your mood log</span>
+  const LoadingSkeleton = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} style={{ height: 76, background: '#FFFDF9', borderRadius: 14, opacity: 0.5 }} />
+      ))}
+    </div>
+  );
+
+  const LogGroups = ({ web }: { web?: boolean }) => (
+    <>
+      {loading ? <LoadingSkeleton /> : entries.length === 0 ? <EmptyState /> : (
+        grouped.map(({ label, entries: dayEntries }) => (
+          <div key={label} style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>
+              {label}
+            </div>
+            {web ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+                {dayEntries.map(entry => (
+                  <EntryCard key={entry.id} entry={entry} web />
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dayEntries.map(entry => (
+                  <EntryCard key={entry.id} entry={entry} />
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {/* ─── Mobile ─── */}
+      <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => router.back()}
+              style={{ width: 38, height: 38, borderRadius: 12, background: '#FFFDF9', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>State of mind</div>
+              <h1 className="font-serif-italic" style={{ fontSize: 23, color: '#012374', lineHeight: 1 }}>Your mood log</h1>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 20px 0' }}>
+          <LogGroups />
+        </div>
+
+        <BottomNav />
+      </div>
+
+      {/* ─── Web ─── */}
+      <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
+        <WebNav />
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+          <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
+            State of mind · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', lineHeight: 1.05, marginTop: 6 }}>
+            How are you, really?
+          </h1>
+          <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 4, lineHeight: 1.55 }}>
+            Check in, watch your week unfold, and see how your mood has been tracking.
+          </p>
+
+          <div style={{ marginTop: 26, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
+            {/* Left column */}
+            <div>
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 24, boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)' }}>
+                <div className="font-serif-italic" style={{ fontSize: 23, color: '#012374', marginBottom: 14 }}>Recent check-ins</div>
+                <LogGroups web />
+              </div>
+            </div>
+
+            {/* Right column — summary / insight */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 24, boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)' }}>
+                <div className="font-serif-italic" style={{ fontSize: 23, color: '#012374', marginBottom: 6 }}>Your week at a glance</div>
+                <p style={{ fontSize: 14, color: 'rgba(22,24,42,0.6)', lineHeight: 1.6 }}>
+                  {entries.length === 0
+                    ? 'No check-ins yet this week. Start from the home screen.'
+                    : `${entries.length} check-in${entries.length === 1 ? '' : 's'} logged. Keep checking in — patterns emerge over time.`}
+                </p>
+
+                {/* Mood distribution if there are entries */}
+                {entries.length > 0 && (() => {
+                  const counts: Record<string, number> = {};
+                  entries.forEach(e => { counts[e.mood] = (counts[e.mood] || 0) + 1; });
+                  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                  return (
+                    <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {top.map(([mood, count]) => {
+                        const orb = ORB_COLORS[mood] ?? ORB_COLORS.neutral;
+                        return (
+                          <div key={mood} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F7EFE1', borderRadius: 12, padding: '10px 14px' }}>
+                            <div style={{ width: 11, height: 11, borderRadius: '50%', background: orb.dot, flexShrink: 0 }} />
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#16182A' }}>{MOOD_LABELS[mood] ?? mood}</span>
+                            <span style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)' }}>×{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div style={{ background: '#012374', borderRadius: 22, padding: 24, color: '#FFFDF9' }}>
+                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Chatita reminder</div>
+                <p style={{ fontSize: 16, lineHeight: 1.6, marginTop: 10, opacity: 0.92 }}>
+                  Your mood and blood sugar are connected. Stress, sleep, and how you feel all play a role — logging regularly helps you see the full picture.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div style={{ maxWidth: 672, margin: '0 auto', padding: '20px 20px 0' }}>
-
-        {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} style={{ height: 88, background: 'var(--bg-card)', borderRadius: 18, opacity: 0.5 }} />
-            ))}
-          </div>
-        )}
-
-        {!loading && entries.length === 0 && (
-          <div style={{
-            marginTop: 40,
-            textAlign: 'center',
-            padding: '40px 20px',
-            background: 'var(--bg-card)',
-            borderRadius: 22,
-            border: '1px solid rgba(1,35,116,0.06)',
-          }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(1,35,116,0.08)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.5" opacity="0.5"/><path d="M8.5 14s1 1.5 3.5 1.5 3.5-1.5 3.5-1.5M9 9h.01M15 9h.01" stroke="#012374" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            </div>
-            <p className="font-serif-italic" style={{ fontSize: 20, color: 'var(--text-primary)' }}>No check-ins yet</p>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
-              Your mood check-ins will appear here. Go back to the home screen to log how you're feeling.
-            </p>
-          </div>
-        )}
-
-        {!loading && grouped.map(({ label, entries: dayEntries }) => (
-          <div key={label} style={{ marginBottom: 24 }}>
-            <div style={{
-              fontSize: 11,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: '#C8932B',
-              fontWeight: 700,
-              marginBottom: 10,
-            }}>
-              {label}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dayEntries.map(entry => {
-                const orb = ORB_COLORS[entry.mood] ?? ORB_COLORS.neutral;
-                const tags = [
-                  entry.notFeelingWell && 'Not feeling well',
-                  entry.onPeriod && 'On period',
-                  entry.feelingOverwhelmed && 'Overwhelmed',
-                  entry.havingCravings && 'Having cravings',
-                ].filter(Boolean) as string[];
-
-                return (
-                  <div
-                    key={entry.id}
-                    style={{
-                      background: 'var(--bg-card)',
-                      borderRadius: 18,
-                      padding: '16px 18px',
-                      border: '1px solid rgba(1,35,116,0.06)',
-                      display: 'flex',
-                      gap: 14,
-                      alignItems: 'flex-start',
-                    }}
-                  >
-                    {/* Orb */}
-                    <div style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '50%',
-                      background: `radial-gradient(circle at 35% 30%, ${orb.from}, ${orb.to})`,
-                      flexShrink: 0,
-                      boxShadow: `0 6px 14px -6px ${orb.to}88`,
-                    }} />
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                        <span className="font-serif-italic" style={{ fontSize: 18, color: 'var(--text-primary)', lineHeight: 1 }}>
-                          {MOOD_LABELS[entry.mood] ?? entry.mood}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-                          {formatDate(entry.recordedAt)}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 5 }}>
-                        {/* Stress bar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Stress:</div>
-                          <div style={{ display: 'flex', gap: 2 }}>
-                            {[1, 2, 3, 4, 5].map(i => (
-                              <div key={i} style={{
-                                width: 14,
-                                height: 6,
-                                borderRadius: 3,
-                                background: i <= Math.ceil(entry.stressLevel / 2)
-                                  ? (entry.stressLevel >= 8 ? '#E3171A' : entry.stressLevel >= 5 ? '#C8932B' : '#012374')
-                                  : 'rgba(1,35,116,0.1)',
-                              }} />
-                            ))}
-                          </div>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            {STRESS_LABELS[entry.stressLevel] ?? ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {tags.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                          {tags.map(t => (
-                            <span key={t} style={{
-                              padding: '3px 9px',
-                              borderRadius: 99,
-                              fontSize: 11,
-                              background: 'rgba(1,35,116,0.07)',
-                              color: 'var(--text-secondary)',
-                            }}>{t}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      {entry.notes && (
-                        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, fontStyle: 'italic' }}>
-                          "{entry.notes}"
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <BottomNav />
-    </div>
+    </>
   );
 }

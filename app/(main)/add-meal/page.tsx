@@ -75,68 +75,97 @@ function TipIcon({ icon }: { icon: string }) {
   );
 }
 
+// ── Tone icon ─────────────────────────────────────────────────────────────────
+
+function ToneIcon({ tone, size = 18 }: { tone: string; size?: number }) {
+  if (tone === 'great') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M5 13l4 4L19 7" stroke="#1C7A4F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  if (tone === 'mindful') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3l2.4 6 6.1.4-4.7 4 1.5 6L12 16.8 6.7 19.4l1.5-6-4.7-4 6.1-.4L12 3z" stroke="#9A6F18" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  );
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 4v16M7 20h10M5 8h14M5 8l-2.5 5a3 3 0 0 0 5 0L5 8zM19 8l-2.5 5a3 3 0 0 0 5 0L19 8z" stroke="#B5562E" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 // ── GuidanceCard ──────────────────────────────────────────────────────────────
 
 function GuidanceCard({ guidance, web }: { guidance: MealGuidance; web?: boolean }) {
   const ts = TONE_STYLE[guidance.tone];
-  const toneEmoji = guidance.tone === 'great' ? '✅' : guidance.tone === 'mindful' ? '🌿' : '🎉';
+  const iconSize = web ? 22 : 18;
+  const boxSize = web ? 42 : 34;
   return (
-    <div style={{ background: ts.cardBg, border: `1px solid ${ts.border}`, borderRadius: '16px', padding: web ? '20px' : '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-        <span style={{ fontSize: '18px' }}>{toneEmoji}</span>
-        <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: ts.accent, fontWeight: 700 }}>{guidance.kicker}</span>
+    <div style={{ background: ts.cardBg, border: `1px solid ${ts.border}`, borderRadius: web ? '20px' : '16px', padding: web ? '24px' : '18px' }}>
+      {/* Header row: icon box + kicker + headline */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '13px', marginBottom: '16px' }}>
+        <span style={{ flexShrink: 0, width: boxSize, height: boxSize, borderRadius: web ? '12px' : '10px', background: `${ts.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ToneIcon tone={guidance.tone} size={iconSize} />
+        </span>
+        <div>
+          <p style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: ts.accent, fontWeight: 700 }}>{guidance.kicker}</p>
+          <p className="font-serif-italic" style={{ fontSize: web ? '22px' : '17px', color: '#16182A', lineHeight: 1.2, marginTop: '3px' }}>
+            {guidance.headline}
+          </p>
+        </div>
       </div>
-      <p className="font-serif-italic" style={{ fontSize: web ? '20px' : '17px', color: '#012374', marginBottom: '14px', lineHeight: 1.25 }}>
-        {guidance.headline}
-      </p>
 
       {web ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
-          <div>
-            <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>Eat it in this order</p>
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+          {/* Order steps — white panel */}
+          <div style={{ background: 'rgba(255,253,249,0.7)', borderRadius: '14px', padding: '16px' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.55)', fontWeight: 700, marginBottom: '12px' }}>Eat it in this order</p>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '11px' }}>
               {guidance.order.map((step, i) => (
-                <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ts.accent, color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+                <div key={i} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
+                  <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: ts.accent, color: '#FFFDF9', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
                   <div>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{step.label}</p>
-                    <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)' }}>{step.note}</p>
+                    <p style={{ fontSize: '14.5px', fontWeight: 600, color: '#16182A' }}>{step.label}</p>
+                    <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.62)', marginTop: '1px' }}>{step.note}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div>
-            <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>Tips</p>
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
-              {guidance.tips.map((tip, i) => (
-                <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                  <TipIcon icon={tip.icon} />
-                  <p style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.4 }}>{tip.text}</p>
-                </div>
-              ))}
-            </div>
+          {/* Tips — individual cards */}
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '11px' }}>
+            {guidance.tips.map((tip, i) => (
+              <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'rgba(255,253,249,0.7)', borderRadius: '12px', padding: '13px 14px' }}>
+                <TipIcon icon={tip.icon} />
+                <p style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.45 }}>{tip.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       ) : (
         <>
-          <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: ts.accent, fontWeight: 700, marginBottom: '10px' }}>Eat it in this order</p>
-          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px', marginBottom: '14px' }}>
-            {guidance.order.map((step, i) => (
-              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: ts.accent, color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#012374' }}>{step.label}</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)' }}>{step.note}</p>
+          {/* Order steps — white panel */}
+          <div style={{ background: 'rgba(255,253,249,0.7)', borderRadius: '13px', padding: '14px', marginBottom: '13px' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.55)', fontWeight: 700, marginBottom: '11px' }}>Eat it in this order</p>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '10px' }}>
+              {guidance.order.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
+                  <span style={{ width: '23px', height: '23px', borderRadius: '50%', background: ts.accent, color: '#FFFDF9', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
+                  <div>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#16182A' }}>{step.label}</span>
+                    <span style={{ fontSize: '13px', color: 'rgba(22,24,42,0.62)' }}> — {step.note}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '8px' }}>
+          {/* Tips */}
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '9px' }}>
             {guidance.tips.map((tip, i) => (
-              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <TipIcon icon={tip.icon} />
-                <p style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.4 }}>{tip.text}</p>
+                <p style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.45 }}>{tip.text}</p>
               </div>
             ))}
           </div>
@@ -305,22 +334,35 @@ export default function AddMealPage() {
   const DetectedFoodsCard = () => {
     const result = state.aiResult;
     if (!result) return null;
+    const confColor = result.confidence >= 80 ? '#1C7A4F' : result.confidence >= 60 ? '#9A6F18' : '#B5562E';
     return (
-      <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700 }}>Chatita sees</p>
+      <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.08)', padding: '16px 18px' }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(1,35,116,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.8-.5L12 3z" stroke="#012374" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          </span>
+          <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.55)', fontWeight: 700 }}>Chatita sees</span>
           {result.confidence > 0 && (
-            <span className="font-serif-italic" style={{ fontSize: '18px', color: '#012374' }}>{result.confidence}% sure</span>
+            <span style={{ marginLeft: 'auto', fontSize: '12px', fontWeight: 700, color: confColor }}>{result.confidence}% sure</span>
           )}
         </div>
-        {result.aiSummary && <p style={{ fontSize: '13px', color: '#16182A', marginTop: '6px' }}>Looks like {result.aiSummary}!</p>}
-        {result.nutritionSummary && <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.5)', marginTop: '4px' }}>{result.nutritionSummary}</p>}
+        {/* Summary */}
+        {result.aiSummary && (
+          <p className="font-serif-italic" style={{ fontSize: '19px', color: '#012374', lineHeight: 1.25, marginTop: '9px' }}>
+            Looks like {result.aiSummary}!
+          </p>
+        )}
+        {/* Food chips */}
         {state.foods.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '7px', marginTop: '11px' }}>
             {state.foods.map((f, i) => (
-              <span key={i} style={{ background: '#F7EFE1', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', color: '#012374', fontWeight: 500 }}>{f}</span>
+              <span key={i} style={{ background: '#F7EFE1', color: '#012374', borderRadius: '999px', padding: '7px 11px', fontSize: '12.5px', fontWeight: 500 }}>{f}</span>
             ))}
           </div>
+        )}
+        {result.nutritionSummary && (
+          <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.5)', marginTop: '8px' }}>{result.nutritionSummary}</p>
         )}
       </div>
     );
