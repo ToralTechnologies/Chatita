@@ -108,7 +108,7 @@ export default function RecipeLibraryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background pb-24 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-background mobile-page-pb flex items-center justify-center">
         <div className="text-center">
           <ChefHat className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
           <p className="text-gray-500">Loading recipes...</p>
@@ -119,7 +119,7 @@ export default function RecipeLibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
+    <div className="min-h-screen bg-gray-background mobile-page-pb">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">

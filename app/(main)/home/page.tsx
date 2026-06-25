@@ -189,7 +189,7 @@ export default function HomePage() {
     </div>
 
     {/* ── Mobile layout (< lg) ── */}
-    <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
+    <div className="lg:hidden min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
 
       {/* ── Navy hero band ── */}
       <div

@@ -162,7 +162,7 @@ export default function RestaurantFinderPage() {
   // ─── MOBILE ────────────────────────────────────────────────────────────────
 
   const MobileLayout = (
-    <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', paddingBottom: 96 }}>
+    <div className="lg:hidden mobile-page-pb" style={{ minHeight: '100vh', background: '#F7EFE1' }}>
       <div style={{ padding: '24px 20px 16px' }}>
         <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
         <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', lineHeight: 1.1, marginTop: 6 }}>Find a kind place to eat.</h1>

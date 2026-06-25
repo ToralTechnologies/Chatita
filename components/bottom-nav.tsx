@@ -72,14 +72,14 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-30 pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-30"
       style={{
         background: navBg,
         borderTop: `1px solid ${isDark ? 'rgba(255,253,249,0.12)' : 'rgba(200,147,43,0.3)'}`,
-        height: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex items-center justify-around h-full max-w-2xl mx-auto px-5">
+      <div className="flex items-center justify-around max-w-2xl mx-auto px-5" style={{ height: '68px' }}>
 
         {/* Home */}
         <Link href="/home" className="flex items-center justify-center w-10 h-10" style={{ opacity: isDark && pathname !== '/home' ? 0.5 : 1 }}>

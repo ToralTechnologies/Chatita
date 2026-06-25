@@ -420,7 +420,7 @@ export default function SavedRecipesPage() {
   // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
 
   const MobileLayout = (
-    <div className="lg:hidden" style={{ background: '#F7EFE1', minHeight: '100vh', paddingBottom: '96px' }}>
+    <div className="lg:hidden mobile-page-pb" style={{ background: '#F7EFE1', minHeight: '100vh' }}>
       {/* Page header */}
       <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
         <BackButton href="/recipes" />

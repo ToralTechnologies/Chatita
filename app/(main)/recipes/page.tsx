@@ -537,7 +537,7 @@ export default function RecipesPage() {
   return (
     <>
       {/* ─── Mobile (lg:hidden) ─── */}
-      <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
+      <div className="lg:hidden mobile-page-pb" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ padding: '24px 20px 16px' }}>
           <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
           <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 6 }}>

@@ -74,9 +74,14 @@ body {
   padding-top: max(16px, env(safe-area-inset-top, 0px));
 }
 
-/* Bottom-safe padding for fixed bars */
+/* Bottom-safe padding for fixed nav bars (home indicator area) */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Page bottom clearance: clears fixed BottomNav (68px) + home indicator + buffer */
+.mobile-page-pb {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Custom scrollbar ── */

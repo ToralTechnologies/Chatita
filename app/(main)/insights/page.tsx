@@ -95,7 +95,7 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background pb-24">
+      <div className="min-h-screen bg-gray-background mobile-page-pb">
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-2xl mx-auto px-6 py-4">
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -121,7 +121,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-background pb-24">
+    <div className="min-h-screen bg-gray-background mobile-page-pb">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-6 py-4">

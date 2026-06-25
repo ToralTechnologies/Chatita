@@ -29,7 +29,7 @@ export default function RewardsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background pb-24 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-background mobile-page-pb flex items-center justify-center">
         <p className="text-gray-500">Loading rewards...</p>
         <BottomNav />
       </div>
@@ -38,7 +38,7 @@ export default function RewardsPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-background pb-24 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-background mobile-page-pb flex items-center justify-center">
         <p className="text-gray-500">Unable to load rewards</p>
         <BottomNav />
       </div>
