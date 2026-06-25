@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { analyzeMealPhoto } from '@/lib/ai/meal-analyzer';
+import { analyzeMealPhoto, analyzeMealText } from '@/lib/ai/meal-analyzer';
 import { checkRateLimit, recordAiUsage } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
@@ -11,51 +11,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { photoBase64 } = await request.json();
+    const { photoBase64, foods } = await request.json();
 
-    if (!photoBase64) {
+    if (!photoBase64 && (!foods || !Array.isArray(foods) || foods.length === 0)) {
       return NextResponse.json(
-        { error: 'Photo is required' },
+        { error: 'A photo or a list of foods is required' },
         { status: 400 }
       );
     }
 
-    // Rate limit check
     const limit = await checkRateLimit(session.user.id, 'analyze-meal');
     if (!limit.allowed) {
       return NextResponse.json({
-        message: 'AI analysis limit reached. Please add foods manually.',
+        message: 'AI analysis limit reached. You can still save the meal manually.',
         mode: '$0',
-        detectedFoods: [],
+        detectedFoods: foods ?? [],
         nutrition: {},
       });
     }
 
-    // Analyze the meal photo
-    const analysis = await analyzeMealPhoto(photoBase64);
+    const analysis = photoBase64
+      ? await analyzeMealPhoto(photoBase64)
+      : await analyzeMealText(foods as string[]);
 
-    // Check if AI is disabled
     if (analysis.mode === '$0') {
       return NextResponse.json({
-        message: 'AI analysis is disabled. Please add foods manually.',
+        message: 'AI analysis is unavailable. You can still save the meal manually.',
         mode: '$0',
-        detectedFoods: [],
+        detectedFoods: foods ?? [],
         nutrition: {},
       });
     }
 
     await recordAiUsage(session.user.id, 'analyze-meal');
 
-    // Return AI analysis
     return NextResponse.json({
       detectedFoods: analysis.detectedFoods,
       allDetectedDishes: analysis.allDetectedDishes || [],
       needsSelection: analysis.needsSelection || false,
+      aiSummary: analysis.aiSummary,
       nutrition: analysis.nutrition,
+      nutritionSummary: analysis.nutritionSummary,
       portionSize: analysis.portionSize,
       confidence: analysis.confidence,
+      guidance: analysis.guidance,
       mode: 'ai',
-      disclaimer: '⚠️ These are AI estimates and may vary. Always verify nutrition information.',
+      disclaimer: 'AI estimates may vary. Always verify with your care team.',
     });
   } catch (error) {
     console.error('Meal analysis error:', error);

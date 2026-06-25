@@ -1,214 +1,406 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
-import Link from 'next/link';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Rating = 'great' | 'moderate' | 'caution';
-type SearchMode = 'nearby' | 'dish' | 'name' | 'favs';
+type Score = 'great' | 'moderate' | 'caution';
 
-interface Dish {
-  id: string;
-  name: string;
-  rating: Rating;
-  carbs: string;
-  tip: string;
-}
-
-interface Section {
-  name: string;
-  dishes: Dish[];
-}
-
-interface Place {
+interface RestaurantSuggestion {
   id: string;
   name: string;
   cuisine: string;
-  distance: string;
-  address: string;
-  sections: Section[];
+  address?: string;
+  distance?: string;
 }
 
-// ─── Rating config ─────────────────────────────────────────────────────────────
+interface MenuDish {
+  name: string;
+  category: string;
+  score: Score;
+  carbEstimate: string;
+  tip: string;
+}
 
-const RATING = {
-  great:    { label: 'Great',          color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  border: 'rgba(28,122,79,0.18)',  row: 'rgba(28,122,79,0.06)' },
+interface DishTip {
+  dish: string;
+  dishScore: Score;
+  scoreReason: string;
+  tips: string[];
+  portionGuidance?: string;
+  culturalNote?: string | null;
+}
+
+interface TipsResult {
+  dishTips: DishTip[];
+  overallAdvice: string;
+  mealBalance?: { estimatedCarbs: string; estimatedProtein: string; bloodSugarImpact: string };
+}
+
+// ─── Score config ─────────────────────────────────────────────────────────────
+
+const SCORE = {
+  great:    { label: 'Great',           color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  border: 'rgba(28,122,79,0.18)',  row: 'rgba(28,122,79,0.06)' },
   moderate: { label: 'Enjoy mindfully', color: '#9A6F18', bg: 'rgba(200,147,43,0.18)', border: 'rgba(200,147,43,0.22)', row: 'rgba(200,147,43,0.07)' },
-  caution:  { label: 'Save for later', color: '#B5562E', bg: 'rgba(181,86,46,0.13)',  border: 'rgba(181,86,46,0.18)',  row: 'rgba(181,86,46,0.05)' },
+  caution:  { label: 'Save for later',  color: '#B5562E', bg: 'rgba(181,86,46,0.13)',  border: 'rgba(181,86,46,0.18)',  row: 'rgba(181,86,46,0.05)' },
 } as const;
 
-// ─── Hardcoded restaurant data ────────────────────────────────────────────────
-
-const PLACES: Place[] = [
-  {
-    id: 'pizza', name: 'Pizza House', cuisine: 'Italian', distance: '0.4 mi', address: '618 Church St',
-    sections: [
-      { name: 'Appetizer', dishes: [
-        { id: 'caprese', name: 'Caprese Salad', rating: 'great', carbs: '6–8g', tip: 'Fresh tomato, mozzarella and basil — naturally low in carbs. Enjoy as much as you like with a drizzle of olive oil.' },
-        { id: 'knots', name: 'Garlic Knots', rating: 'caution', carbs: '18–24g', tip: 'A lovely treat — share with the table and pair with a protein-rich dish to steady your blood sugar.' },
-      ]},
-      { name: 'Entrée', dishes: [
-        { id: 'salmon', name: 'Grilled Salmon with Lemon & Herbs', rating: 'great', carbs: '2–4g', tip: 'Rich in omega-3s and protein — fill half your plate and add non-starchy veg on the side.' },
-        { id: 'carbonara', name: 'Spaghetti Carbonara', rating: 'caution', carbs: '45–55g', tip: 'Ask for zucchini noodles or a smaller portion mixed with extra vegetables to keep carbs in check.' },
-        { id: 'eggplant', name: 'Eggplant Parmesan', rating: 'moderate', carbs: '16–22g', tip: 'Comforting and veg-forward — just watch the breadcrumb coating and pair with a big green salad.' },
-      ]},
-      { name: 'Beverage', dishes: [
-        { id: 'tea', name: 'Unsweetened Iced Tea', rating: 'great', carbs: '0–1g', tip: 'A refreshing choice that keeps your blood sugar steady throughout the meal.' },
-      ]},
-    ],
-  },
-  {
-    id: 'salad', name: 'Green Bowl Co.', cuisine: 'Salads & bowls', distance: '0.6 mi', address: '210 Main St',
-    sections: [
-      { name: 'Bowls', dishes: [
-        { id: 'harvest', name: 'Harvest Grain Bowl', rating: 'moderate', carbs: '24–30g', tip: 'Hearty and balanced — ask for half the grains and extra greens to lighten the load.' },
-        { id: 'cobb', name: 'Chicken Cobb Salad', rating: 'great', carbs: '6–9g', tip: 'Protein-packed and crisp. Dressing on the side lets you keep it gentle.' },
-      ]},
-      { name: 'Sides', dishes: [
-        { id: 'soup', name: 'Lentil Soup', rating: 'great', carbs: '12–16g', tip: 'Slow-digesting lentils make this a steady, warming pick.' },
-      ]},
-    ],
-  },
-  {
-    id: 'grill', name: 'Cedar & Coal', cuisine: 'Mediterranean grill', distance: '0.9 mi', address: '44 Liberty St',
-    sections: [
-      { name: 'Plates', dishes: [
-        { id: 'kebab', name: 'Chicken Kebab Plate', rating: 'great', carbs: '8–12g', tip: 'Grilled lean protein with herbs. Swap rice for the salad to keep it light.' },
-        { id: 'falafel', name: 'Falafel Wrap', rating: 'moderate', carbs: '28–34g', tip: 'Flavorful and filling — go half-wrap or a lettuce wrap for fewer carbs.' },
-      ]},
-      { name: 'Dessert', dishes: [
-        { id: 'baklava', name: 'Baklava', rating: 'caution', carbs: '30–38g', tip: 'Quite sweet — save it for a celebration and enjoy a small taste slowly.' },
-      ]},
-    ],
-  },
-];
-
-// ─── Plate tip logic ──────────────────────────────────────────────────────────
-
-function getPlateTip(selectedIds: string[], place: Place): string {
-  const allDishes = place.sections.flatMap(s => s.dishes);
-  const dishes = selectedIds.map(id => allDishes.find(d => d.id === id)).filter(Boolean) as Dish[];
-  if (!dishes.length) return '';
-  if (dishes.every(d => d.rating === 'great')) return 'Beautifully gentle — this combination should sit easy with your blood sugar.';
-  if (dishes.some(d => d.rating === 'caution')) return "There's a richer pick here — pair it with a salad and a glass of water, and enjoy a smaller portion.";
-  return 'Looking balanced. A glass of water before you eat helps too.';
-}
-
-function getGentleCount(place: Place): number {
-  return place.sections.flatMap(s => s.dishes).filter(d => d.rating === 'great').length;
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function RestaurantFinderPage() {
-  const [mode, setMode] = useState<SearchMode>('nearby');
-  const [activeId, setActiveId] = useState('pizza');
-  const [favs, setFavs] = useState<string[]>(['salad']);
-  const [selected, setSelected] = useState<Record<string, string[]>>({ pizza: ['caprese', 'salmon'], salad: [], grill: [] });
-  const [expandedMobile, setExpandedMobile] = useState<string | null>('pizza');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<RestaurantSuggestion[]>([]);
+  const [selected, setSelected] = useState<RestaurantSuggestion | null>(null);
+  const [menu, setMenu] = useState<MenuDish[] | null>(null);
+  const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
+  const [tips, setTips] = useState<TipsResult | null>(null);
+  const [expandedMobile, setExpandedMobile] = useState<string | null>(null);
+  const [favs, setFavs] = useState<string[]>([]);
 
-  const activePlace = PLACES.find(p => p.id === activeId) ?? PLACES[0];
-  const activeSelected = selected[activeId] || [];
-  const allDishes = activePlace.sections.flatMap(s => s.dishes);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingMenu, setLoadingMenu] = useState(false);
+  const [loadingTips, setLoadingTips] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleDish = (placeId: string, dishId: string) => {
-    setSelected(prev => {
-      const cur = prev[placeId] || [];
-      return { ...prev, [placeId]: cur.includes(dishId) ? cur.filter(x => x !== dishId) : [...cur, dishId] };
-    });
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Search by name ─────────────────────────────────────────────────────────
+  const handleSearchInput = (q: string) => {
+    setSearchQuery(q);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!q.trim()) { setSuggestions([]); return; }
+    searchTimeout.current = setTimeout(async () => {
+      setLoadingSearch(true);
+      try {
+        const res = await fetch('/api/restaurants/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'name', query: q }),
+        });
+        const data = await res.json();
+        setSuggestions(data.suggestions || []);
+      } catch { setSuggestions([]); } finally { setLoadingSearch(false); }
+    }, 350);
   };
 
-  const toggleFav = (id: string) => {
-    setFavs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  // ── Detect nearby ──────────────────────────────────────────────────────────
+  const handleNearby = () => {
+    setLocationError(null);
+    if (!navigator.geolocation) { setLocationError('Geolocation is not supported by your browser.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setLoadingSearch(true);
+        try {
+          const res = await fetch('/api/restaurants/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'nearby', lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          });
+          const data = await res.json();
+          setSuggestions(data.places || []);
+        } catch { setLocationError('Could not load nearby restaurants.'); } finally { setLoadingSearch(false); }
+      },
+      () => setLocationError('Location access was denied. Try searching by name instead.')
+    );
   };
 
-  const MODE_LABELS: { key: SearchMode; label: string }[] = [
-    { key: 'nearby', label: 'Browse nearby' },
-    { key: 'dish', label: 'Search by dish' },
-    { key: 'name', label: 'Search by name' },
-    { key: 'favs', label: 'Favorites' },
-  ];
+  // ── Select restaurant → load menu ──────────────────────────────────────────
+  const handleSelectRestaurant = async (r: RestaurantSuggestion) => {
+    setSelected(r);
+    setMenu(null);
+    setSelectedDishes([]);
+    setTips(null);
+    setError(null);
+    setLoadingMenu(true);
+    try {
+      const res = await fetch('/api/restaurants/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantName: r.name, cuisine: r.cuisine }),
+      });
+      const data = await res.json();
+      setMenu(data.dishes || []);
+    } catch { setError('Could not load menu. Try again.'); } finally { setLoadingMenu(false); }
+  };
 
-  return (
-    <>
-      {/* ─── Mobile (lg:hidden) ─── */}
-      <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
-        <div style={{ padding: '24px 20px 16px' }}>
-          <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
-          <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 6 }}>
-            Find a kind place to eat.
-          </h1>
-          <p style={{ fontSize: 14, color: '#16182A', opacity: 0.72, marginTop: 6, lineHeight: 1.5 }}>
-            Chatita reads the menu with you and points to dishes that sit easy.
-          </p>
+  // ── Get tips for selected dishes ───────────────────────────────────────────
+  const handleGetTips = async () => {
+    if (!selected || selectedDishes.length === 0) return;
+    setLoadingTips(true);
+    setTips(null);
+    try {
+      const res = await fetch('/api/restaurant-tips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantName: selected.name, cuisine: selected.cuisine, dishes: selectedDishes }),
+      });
+      const data = await res.json();
+      setTips({ dishTips: data.dishTips || [], overallAdvice: data.overallAdvice || '', mealBalance: data.mealBalance });
+    } catch { setError('Could not get tips. Try again.'); } finally { setLoadingTips(false); }
+  };
+
+  const toggleDish = (name: string) => setSelectedDishes(prev =>
+    prev.includes(name) ? prev.filter(d => d !== name) : [...prev, name]
+  );
+  const toggleFav = (id: string) => setFavs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  // ── Group menu by category ─────────────────────────────────────────────────
+  const menuByCategory = menu
+    ? Object.entries(
+        menu.reduce<Record<string, MenuDish[]>>((acc, d) => {
+          (acc[d.category] = acc[d.category] || []).push(d);
+          return acc;
+        }, {})
+      )
+    : [];
+
+  const gentleCount = menu?.filter(d => d.score === 'great').length ?? 0;
+
+  // ─── MOBILE ────────────────────────────────────────────────────────────────
+
+  const MobileLayout = (
+    <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', paddingBottom: 96 }}>
+      <div style={{ padding: '24px 20px 16px' }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
+        <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', lineHeight: 1.1, marginTop: 6 }}>Find a kind place to eat.</h1>
+        <p style={{ fontSize: 14, color: '#16182A', opacity: 0.72, marginTop: 6, lineHeight: 1.5 }}>
+          Chatita reads the menu with you and points to dishes that sit easy.
+        </p>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ background: '#FFFDF9', borderRadius: 18, border: '1px solid rgba(1,35,116,0.08)', padding: 16 }}>
+          <input
+            type="text" value={searchQuery} onChange={e => handleSearchInput(e.target.value)}
+            placeholder="Search restaurant or cuisine…"
+            style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: '#F7EFE1', fontSize: '14px', color: '#001A4D', outline: 'none', boxSizing: 'border-box' as const }}
+          />
+          <button onClick={handleNearby} style={{ marginTop: 10, width: '100%', padding: '11px', borderRadius: '12px', background: 'rgba(1,35,116,0.07)', color: '#012374', fontSize: '13px', fontWeight: 600, border: '1px solid rgba(1,35,116,0.12)', cursor: 'pointer' }}>
+            📍 Use my location
+          </button>
+          {locationError && <p style={{ fontSize: '12px', color: '#B5562E', marginTop: 8 }}>{locationError}</p>}
         </div>
+      </div>
 
-        {/* Restaurant list */}
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {PLACES.map(place => {
-            const isOpen = expandedMobile === place.id;
-            const placeDishes = place.sections.flatMap(s => s.dishes);
-            const placeSel = selected[place.id] || [];
-            return (
-              <div key={place.id} style={{ background: '#FFFDF9', borderRadius: 18, border: `1px solid ${isOpen ? '#012374' : 'rgba(1,35,116,0.08)'}`, overflow: 'hidden' }}>
-                <div
-                  onClick={() => setExpandedMobile(isOpen ? null : place.id)}
-                  style={{ padding: '16px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                >
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{place.name}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 2 }}>{place.cuisine} · {place.distance}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ background: 'rgba(28,122,79,0.12)', color: '#1C7A4F', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>
-                      {getGentleCount(place)} gentle picks
+      {/* Suggestions or selected restaurant */}
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+        {error && (
+          <div style={{ background: 'rgba(181,86,46,0.10)', borderRadius: '12px', padding: '12px 14px', border: '1px solid rgba(181,86,46,0.22)' }}>
+            <p style={{ fontSize: '13px', color: '#B5562E' }}>{error}</p>
+          </div>
+        )}
+
+        {loadingSearch && <p style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', textAlign: 'center' as const }}>Searching…</p>}
+
+        {!selected && suggestions.map(r => (
+          <div key={r.id} onClick={() => handleSelectRestaurant(r)} style={{ background: '#FFFDF9', borderRadius: 16, border: '1px solid rgba(1,35,116,0.08)', padding: '14px 16px', cursor: 'pointer' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#012374' }}>{r.name}</div>
+            <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 2 }}>{r.cuisine}{r.distance ? ` · ${r.distance}` : ''}</div>
+            {r.address && <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.45)', marginTop: 2 }}>{r.address}</div>}
+          </div>
+        ))}
+
+        {selected && (
+          <div style={{ background: '#FFFDF9', borderRadius: 18, border: '1px solid rgba(1,35,116,0.1)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div className="font-serif-italic" style={{ fontSize: 18, color: '#012374' }}>{selected.name}</div>
+                <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 2 }}>{selected.cuisine}</div>
+              </div>
+              <button onClick={() => { setSelected(null); setMenu(null); setSelectedDishes([]); setTips(null); }} style={{ fontSize: '12px', color: 'rgba(1,35,116,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>← Back</button>
+            </div>
+
+            {loadingMenu && <div style={{ padding: 16 }}><p style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', textAlign: 'center' as const }}>Loading menu…</p></div>}
+
+            {menu && (
+              <div style={{ padding: '12px 16px 16px' }}>
+                {menuByCategory.map(([cat, dishes]) => (
+                  <div key={cat} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 8 }}>{cat}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
+                      {dishes.map(d => {
+                        const r = SCORE[d.score];
+                        const isSel = selectedDishes.includes(d.name);
+                        return (
+                          <div key={d.name} onClick={() => toggleDish(d.name)} style={{ cursor: 'pointer', borderRadius: 12, padding: '11px 12px', background: r.row, border: `1px solid ${r.border}`, boxShadow: isSel ? '0 0 0 2px #012374' : undefined }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                <span style={{ marginTop: 2, width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSel ? '#012374' : 'transparent', border: isSel ? 'none' : '1.5px solid rgba(1,35,116,0.3)' }}>
+                                  {isSel && <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round"/></svg>}
+                                </span>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#16182A' }}>{d.name}</div>
+                              </div>
+                              <span style={{ display: 'inline-flex', padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: r.bg, color: r.color, flexShrink: 0 }}>{r.label}</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: '#16182A', opacity: 0.6, marginTop: 5, paddingLeft: 24, lineHeight: 1.4 }}>{d.tip} · {d.carbEstimate} carbs</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                      <path d="M6 9l6 6 6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
                   </div>
+                ))}
+
+                {selectedDishes.length > 0 && (
+                  <div>
+                    {!tips && !loadingTips && (
+                      <button onClick={handleGetTips} style={{ width: '100%', padding: 12, borderRadius: 14, background: '#012374', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 4 }}>
+                        Get tips for {selectedDishes.length} {selectedDishes.length === 1 ? 'dish' : 'dishes'} →
+                      </button>
+                    )}
+                    {loadingTips && <p style={{ textAlign: 'center' as const, fontSize: '13px', color: 'rgba(1,35,116,0.5)', marginTop: 12 }}>Getting your tips…</p>}
+                    {tips && (
+                      <div style={{ background: '#012374', color: '#FFFDF9', borderRadius: 15, padding: 16, marginTop: 8 }}>
+                        <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Your meal tips</div>
+                        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                          {tips.dishTips.map((dt, i) => (
+                            <div key={i}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#FFFDF9' }}>{dt.dish}</div>
+                              {dt.tips.slice(0, 2).map((tip, j) => (
+                                <div key={j} style={{ fontSize: 12, color: 'rgba(255,253,249,0.8)', marginTop: 3 }}>· {tip}</div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                        {tips.overallAdvice && <div style={{ fontSize: 12.5, color: 'rgba(255,253,249,0.75)', marginTop: 12, lineHeight: 1.5, borderTop: '1px solid rgba(255,253,249,0.15)', paddingTop: 10 }}>{tips.overallAdvice}</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Disclaimer */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', opacity: 0.7, marginTop: 4 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
+            <path d="M12 2L2 20h20L12 2z" stroke="#C8932B" strokeWidth="1.8" strokeLinejoin="round"/>
+            <path d="M12 9v5M12 16v1" stroke="#C8932B" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <p style={{ fontSize: 12, color: '#16182A', lineHeight: 1.5, fontStyle: 'italic' }}>Carb estimates are approximate. Always confirm with your care team.</p>
+        </div>
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+
+  // ─── WEB ───────────────────────────────────────────────────────────────────
+
+  const WebLayout = (
+    <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden' }}>
+      <WebNav />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
+        <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', lineHeight: 1.1, marginTop: 8 }}>Find a kind place to eat.</h1>
+        <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 8, lineHeight: 1.55 }}>
+          Chatita reads the menu with you and points to dishes that sit easy — never good or bad, just gentle or mindful.
+        </p>
+
+        {error && (
+          <div style={{ marginTop: '16px', background: 'rgba(181,86,46,0.10)', borderRadius: '12px', padding: '12px 16px', border: '1px solid rgba(181,86,46,0.22)' }}>
+            <p style={{ fontSize: '13px', color: '#B5562E' }}>{error}</p>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, marginTop: 26, alignItems: 'start' }}>
+          {/* LEFT: search + list */}
+          <div style={{ position: 'sticky', top: 0 }}>
+            <div style={{ background: '#FFFDF9', borderRadius: 22, padding: 24, border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
+              <span className="font-serif-italic" style={{ fontSize: 18, color: '#012374', display: 'block', marginBottom: 8 }}>Find a gentle spot</span>
+              <input
+                type="text" value={searchQuery} onChange={e => handleSearchInput(e.target.value)}
+                placeholder="Restaurant name or cuisine…"
+                style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: '#F7EFE1', fontSize: '13.5px', color: '#001A4D', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 10 }}
+              />
+              <button onClick={handleNearby} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: 'rgba(1,35,116,0.07)', color: '#012374', fontSize: '13.5px', fontWeight: 600, border: '1px solid rgba(1,35,116,0.12)', cursor: 'pointer' }}>
+                📍 Use my location
+              </button>
+              {locationError && <p style={{ fontSize: '12px', color: '#B5562E', marginTop: 8 }}>{locationError}</p>}
+            </div>
+
+            {/* Suggestion list */}
+            {suggestions.length > 0 && !selected && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>
+                  {loadingSearch ? 'Searching…' : 'Results'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {suggestions.map(r => (
+                    <div key={r.id} onClick={() => handleSelectRestaurant(r)} style={{ background: '#FFFDF9', borderRadius: 14, padding: '14px 16px', cursor: 'pointer', border: '1px solid rgba(1,35,116,0.08)', transition: 'border-color .15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div className="font-serif-italic" style={{ fontSize: 15, color: '#012374' }}>{r.name}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.6)', marginTop: 2 }}>{r.cuisine}{r.distance ? ` · ${r.distance}` : ''}</div>
+                          {r.address && <div style={{ fontSize: 11, color: 'rgba(22,24,42,0.4)', marginTop: 1 }}>{r.address}</div>}
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleFav(r.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: favs.includes(r.id) ? '#E3171A' : 'rgba(1,35,116,0.25)', fontSize: 18 }}>
+                          {favs.includes(r.id) ? '♥' : '♡'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loadingSearch && !suggestions.length && (
+              <p style={{ textAlign: 'center' as const, fontSize: '13px', color: 'rgba(1,35,116,0.5)', marginTop: 16 }}>Searching…</p>
+            )}
+          </div>
+
+          {/* RIGHT: menu + tips */}
+          <div>
+            {!selected && (
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '2px dashed rgba(1,35,116,0.12)', height: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' as const, gap: 12 }}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.4" opacity={0.25}/>
+                  <circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.4" opacity={0.25}/>
+                </svg>
+                <p style={{ fontSize: '15px', color: 'rgba(1,35,116,0.3)', fontWeight: 500 }}>Search for a restaurant to see the menu</p>
+              </div>
+            )}
+
+            {selected && (
+              <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', overflow: 'hidden' }}>
+                {/* Restaurant header */}
+                <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(1,35,116,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>{selected.name}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 3 }}>{selected.cuisine}{selected.address ? ` · ${selected.address}` : ''}</div>
+                    {menu && <div style={{ fontSize: 12, color: '#1C7A4F', marginTop: 4, fontWeight: 600 }}>{gentleCount} gentle {gentleCount === 1 ? 'pick' : 'picks'} on the menu</div>}
+                  </div>
+                  <button onClick={() => { setSelected(null); setMenu(null); setSelectedDishes([]); setTips(null); setSuggestions([]); setSearchQuery(''); }} style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}>← Back</button>
                 </div>
 
-                {isOpen && (
-                  <div style={{ padding: '0 16px 16px' }}>
-                    {place.sections.map(sec => (
-                      <div key={sec.name} style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 8 }}>{sec.name}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {sec.dishes.map(d => {
-                            const r = RATING[d.rating];
-                            const isSel = placeSel.includes(d.id);
+                {loadingMenu && <div style={{ padding: 30, textAlign: 'center' as const }}><p style={{ fontSize: '14px', color: 'rgba(1,35,116,0.5)' }}>Generating menu…</p></div>}
+
+                {menu && (
+                  <div style={{ padding: '20px 24px' }}>
+                    {/* Dish grid by category */}
+                    {menuByCategory.map(([cat, dishes]) => (
+                      <div key={cat} style={{ marginBottom: 18 }}>
+                        <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>{cat}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          {dishes.map(d => {
+                            const r = SCORE[d.score];
+                            const isSel = selectedDishes.includes(d.name);
                             return (
-                              <div
-                                key={d.id}
-                                onClick={() => toggleDish(place.id, d.id)}
-                                style={{
-                                  cursor: 'pointer', borderRadius: 13, padding: '12px 13px',
-                                  background: r.row, border: `1px solid ${r.border}`,
-                                  boxShadow: isSel ? '0 0 0 2px #012374' : undefined,
-                                }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                                  <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                                    <span style={{
-                                      marginTop: 1, width: 17, height: 17, borderRadius: 5, flexShrink: 0,
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      background: isSel ? '#012374' : 'transparent',
-                                      border: isSel ? 'none' : '1.5px solid rgba(1,35,116,0.3)',
-                                    }}>
-                                      {isSel && <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              <div key={d.name} onClick={() => toggleDish(d.name)} style={{ cursor: 'pointer', borderRadius: 12, padding: '12px 13px', background: r.row, border: `1px solid ${r.border}`, boxShadow: isSel ? '0 0 0 2px #012374' : undefined, transition: 'box-shadow .15s' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'flex-start' }}>
+                                  <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+                                    <span style={{ width: 15, height: 15, borderRadius: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSel ? '#012374' : 'transparent', border: isSel ? 'none' : '1.5px solid rgba(1,35,116,0.28)' }}>
+                                      {isSel && <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round"/></svg>}
                                     </span>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#16182A' }}>{d.name}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16182A' }}>{d.name}</div>
                                   </div>
-                                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                    <span style={{ display: 'inline-flex', padding: '4px 9px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: r.bg, color: r.color }}>{r.label}</span>
-                                    <div style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.5)', marginTop: 4 }}>{d.carbs} carbs</div>
-                                  </div>
+                                  <span style={{ display: 'inline-flex', padding: '3px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, background: r.bg, color: r.color, flexShrink: 0 }}>{r.label}</span>
                                 </div>
-                                <div style={{ fontSize: 12.5, color: '#16182A', opacity: 0.66, lineHeight: 1.45, marginTop: 7, paddingLeft: 26 }}>{d.tip}</div>
+                                <div style={{ fontSize: 11.5, color: '#16182A', opacity: 0.62, marginTop: 5, paddingLeft: 22, lineHeight: 1.4 }}>{d.tip} · {d.carbEstimate}</div>
                               </div>
                             );
                           })}
@@ -216,275 +408,71 @@ export default function RestaurantFinderPage() {
                       </div>
                     ))}
 
-                    {/* Plate summary */}
-                    {placeSel.length > 0 && (
-                      <div style={{ background: '#012374', color: '#FFFDF9', borderRadius: 15, padding: 16, marginTop: 8 }}>
-                        <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Your plate so far</div>
-                        <div className="font-serif-italic" style={{ fontSize: 19, lineHeight: 1.2, marginTop: 6, fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>
-                          {placeSel.length} {placeSel.length === 1 ? 'dish chosen' : 'dishes chosen'}
+                    {/* Get tips CTA */}
+                    {selectedDishes.length > 0 && !loadingTips && !tips && (
+                      <button onClick={handleGetTips} style={{ width: '100%', padding: '13px', borderRadius: '14px', background: '#012374', color: '#FFFDF9', fontSize: '15px', fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 4 }}>
+                        Get detailed tips for {selectedDishes.length} {selectedDishes.length === 1 ? 'dish' : 'dishes'} →
+                      </button>
+                    )}
+                    {loadingTips && <p style={{ textAlign: 'center' as const, fontSize: '14px', color: 'rgba(1,35,116,0.5)', marginTop: 12 }}>Getting your tips…</p>}
+
+                    {/* Tips panel */}
+                    {tips && (
+                      <div style={{ background: '#012374', borderRadius: 16, padding: 20, marginTop: 14 }}>
+                        <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Your meal tips</div>
+                        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: tips.dishTips.length > 1 ? '1fr 1fr' : '1fr', gap: 14 }}>
+                          {tips.dishTips.map((dt, i) => (
+                            <div key={i}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#FFFDF9', marginBottom: 6 }}>{dt.dish}</div>
+                              {dt.tips.slice(0, 2).map((tip, j) => (
+                                <div key={j} style={{ fontSize: 12, color: 'rgba(255,253,249,0.82)', marginBottom: 3, lineHeight: 1.4 }}>· {tip}</div>
+                              ))}
+                              {dt.portionGuidance && <div style={{ fontSize: 11.5, color: 'rgba(255,253,249,0.6)', marginTop: 5, fontStyle: 'italic' }}>{dt.portionGuidance}</div>}
+                            </div>
+                          ))}
                         </div>
-                        <div style={{ marginTop: 10, fontSize: 13, opacity: 0.88, lineHeight: 1.5 }}>{getPlateTip(placeSel, place)}</div>
+                        {tips.overallAdvice && (
+                          <div style={{ fontSize: 13, color: 'rgba(255,253,249,0.75)', marginTop: 14, lineHeight: 1.55, borderTop: '1px solid rgba(255,253,249,0.15)', paddingTop: 12 }}>
+                            {tips.overallAdvice}
+                          </div>
+                        )}
+                        {tips.mealBalance && (
+                          <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
+                            {[['Est. carbs', tips.mealBalance.estimatedCarbs], ['Protein', tips.mealBalance.estimatedProtein], ['BG impact', tips.mealBalance.bloodSugarImpact]].map(([k, v]) => (
+                              <div key={k} style={{ background: 'rgba(255,253,249,0.1)', borderRadius: 10, padding: '6px 12px' }}>
+                                <div style={{ fontSize: 10, color: 'rgba(255,253,249,0.55)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>{k}</div>
+                                <div style={{ fontSize: 12.5, color: '#FFFDF9', fontWeight: 600, marginTop: 2 }}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button onClick={() => { setTips(null); setSelectedDishes([]); }} style={{ marginTop: 14, fontSize: 12, color: 'rgba(255,253,249,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                          Clear selection
+                        </button>
                       </div>
                     )}
+
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 14, opacity: 0.65 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
+                        <path d="M12 2L2 20h20L12 2z" stroke="#C8932B" strokeWidth="1.8" strokeLinejoin="round"/>
+                        <path d="M12 9v5M12 16v1" stroke="#C8932B" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                      <p style={{ fontSize: 11.5, color: '#16182A', lineHeight: 1.5, fontStyle: 'italic' }}>Carb estimates are approximate. Always confirm with your care team.</p>
+                    </div>
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-
-        {/* Disclaimer */}
-        <div style={{ margin: '20px 16px 0', display: 'flex', gap: 10, alignItems: 'flex-start', opacity: 0.7 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
-            <path d="M12 2L2 20h20L12 2z" stroke="#C8932B" strokeWidth="1.8" strokeLinejoin="round"/>
-            <path d="M12 9v5M12 16v1" stroke="#C8932B" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-          <p style={{ fontSize: 12, color: '#16182A', lineHeight: 1.5, fontStyle: 'italic' }}>
-            Carb estimates are approximate and based on typical portion sizes. Always confirm with your care team.
-          </p>
-        </div>
-
-        <BottomNav />
-      </div>
-
-      {/* ─── Web (hidden lg:flex) ─── */}
-      <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
-        <WebNav />
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
-
-          {/* Header */}
-          <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-            Restaurants · Eating out
-          </div>
-          <h1
-            className="font-serif-italic"
-            style={{ fontSize: 38, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 8 }}
-          >
-            Find a kind place to eat.
-          </h1>
-          <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 8, lineHeight: 1.55 }}>
-            Chatita reads the menu with you and points to dishes that sit easy — never good or bad, just gentle or mindful.
-          </p>
-
-          {/* 2-col grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, marginTop: 26, alignItems: 'start' }}>
-
-            {/* LEFT: sticky search + list */}
-            <div style={{ position: 'sticky', top: 0 }}>
-              {/* Search panel */}
-              <div style={{ background: '#FFFDF9', borderRadius: 22, padding: 24, border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.6"/>
-                    <circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.6"/>
-                  </svg>
-                  <span className="font-serif-italic" style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>Find a gentle spot</span>
-                </div>
-                <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.65)', lineHeight: 1.5, marginBottom: 16 }}>
-                  Browse places near you or search by dish or restaurant name.
-                </p>
-
-                {/* Mode chips 2x2 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {MODE_LABELS.map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setMode(key)}
-                      style={{
-                        padding: '10px 14px', borderRadius: 12, fontFamily: 'inherit',
-                        fontSize: 13.5, fontWeight: 600, cursor: 'pointer', textAlign: 'center',
-                        background: mode === key ? '#012374' : '#F7EFE1',
-                        color: mode === key ? '#FFFDF9' : '#012374',
-                        border: mode === key ? 'none' : '1px solid rgba(1,35,116,0.12)',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Restaurant list */}
-              <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 12 }}>
-                  Recommended near you
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {PLACES.map(place => {
-                    const isActive = activeId === place.id;
-                    const isFav = favs.includes(place.id);
-                    return (
-                      <div
-                        key={place.id}
-                        onClick={() => setActiveId(place.id)}
-                        style={{
-                          background: '#FFFDF9', borderRadius: 16, padding: 16, cursor: 'pointer',
-                          border: `1px solid ${isActive ? '#012374' : 'rgba(1,35,116,0.08)'}`,
-                          boxShadow: isActive ? '0 0 0 1px #012374' : undefined,
-                          transition: 'border-color 0.15s',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <div className="font-serif-italic" style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{place.name}</div>
-                            <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 3 }}>{place.cuisine} · {place.distance}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <button
-                              onClick={e => { e.stopPropagation(); toggleFav(place.id); }}
-                              style={{
-                                width: 32, height: 32, borderRadius: '50%', background: '#F7EFE1',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', cursor: 'pointer',
-                              }}
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill={isFav ? '#E3171A' : 'none'}>
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke={isFav ? '#E3171A' : '#012374'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)' }}>{place.address}</div>
-                          <div style={{ background: 'rgba(28,122,79,0.12)', color: '#1C7A4F', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>
-                            {getGentleCount(place)} gentle picks
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT: Selected restaurant menu */}
-            <div style={{ background: '#FFFDF9', borderRadius: 22, overflow: 'hidden', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
-              {/* Restaurant header */}
-              <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h2 className="font-serif-italic" style={{ fontSize: 26, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1 }}>
-                      {activePlace.name}
-                    </h2>
-                    <div style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.6)', marginTop: 6 }}>
-                      {activePlace.cuisine} · {activePlace.distance} · {activePlace.address}
-                    </div>
-                  </div>
-                  <button style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    + Quick-add a meal
-                  </button>
-                </div>
-              </div>
-
-              {/* Menu content */}
-              <div style={{ padding: '24px 28px', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 28, alignItems: 'start' }}>
-                {/* LEFT: menu sections */}
-                <div>
-                  {activePlace.sections.map(sec => (
-                    <div key={sec.name} style={{ marginBottom: 22 }}>
-                      <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.55)', fontWeight: 700, marginBottom: 12 }}>
-                        {sec.name}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                        {sec.dishes.map(d => {
-                          const r = RATING[d.rating];
-                          const isSel = activeSelected.includes(d.id);
-                          return (
-                            <div
-                              key={d.id}
-                              onClick={() => toggleDish(activeId, d.id)}
-                              style={{
-                                cursor: 'pointer', borderRadius: 14, padding: '15px 16px',
-                                background: r.row, border: `1px solid ${r.border}`,
-                                boxShadow: isSel ? '0 0 0 2px #012374' : undefined,
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                                <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
-                                  <span style={{
-                                    marginTop: 1, width: 19, height: 19, borderRadius: 6, flexShrink: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: isSel ? '#012374' : 'transparent',
-                                    border: isSel ? 'none' : '1.5px solid rgba(1,35,116,0.3)',
-                                  }}>
-                                    {isSel && <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                  </span>
-                                  <div>
-                                    <div style={{ fontSize: 15, fontWeight: 600, color: '#16182A' }}>{d.name}</div>
-                                    <div style={{ fontSize: 13, color: '#16182A', opacity: 0.66, lineHeight: 1.45, marginTop: 5, maxWidth: 380 }}>{d.tip}</div>
-                                  </div>
-                                </div>
-                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                  <span style={{ display: 'inline-flex', padding: '5px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: r.bg, color: r.color }}>
-                                    {r.label}
-                                  </span>
-                                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 7 }}>{d.carbs} carbs</div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Disclaimer */}
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 10, opacity: 0.65 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
-                      <path d="M12 2L2 20h20L12 2z" stroke="#C8932B" strokeWidth="1.8" strokeLinejoin="round"/>
-                      <path d="M12 9v5M12 16v1" stroke="#C8932B" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                    <p style={{ fontSize: 12, color: '#16182A', lineHeight: 1.5, fontStyle: 'italic' }}>
-                      Carb estimates are approximate and based on typical portion sizes. Always confirm with your care team.
-                    </p>
-                  </div>
-                </div>
-
-                {/* RIGHT: sticky plate summary */}
-                <div style={{ position: 'sticky', top: 24 }}>
-                  {activeSelected.length > 0 ? (
-                    <div style={{ background: '#012374', color: '#FFFDF9', borderRadius: 18, padding: 22 }}>
-                      <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Your plate so far</div>
-                      <div className="font-serif-italic" style={{ fontSize: 23, lineHeight: 1.2, marginTop: 8, fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>
-                        {activeSelected.length} {activeSelected.length === 1 ? 'dish chosen' : 'dishes chosen'}
-                      </div>
-                      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                        {activeSelected.map(id => {
-                          const dish = allDishes.find(d => d.id === id);
-                          return dish ? (
-                            <div key={id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 14 }}>
-                              <span style={{ opacity: 0.92 }}>{dish.name}</span>
-                              <span style={{ opacity: 0.7 }}>{dish.carbs}</span>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                      <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,253,249,0.18)', fontSize: 13.5, opacity: 0.88, lineHeight: 1.5 }}>
-                        {getPlateTip(activeSelected, activePlace)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ border: '1.5px dashed rgba(1,35,116,0.2)', borderRadius: 18, padding: '32px 24px', textAlign: 'center' }}>
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.35 }}>
-                        <circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.6"/>
-                        <path d="M8 12h8M12 8v8" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/>
-                      </svg>
-                      <div className="font-serif-italic" style={{ fontSize: 17, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginTop: 14, lineHeight: 1.35 }}>
-                        Build your plate
-                      </div>
-                      <p style={{ fontSize: 13, color: 'rgba(22,24,42,0.55)', lineHeight: 1.5, marginTop: 8 }}>
-                        Tap dishes from the menu to see a gentle tip about your combination.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {MobileLayout}
+      {WebLayout}
     </>
   );
 }
