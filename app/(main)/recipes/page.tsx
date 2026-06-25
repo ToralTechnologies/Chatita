@@ -1,129 +1,421 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import BottomNav from '@/components/bottom-nav';
-import BackButton from '@/components/back-button';
 import WebNav from '@/components/web-nav';
-import { compressImage } from '@/lib/compress-image';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Recipe {
+  id: string;
   title: string;
   description: string;
   carbEstimate: string;
   calorieEstimate: string;
-  bloodSugarImpact: 'low' | 'moderate' | 'high';
+  bloodSugarImpact: 'low' | 'moderate';
+  prepTime: string;
+  servings: number;
+  cuisine: string;
   ingredients: string[];
   steps: string[];
   tips: string[];
-  prepTime: string;
-  servings: number;
 }
 
-const COMMON_PAIRINGS = [
-  'spinach', 'lentils', 'paneer', 'tomato', 'ginger', 'cumin',
-  'onion', 'garlic', 'zucchini', 'chickpeas', 'okra', 'eggplant',
-];
+// ─── Impact config ────────────────────────────────────────────────────────────
 
 const IMPACT = {
-  low: { label: 'Gentle on blood sugar', color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)', dot: '#1C7A4F' },
-  moderate: { label: 'Enjoy mindfully', color: '#9A6F18', bg: 'rgba(200,147,43,0.18)', dot: '#C8932B' },
-  high: { label: 'Save for a special occasion', color: '#B5562E', bg: 'rgba(181,86,46,0.13)', dot: '#B5562E' },
+  low:      { label: 'Gentle on blood sugar', color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   dot: '#1C7A4F' },
+  moderate: { label: 'Enjoy mindfully',        color: '#9A6F18', bg: 'rgba(200,147,43,0.18)',  dot: '#C8932B' },
 };
 
-// ─── Shared sub-components ────────────────────────────────────────────────────
+// ─── Static fallback recipes ──────────────────────────────────────────────────
 
-function InputPanel({
-  tab, setTab, draft, setDraft, ingredients, setIngredients,
-  fridgePhoto, setFridgePhoto, onSearch, loading, web,
-}: {
-  tab: 'type' | 'photo';
-  setTab: (t: 'type' | 'photo') => void;
-  draft: string;
-  setDraft: (v: string) => void;
-  ingredients: string[];
-  setIngredients: (v: string[]) => void;
-  fridgePhoto: string | null;
-  setFridgePhoto: (v: string | null) => void;
-  onSearch: () => void;
-  loading: boolean;
+const STATIC_RECIPES: Recipe[] = [
+  {
+    id: 'biryani',
+    title: 'Chicken & Cauliflower Biryani',
+    description: 'A lighter spin on a beloved classic — cauliflower stands in for half the rice, soaking up all the warming spices.',
+    carbEstimate: '28–34g',
+    calorieEstimate: '310 kcal',
+    bloodSugarImpact: 'low',
+    prepTime: '35 min',
+    servings: 4,
+    cuisine: 'Pakistani',
+    ingredients: ['500g chicken thighs, boneless', '1 small cauliflower, riced', '1 cup basmati rice', '1 cup plain yogurt', '2 onions, thinly sliced', '3 tbsp ghee or oil', '1 tsp cumin seeds', '2 tsp biryani masala', 'Fresh coriander and mint to finish'],
+    steps: [
+      'Marinate chicken in yogurt, biryani masala, and salt for at least 20 minutes.',
+      'In a heavy pot, fry onions in ghee until deep golden and crisp. Remove half for topping.',
+      'Add cumin seeds, then the chicken. Sear until lightly browned, about 8 minutes.',
+      'Add soaked rice and cauliflower rice. Pour in 1.5 cups of water.',
+      'Cover tightly and cook on low for 18–20 minutes until the rice is tender.',
+      'Rest covered for 5 minutes, then fluff gently and top with reserved onions and fresh herbs.',
+    ],
+    tips: [
+      'Ricing the cauliflower yourself (pulse in a food processor) gives the best texture.',
+      'The yogurt marinade is key — it tenderizes the chicken and adds gentle tang.',
+    ],
+  },
+  {
+    id: 'raita',
+    title: 'Cucumber & Mint Raita',
+    description: 'A cooling, probiotic-rich side that pairs beautifully with spiced dishes and helps slow carb absorption.',
+    carbEstimate: '5–7g',
+    calorieEstimate: '70 kcal',
+    bloodSugarImpact: 'low',
+    prepTime: '10 min',
+    servings: 4,
+    cuisine: 'Pakistani',
+    ingredients: ['2 cups plain full-fat yogurt', '1 cucumber, grated and squeezed dry', 'Small handful fresh mint, finely chopped', '1/2 tsp cumin, toasted and ground', 'Pinch of salt and chili flakes'],
+    steps: [
+      'Whisk the yogurt until smooth and creamy.',
+      'Fold in the cucumber, mint, and cumin.',
+      'Taste and adjust salt. Top with a pinch of chili flakes.',
+      'Chill for 10 minutes before serving for best flavor.',
+    ],
+    tips: [
+      'Squeezing the cucumber is important — it prevents the raita from going watery.',
+      'Toasting the cumin yourself makes a big difference in flavor.',
+    ],
+  },
+  {
+    id: 'daal',
+    title: 'Red Lentil Daal with Turmeric',
+    description: 'Slow-digesting lentils in a fragrant, golden broth. Protein and fiber together keep glucose rising gently.',
+    carbEstimate: '30–36g',
+    calorieEstimate: '280 kcal',
+    bloodSugarImpact: 'low',
+    prepTime: '30 min',
+    servings: 4,
+    cuisine: 'Pakistani',
+    ingredients: ['1.5 cups red lentils, rinsed', '1 onion, diced', '3 garlic cloves, minced', '1 tbsp fresh ginger, grated', '1 tsp turmeric', '1 tsp cumin', '400ml canned tomatoes', '1 tbsp ghee or butter', 'Fresh coriander to serve'],
+    steps: [
+      'Simmer lentils in 3 cups water with turmeric and a pinch of salt for 20 minutes until soft.',
+      'In a separate pan, fry onion in ghee until golden. Add garlic and ginger, cook 2 minutes.',
+      'Add cumin and tomatoes. Simmer 8 minutes until the sauce thickens.',
+      'Combine lentils and sauce. Adjust consistency with water.',
+      'Finish with a squeeze of lemon and fresh coriander.',
+    ],
+    tips: [
+      'Red lentils dissolve more than green — perfect for a creamy, souplike texture.',
+      'Serve with a small portion of rice or a warm roti for a balanced meal.',
+    ],
+  },
+  {
+    id: 'skillet',
+    title: 'Ginger Chicken & Veggie Skillet',
+    description: 'A quick weeknight one-pan that comes together in 20 minutes with minimal carbs and maximum flavor.',
+    carbEstimate: '10–14g',
+    calorieEstimate: '350 kcal',
+    bloodSugarImpact: 'low',
+    prepTime: '20 min',
+    servings: 2,
+    cuisine: 'Any',
+    ingredients: ['400g chicken breast, sliced thin', '2 cups broccoli florets', '1 red bell pepper, sliced', '2 tsp fresh ginger, grated', '2 garlic cloves', '2 tbsp low-sodium soy sauce', '1 tsp sesame oil', 'Sesame seeds to finish'],
+    steps: [
+      'Season chicken with a little salt and pepper.',
+      'Heat oil in a large skillet or wok over high heat. Sear chicken until golden, 4–5 minutes. Remove.',
+      'Add ginger and garlic. Stir 30 seconds until fragrant.',
+      'Add broccoli and pepper. Stir-fry 4 minutes.',
+      'Return chicken. Add soy sauce and sesame oil. Toss to coat.',
+      'Serve immediately, topped with sesame seeds.',
+    ],
+    tips: [
+      'High heat is the secret — it creates char and flavor rather than steaming the vegetables.',
+      'Swap broccoli for bok choy or snap peas depending on what you have.',
+    ],
+  },
+  {
+    id: 'salmonbowl',
+    title: 'Smoked Salmon & Avocado Bowl',
+    description: 'Healthy fats and omega-3s on a bed of greens — minimal carbs, maximum satisfaction.',
+    carbEstimate: '8–12g',
+    calorieEstimate: '420 kcal',
+    bloodSugarImpact: 'low',
+    prepTime: '10 min',
+    servings: 1,
+    cuisine: 'Any',
+    ingredients: ['100g smoked salmon', '1/2 ripe avocado, sliced', '2 cups mixed greens', '6 cherry tomatoes, halved', '1 tbsp capers', '1 tbsp extra-virgin olive oil', 'Juice of half a lemon', 'Cracked black pepper'],
+    steps: [
+      'Arrange greens in a bowl.',
+      'Layer salmon, avocado slices, and tomatoes.',
+      'Scatter capers over the top.',
+      'Drizzle with olive oil and lemon juice.',
+      'Finish with cracked pepper.',
+    ],
+    tips: [
+      'Choose wild salmon when possible for the best omega-3 profile.',
+      'If you want more substance, add a soft-boiled egg or a handful of cooked quinoa.',
+    ],
+  },
+];
+
+// ─── Common pairings + detect data ───────────────────────────────────────────
+
+const COMMON_PAIRINGS = ['spinach', 'lentils', 'paneer', 'tomato', 'ginger', 'cumin', 'onion', 'garlic', 'zucchini', 'chickpeas', 'okra', 'eggplant'];
+
+const DETECT = {
+  fridge: ['greek yogurt', 'red bell pepper', 'feta', 'lettuce', 'tomato', 'red onion'],
+  pantry: ['chickpeas', 'brown rice', 'red lentils', 'cumin', 'olive oil', 'canned tomatoes'],
+};
+
+const CUISINES = ['Any cuisine', 'Pakistani', 'Indian', 'Mexican', 'Mediterranean'];
+
+// ─── Recipe card component ────────────────────────────────────────────────────
+
+function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
+  recipe: Recipe;
+  expanded: boolean;
+  onToggle: () => void;
+  saved: boolean;
+  onSave: () => void;
   web?: boolean;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const addIngredient = () => {
-    const v = draft.trim().toLowerCase();
-    if (v && !ingredients.includes(v)) {
-      setIngredients([...ingredients, v]);
-      setDraft('');
-    }
-  };
-
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const { base64 } = await compressImage(file);
-      setFridgePhoto(base64);
-    } catch { /* silent */ }
-  };
-
-  const suggestions = COMMON_PAIRINGS.filter(x => !ingredients.includes(x)).slice(0, 6);
-
-  const tabStyle = (active: boolean) => ({
-    flex: 1 as const,
-    textAlign: 'center' as const,
-    cursor: 'pointer' as const,
-    padding: web ? '12px 0' : '11px 0',
-    borderRadius: '10px',
-    fontSize: web ? '14px' : '13.5px',
-    fontWeight: 600 as const,
-    border: 'none' as const,
-    background: active ? '#012374' : 'transparent',
-    color: active ? '#FFFDF9' : '#012374',
-    transition: 'all .15s',
-  });
+  const imp = IMPACT[recipe.bloodSugarImpact];
 
   return (
     <div style={{
       background: '#FFFDF9',
-      borderRadius: web ? '22px' : '20px',
-      padding: web ? '24px' : '20px',
+      borderRadius: 20,
+      padding: web ? '22px 24px' : '18px 20px',
       border: '1px solid rgba(1,35,116,0.07)',
-      boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)',
+      boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)',
+      cursor: 'pointer',
     }}>
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '6px', background: '#F7EFE1', borderRadius: '14px', padding: '5px' }}>
-        <button style={tabStyle(tab === 'type')} onClick={() => setTab('type')}>
-          Type ingredients
-        </button>
-        <button style={tabStyle(tab === 'photo')} onClick={() => setTab('photo')}>
-          Snap your fridge
-        </button>
+      {/* Header */}
+      <div onClick={onToggle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div className="font-serif-italic" style={{ fontSize: web ? 22 : 19, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.2 }}>
+            {recipe.title}
+          </div>
+          <div style={{ fontSize: web ? 14.5 : 13.5, color: 'rgba(22,24,42,0.66)', lineHeight: 1.5, marginTop: 6 }}>
+            {recipe.description}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12, alignItems: 'center' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: imp.bg, color: imp.color }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: imp.dot, flexShrink: 0 }} />
+              {imp.label}
+            </span>
+            <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>{recipe.carbEstimate} carbs</span>
+            <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>·</span>
+            <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>{recipe.prepTime}</span>
+            {recipe.cuisine !== 'Any' && (
+              <>
+                <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>·</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#012374', background: 'rgba(1,35,116,0.08)', padding: '4px 10px', borderRadius: 999 }}>{recipe.cuisine}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <svg
+          width="20" height="20" viewBox="0 0 24 24" fill="none"
+          style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginTop: 4 }}
+        >
+          <path d="M6 9l6 6 6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </div>
 
-      {tab === 'type' ? (
-        <div style={{ marginTop: '16px' }}>
-          <div style={{ display: 'flex', gap: '9px' }}>
+      {/* Expanded content */}
+      {expanded && (
+        <div style={{ marginTop: 20 }}>
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+            {[
+              { label: 'Carbs', value: recipe.carbEstimate },
+              { label: 'Calories', value: recipe.calorieEstimate },
+              { label: 'Servings', value: `${recipe.servings}` },
+            ].map(stat => (
+              <div key={stat.label} style={{ flex: 1, background: '#F7EFE1', borderRadius: 13, padding: '12px 14px' }}>
+                <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>
+                  {stat.value}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 4 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 2-col grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: web ? '1fr 1fr' : '1fr', gap: web ? 24 : 0 }}>
+            {/* Ingredients + Tips */}
+            <div>
+              <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Ingredients</div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {recipe.ingredients.map((ing, i) => (
+                  <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, color: '#16182A' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#C8932B', flexShrink: 0, marginTop: 6 }} />
+                    {ing}
+                  </li>
+                ))}
+              </ul>
+              {recipe.tips.length > 0 && (
+                <div style={{ marginTop: 18, background: 'rgba(1,35,116,0.05)', borderRadius: 14, padding: '13px 16px' }}>
+                  <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 8 }}>Tips</div>
+                  {recipe.tips.map((tip, i) => (
+                    <p key={i} style={{ fontSize: 13, color: '#16182A', lineHeight: 1.5, margin: '0 0 6px' }}>{tip}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Steps */}
+            <div style={{ marginTop: web ? 0 : 20 }}>
+              <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Steps</div>
+              <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recipe.steps.map((step, i) => (
+                  <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#012374', color: '#FFFDF9', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {i + 1}
+                    </span>
+                    <span style={{ fontSize: 13.5, color: '#16182A', lineHeight: 1.5, paddingTop: 2 }}>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+
+          {/* Save button */}
+          <button
+            onClick={e => { e.stopPropagation(); onSave(); }}
+            style={{
+              marginTop: 20, width: '100%', padding: '13px', borderRadius: 14,
+              fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: saved ? 'rgba(28,122,79,0.12)' : '#012374',
+              color: saved ? '#1C7A4F' : '#FFFDF9',
+              transition: 'all 0.15s',
+            }}
+          >
+            {saved ? '✓ Saved' : 'Save this recipe'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function RecipesPage() {
+  const [tab, setTab] = useState<'type' | 'fridge' | 'pantry'>('type');
+  const [ingredients, setIngredients] = useState<string[]>(['chicken', 'cauliflower', 'yogurt']);
+  const [photo, setPhoto] = useState<'fridge' | 'pantry' | null>(null);
+  const [cuisine, setCuisine] = useState('Any cuisine');
+  const [customCuisine, setCustomCuisine] = useState('');
+  const [craving, setCraving] = useState('');
+  const [draft, setDraft] = useState('');
+  const [searched, setSearched] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>('biryani');
+  const [saved, setSaved] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [recipes, setRecipes] = useState<Recipe[]>(STATIC_RECIPES);
+
+  const suggestions = COMMON_PAIRINGS.filter(x => !ingredients.includes(x)).slice(0, 6);
+
+  const addIngredient = (val?: string) => {
+    const v = (val ?? draft).trim().toLowerCase();
+    if (v && !ingredients.includes(v)) {
+      setIngredients(prev => [...prev, v]);
+      if (!val) setDraft('');
+    }
+  };
+
+  const removeIngredient = (ing: string) => {
+    setIngredients(prev => prev.filter(i => i !== ing));
+  };
+
+  const onTakePhoto = () => {
+    if (tab !== 'fridge' && tab !== 'pantry') return;
+    const detected = DETECT[tab];
+    setPhoto(tab);
+    setIngredients(prev => {
+      const merged = [...prev];
+      for (const item of detected) {
+        if (!merged.includes(item)) merged.push(item);
+      }
+      return merged;
+    });
+  };
+
+  const search = async () => {
+    setLoading(true);
+    setSearched(true);
+    try {
+      const res = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients, cuisine: cuisine === 'Any cuisine' ? customCuisine || 'Any' : cuisine, craving }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.recipes?.length) {
+          setRecipes(data.recipes);
+          setExpanded(data.recipes[0]?.id ?? null);
+        } else {
+          setRecipes(STATIC_RECIPES);
+          setExpanded('biryani');
+        }
+      } else {
+        setRecipes(STATIC_RECIPES);
+        setExpanded('biryani');
+      }
+    } catch {
+      setRecipes(STATIC_RECIPES);
+      setExpanded('biryani');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSave = (id: string) => {
+    setSaved(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  // ── Input panel (shared between mobile and web) ──
+  const InputPanel = ({ web }: { web?: boolean }) => (
+    <div style={{
+      background: '#FFFDF9', borderRadius: 22, padding: web ? 24 : 20,
+      border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)',
+    }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 6, background: '#F7EFE1', borderRadius: 14, padding: 5 }}>
+        {(['type', 'fridge', 'pantry'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              flex: 1, textAlign: 'center', cursor: 'pointer', padding: '11px 0',
+              borderRadius: 10, fontSize: 13.5, fontWeight: 600, border: 'none',
+              background: tab === t ? '#012374' : 'transparent',
+              color: tab === t ? '#FFFDF9' : '#012374',
+              transition: 'all .15s',
+              fontFamily: 'inherit',
+            }}
+          >
+            {t === 'type' ? 'Type' : t === 'fridge' ? 'Fridge' : 'Pantry'}
+          </button>
+        ))}
+      </div>
+
+      {/* Type tab */}
+      {tab === 'type' && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 9 }}>
             <input
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addIngredient()}
               placeholder="e.g. chicken, spinach, yogurt…"
               style={{
-                flex: 1,
-                background: web ? '#F7EFE1' : '#FFFDF9',
-                border: '1px solid rgba(1,35,116,0.14)',
-                borderRadius: '13px',
-                padding: '13px 15px',
-                fontFamily: 'inherit',
-                fontSize: web ? '14.5px' : '14px',
-                color: '#16182A',
-                outline: 'none',
+                flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)',
+                borderRadius: 13, padding: '13px 15px', fontFamily: 'inherit',
+                fontSize: 14.5, color: '#16182A', outline: 'none',
               }}
             />
             <button
-              onClick={addIngredient}
-              style={{ width: web ? '50px' : '48px', flexShrink: 0, background: '#012374', borderRadius: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}
+              onClick={() => addIngredient()}
+              style={{
+                width: 50, flexShrink: 0, background: '#012374', borderRadius: 13,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', border: 'none',
+              }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round"/>
@@ -133,12 +425,12 @@ function InputPanel({
 
           {ingredients.length > 0 && (
             <>
-              <div style={{ marginTop: '14px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>In your basket</div>
-              <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ marginTop: 14, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.6)', fontWeight: 600 }}>In your basket</div>
+              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {ingredients.map(ing => (
-                  <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: '999px', fontSize: web ? '14px' : '13.5px', fontWeight: 500 }}>
+                  <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: 999, fontSize: 14, fontWeight: 500 }}>
                     {ing}
-                    <span onClick={() => setIngredients(ingredients.filter(i => i !== ing))} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
+                    <span onClick={() => removeIngredient(ing)} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
                     </span>
                   </span>
@@ -149,13 +441,13 @@ function InputPanel({
 
           {suggestions.length > 0 && (
             <>
-              <div style={{ marginTop: '18px', fontSize: '12px', color: '#16182A', opacity: .6 }}>Add a common pairing</div>
-              <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ marginTop: 18, fontSize: 12, color: 'rgba(22,24,42,0.6)' }}>Add a common pairing</div>
+              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {suggestions.map(s => (
                   <span
                     key={s}
-                    onClick={() => setIngredients([...ingredients, s])}
-                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#FFFDF9', color: '#012374', border: '1px solid rgba(1,35,116,0.2)', padding: '9px 13px', borderRadius: '999px', fontSize: web ? '14px' : '13.5px', fontWeight: 500 }}
+                    onClick={() => addIngredient(s)}
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFDF9', color: '#012374', border: '1px solid rgba(1,35,116,0.2)', padding: '9px 13px', borderRadius: 999, fontSize: 14, fontWeight: 500 }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#012374" strokeWidth="2.4" strokeLinecap="round"/></svg>
                     {s}
@@ -165,344 +457,249 @@ function InputPanel({
             </>
           )}
         </div>
-      ) : (
-        <div style={{ marginTop: '16px' }}>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <div
-            onClick={() => fileRef.current?.click()}
-            style={{ border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: '18px', background: web ? '#F7EFE1' : '#FFFDF9', padding: '34px 20px', textAlign: 'center', cursor: 'pointer' }}
-          >
-            {fridgePhoto ? (
-              <>
-                <img src={`data:image/jpeg;base64,${fridgePhoto}`} alt="Fridge" style={{ maxHeight: '160px', borderRadius: '12px', marginBottom: '8px', maxWidth: '100%' }} />
-                <div style={{ fontSize: '13px', color: '#012374', fontWeight: 600 }}>Photo added — tap to change</div>
-              </>
-            ) : (
-              <>
-                <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: 'rgba(1,35,116,0.07)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#012374" strokeWidth="1.7"/><circle cx="12" cy="12.5" r="3.4" stroke="#012374" strokeWidth="1.7"/><path d="M8 6l1.4-2h5.2L16 6" stroke="#012374" strokeWidth="1.7"/></svg>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: 600, color: '#012374', marginTop: '12px' }}>Snap your fridge or pantry</div>
-                <div style={{ fontSize: '13px', color: '#16182A', opacity: .62, marginTop: '4px', lineHeight: 1.45 }}>Chatita spots the ingredients for you — you can edit them after.</div>
-              </>
-            )}
-          </div>
-        </div>
       )}
 
-      <button
-        onClick={onSearch}
-        disabled={loading}
-        style={{
-          marginTop: '22px', background: loading ? 'rgba(1,35,116,0.5)' : '#012374', color: '#FFFDF9',
-          borderRadius: '15px', padding: '15px', textAlign: 'center', fontSize: '15px', fontWeight: 600,
-          cursor: loading ? 'default' : 'pointer', boxShadow: '0 12px 26px -14px rgba(1,35,116,.6)',
-          border: 'none', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-        }}
-      >
-        {loading ? (
-          <>
-            <svg style={{ animation: 'spin 1s linear infinite' }} width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="#FFFDF9" strokeWidth="3" strokeLinecap="round"/>
-            </svg>
-            Finding recipes…
-          </>
-        ) : 'Find gentle recipes'}
-      </button>
-    </div>
-  );
-}
-
-function RecipeCard({ r, idx, expanded, onToggle, saved, onSave, web }: {
-  r: Recipe; idx: number; expanded: boolean; onToggle: () => void;
-  saved: boolean; onSave: () => void; web?: boolean;
-}) {
-  const imp = IMPACT[r.bloodSugarImpact] ?? IMPACT.moderate;
-  const px = web ? '24px' : '16px';
-  const py = web ? '22px 24px' : '16px';
-
-  return (
-    <div style={{ background: '#FFFDF9', borderRadius: web ? '20px' : '18px', border: '1px solid rgba(1,35,116,0.08)', overflow: 'hidden', boxShadow: '0 14px 30px -24px rgba(1,35,116,.4)' }}>
-      {/* Header */}
-      <div onClick={onToggle} style={{ cursor: 'pointer', padding: py }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <div className="font-serif-italic" style={{ fontSize: web ? '22px' : '18px', color: '#012374', lineHeight: 1.15 }}>{r.title}</div>
-            <div style={{ fontSize: web ? '14.5px' : '13px', color: '#16182A', opacity: .72, lineHeight: 1.5, marginTop: web ? '8px' : '7px' }}>{r.description}</div>
-            <div style={{ marginTop: web ? '14px' : '12px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600, background: imp.bg, color: imp.color }}>
-                <span style={{ width: web ? '8px' : '7px', height: web ? '8px' : '7px', borderRadius: '50%', background: imp.dot, flexShrink: 0 }} />
-                {imp.label}
-              </span>
-              <span style={{ background: '#F7EFE1', color: '#012374', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600 }}>{r.carbEstimate} carbs</span>
-              <span style={{ background: '#F7EFE1', color: '#012374', padding: web ? '7px 13px' : '6px 11px', borderRadius: '999px', fontSize: web ? '13px' : '12px', fontWeight: 600 }}>{r.prepTime}</span>
+      {/* Fridge / Pantry tabs */}
+      {(tab === 'fridge' || tab === 'pantry') && (
+        <div style={{ marginTop: 16 }}>
+          {photo !== tab ? (
+            <div
+              onClick={onTakePhoto}
+              style={{
+                border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: 18,
+                background: '#F7EFE1', padding: '34px 20px', textAlign: 'center', cursor: 'pointer',
+              }}
+            >
+              <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(1,35,116,0.07)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#012374" strokeWidth="1.7"/>
+                  <circle cx="12" cy="12.5" r="3.4" stroke="#012374" strokeWidth="1.7"/>
+                  <path d="M8 6l1.4-2h5.2L16 6" stroke="#012374" strokeWidth="1.7"/>
+                </svg>
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#012374', marginTop: 12 }}>Snap your {tab}</div>
+              <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.62)', marginTop: 4, lineHeight: 1.45 }}>Chatita spots the ingredients for you — you can edit them after.</div>
+              <button style={{ marginTop: 14, background: '#012374', color: '#FFFDF9', border: 'none', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                Take a photo
+              </button>
             </div>
-          </div>
-          <div style={{ flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <svg width={web ? 22 : 18} height={web ? 22 : 18} viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {expanded && (
-        <div style={{ padding: `0 ${px} ${px}` }}>
-          {/* Stats row */}
-          <div style={{ display: 'flex', gap: web ? '12px' : '8px', paddingTop: web ? '6px' : '13px', borderTop: '1px solid rgba(1,35,116,0.07)' }}>
-            {[
-              { label: 'carbs / serving', value: r.carbEstimate },
-              { label: 'cal / serving', value: r.calorieEstimate || '—' },
-              { label: 'servings', value: String(r.servings) },
-            ].map(s => (
-              <div key={s.label} style={{ flex: 1, background: '#F7EFE1', borderRadius: web ? '14px' : '12px', padding: web ? '14px 16px' : '11px 12px' }}>
-                <div className="font-serif-italic" style={{ fontSize: web ? '22px' : '18px', color: '#012374' }}>{s.value}</div>
-                <div style={{ fontSize: '11px', color: '#16182A', opacity: .55, marginTop: '2px' }}>{s.label}</div>
+          ) : (
+            <div>
+              <div style={{ background: 'rgba(1,35,116,0.08)', borderRadius: 14, padding: '28px 20px', textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 14, color: '#012374', fontWeight: 600 }}>Chatita spotted {DETECT[tab].length} items</div>
+                <div style={{ fontSize: 12.5, color: 'rgba(22,24,42,0.6)', marginTop: 4 }}>from your {tab}</div>
               </div>
-            ))}
-          </div>
-
-          {web ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '28px', marginTop: '22px' }}>
-              {/* Left: ingredients + why gentle */}
-              <div>
-                <div style={{ fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>You&apos;ll use</div>
-                <div style={{ marginTop: '11px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {r.ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#16182A', padding: '7px 12px', borderRadius: '999px', fontSize: '13px' }}>{ing}</span>)}
-                </div>
-                <div style={{ marginTop: '20px', background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '16px' }}>
-                  <div style={{ fontSize: '12px', letterSpacing: '.06em', color: '#9A6F18', fontWeight: 700, textTransform: 'uppercase' }}>Why it&apos;s gentle</div>
-                  <div style={{ marginTop: '9px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {r.tips.map((tip, i) => <div key={i} style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.45 }}>• {tip}</div>)}
-                  </div>
-                </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {ingredients.map(ing => (
+                  <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: 999, fontSize: 13.5, fontWeight: 500 }}>
+                    {ing}
+                    <span onClick={() => removeIngredient(ing)} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                    </span>
+                  </span>
+                ))}
               </div>
-              {/* Right: steps + save */}
-              <div>
-                <div style={{ fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Steps</div>
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
-                  {r.steps.map((step, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '13px', alignItems: 'flex-start' }}>
-                      <span style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', background: '#012374', color: '#FFFDF9', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
-                      <span style={{ fontSize: '14.5px', color: '#16182A', lineHeight: 1.5 }}>{step}</span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={onSave}
-                  style={{ marginTop: '22px', borderRadius: '14px', padding: '14px', textAlign: 'center', fontSize: '14.5px', fontWeight: 600, cursor: 'pointer', border: 'none', width: '100%', background: saved ? 'rgba(28,122,79,0.12)' : '#012374', color: saved ? '#1C7A4F' : '#FFFDF9' }}
-                >
-                  {saved ? '✓ Saved to your recipes' : 'Save this recipe'}
+              <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+                <input
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addIngredient()}
+                  placeholder="Add more ingredients…"
+                  style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)', borderRadius: 13, padding: '11px 14px', fontFamily: 'inherit', fontSize: 14, color: '#16182A', outline: 'none' }}
+                />
+                <button onClick={() => addIngredient()} style={{ width: 46, background: '#012374', borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round"/></svg>
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              <div style={{ marginTop: '16px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>You&apos;ll use</div>
-              <div style={{ marginTop: '9px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-                {r.ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#16182A', padding: '6px 11px', borderRadius: '999px', fontSize: '12.5px' }}>{ing}</span>)}
-              </div>
-              <div style={{ marginTop: '16px', fontSize: '12px', letterSpacing: '.1em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Steps</div>
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '11px' }}>
-                {r.steps.map((step, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
-                    <span style={{ flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#012374', color: '#FFFDF9', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '1px' }}>{i + 1}</span>
-                    <span style={{ fontSize: '13.5px', color: '#16182A', lineHeight: 1.5 }}>{step}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '16px', background: 'rgba(200,147,43,0.12)', borderRadius: '13px', padding: '14px' }}>
-                <div style={{ fontSize: '12px', letterSpacing: '.06em', color: '#9A6F18', fontWeight: 700, textTransform: 'uppercase' }}>Why it&apos;s gentle</div>
-                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  {r.tips.map((tip, i) => <div key={i} style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.45 }}>• {tip}</div>)}
-                </div>
-              </div>
-              <button
-                onClick={onSave}
-                style={{ marginTop: '14px', borderRadius: '13px', padding: '13px', textAlign: 'center', fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none', width: '100%', background: saved ? 'rgba(28,122,79,0.12)' : '#012374', color: saved ? '#1C7A4F' : '#FFFDF9' }}
-              >
-                {saved ? '✓ Saved to your recipes' : 'Save this recipe'}
-              </button>
-            </>
           )}
         </div>
       )}
-    </div>
-  );
-}
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+      {/* Cuisine */}
+      <div style={{ marginTop: 22 }}>
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Cuisine</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {CUISINES.map(c => (
+            <button
+              key={c}
+              onClick={() => setCuisine(c)}
+              style={{
+                padding: '9px 15px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5,
+                fontWeight: 500, cursor: 'pointer',
+                background: cuisine === c ? '#012374' : '#F7EFE1',
+                color: cuisine === c ? '#FFFDF9' : '#012374',
+                border: cuisine === c ? 'none' : '1px solid rgba(1,35,116,0.12)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 9, marginTop: 10 }}>
+          <input
+            value={customCuisine}
+            onChange={e => setCustomCuisine(e.target.value)}
+            placeholder="Other cuisine…"
+            style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)', borderRadius: 13, padding: '11px 14px', fontFamily: 'inherit', fontSize: 14, color: '#16182A', outline: 'none' }}
+          />
+          {customCuisine && (
+            <button
+              onClick={() => { setCuisine(customCuisine); }}
+              style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '0 16px', borderRadius: 13, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Add
+            </button>
+          )}
+        </div>
+      </div>
 
-export default function RecipesPage() {
-  const [tab, setTab] = useState<'type' | 'photo'>('type');
-  const [draft, setDraft] = useState('');
-  const [ingredients, setIngredients] = useState<string[]>([]);
-  const [fridgePhoto, setFridgePhoto] = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [expanded, setExpanded] = useState<number | null>(null);
-  const [saved, setSaved] = useState<Set<number>>(new Set());
+      {/* Craving */}
+      <div style={{ marginTop: 18 }}>
+        <div style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>What are you craving?</div>
+        <input
+          value={craving}
+          onChange={e => setCraving(e.target.value)}
+          placeholder="Something warm and spiced, light and refreshing…"
+          style={{ width: '100%', background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)', borderRadius: 13, padding: '13px 15px', fontFamily: 'inherit', fontSize: 14.5, color: '#16182A', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
 
-  const generateRecipes = async () => {
-    if (!ingredients.length && !fridgePhoto) {
-      setError('Add at least one ingredient first.');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setRecipes([]);
-    setExpanded(null);
-    setSearched(false);
-    try {
-      const res = await fetch('/api/recipes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients, photoBase64: fridgePhoto }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setRecipes(data.recipes || []);
-      setSearched(true);
-    } catch {
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveRecipe = async (idx: number) => {
-    const r = recipes[idx];
-    if (!r || saved.has(idx)) return;
-    try {
-      await fetch('/api/recipes/saved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: r.title,
-          description: r.description,
-          ingredients: r.ingredients.map(name => ({ name, amount: '' })),
-          instructions: r.steps,
-          servings: r.servings || 2,
-          diabetesTips: r.tips,
-          tags: ['generated', r.bloodSugarImpact],
-        }),
-      });
-      setSaved(prev => new Set([...prev, idx]));
-    } catch { /* silent */ }
-  };
-
-  const resetSearch = () => { setSearched(false); setRecipes([]); setExpanded(null); };
-
-  const inputProps = { tab, setTab, draft, setDraft, ingredients, setIngredients, fridgePhoto, setFridgePhoto, onSearch: generateRecipes, loading };
-
-  const Disclaimer = () => (
-    <div style={{ marginTop: '16px', background: 'rgba(200,147,43,0.1)', borderRadius: '13px', padding: '13px 15px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
-        <path d="M12 3l9 16H3L12 3z" stroke="#9A6F18" strokeWidth="1.7" strokeLinejoin="round"/>
-        <path d="M12 10v4M12 16.5v.5" stroke="#9A6F18" strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-      <div style={{ fontSize: '12px', color: '#16182A', opacity: .72, lineHeight: 1.45 }}>Recipes are gentle suggestions, not medical advice. Your healthcare provider knows your numbers best.</div>
+      {/* CTA */}
+      <button
+        onClick={search}
+        disabled={loading}
+        style={{
+          marginTop: 22, width: '100%', background: loading ? 'rgba(1,35,116,0.5)' : '#012374',
+          color: '#FFFDF9', borderRadius: 15, padding: '15px', textAlign: 'center',
+          fontSize: 15, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+          boxShadow: '0 12px 26px -14px rgba(1,35,116,.6)', border: 'none', fontFamily: 'inherit',
+        }}
+      >
+        {loading ? 'Finding recipes…' : 'Find gentle recipes'}
+      </button>
     </div>
   );
 
   return (
     <>
-      {/* ── Desktop (lg+) ── */}
-      <div className="hidden lg:flex min-h-screen" style={{ background: '#F7EFE1' }}>
+      {/* ─── Mobile (lg:hidden) ─── */}
+      <div className="lg:hidden" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif", paddingBottom: 100 }}>
+        <div style={{ padding: '24px 20px 16px' }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
+          <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 6 }}>
+            Cook with what you have.
+          </h1>
+          <p style={{ fontSize: 14, color: '#16182A', opacity: 0.72, marginTop: 6, lineHeight: 1.5 }}>
+            Tell Chatita what&apos;s in your kitchen and get gentle recipe ideas that work for you.
+          </p>
+        </div>
+
+        <div style={{ padding: '0 16px' }}>
+          <InputPanel />
+        </div>
+
+        {/* Mobile results */}
+        {searched && (
+          <div style={{ padding: '20px 16px 0' }}>
+            <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 14 }}>
+              A few gentle ideas
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {recipes.map(r => (
+                <RecipeCard
+                  key={r.id}
+                  recipe={r}
+                  expanded={expanded === r.id}
+                  onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                  saved={saved.includes(r.id)}
+                  onSave={() => toggleSave(r.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <BottomNav />
+      </div>
+
+      {/* ─── Web (hidden lg:flex) ─── */}
+      <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
         <WebNav />
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
-          <div style={{ fontSize: '12px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes · from your kitchen</div>
-          <div className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', lineHeight: 1.05, marginTop: '6px' }}>Let&apos;s cook something kind.</div>
-          <div style={{ fontSize: '16px', color: '#16182A', opacity: .72, marginTop: '4px' }}>Add what you have on hand. Chatita keeps it gentle — no scores, no judgment.</div>
 
-          <div style={{ marginTop: '26px', display: 'grid', gridTemplateColumns: '400px 1fr', gap: '24px', alignItems: 'start' }}>
-            <InputPanel {...inputProps} web />
+          {/* Header */}
+          <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
+          <h1
+            className="font-serif-italic"
+            style={{ fontSize: 38, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 8 }}
+          >
+            Cook with what you have.
+          </h1>
+          <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 8, lineHeight: 1.55 }}>
+            Tell Chatita what&apos;s in your kitchen and get gentle recipe ideas tailored to your body.
+          </p>
 
+          {/* 2-col grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: 24, marginTop: 26 }}>
+
+            {/* LEFT: Input card */}
+            <div style={{ position: 'sticky', top: 0, height: 'fit-content' }}>
+              <InputPanel web />
+            </div>
+
+            {/* RIGHT: Results */}
             <div>
               {!searched ? (
-                <div style={{ background: '#FFFDF9', border: '1px dashed rgba(1,35,116,0.16)', borderRadius: '22px', padding: '60px 40px', textAlign: 'center', minHeight: '420px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: '#F7EFE1', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#012374" strokeWidth="1.5"/><path d="M3 19h18" stroke="#012374" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <div style={{
+                  border: '1.5px dashed rgba(1,35,116,0.2)', borderRadius: 22, padding: '60px 40px',
+                  textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.3 }}>
+                    <path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#012374" strokeWidth="1.6"/>
+                    <path d="M3 19h18" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/>
+                    <path d="M12 4v4" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginTop: 20, lineHeight: 1.3 }}>
+                    Your recipe ideas will appear here
                   </div>
-                  <div className="font-serif-italic" style={{ fontSize: '25px', color: '#012374', marginTop: '18px' }}>Your recipe ideas will appear here</div>
-                  <div style={{ fontSize: '14.5px', color: '#16182A', opacity: .65, marginTop: '6px', maxWidth: '360px', lineHeight: 1.5 }}>
-                    Add a few ingredients and press <strong style={{ color: '#012374' }}>Find gentle recipes</strong>. Every suggestion comes with carb ranges and a kind tip.
-                  </div>
+                  <p style={{ fontSize: 14, color: 'rgba(22,24,42,0.55)', lineHeight: 1.6, marginTop: 10, maxWidth: 320 }}>
+                    Add your ingredients, choose a cuisine, and Chatita will find gentle dishes that work for you.
+                  </p>
                 </div>
               ) : (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                    <div className="font-serif-italic" style={{ fontSize: '26px', color: '#012374' }}>A few gentle ideas for you</div>
-                    <button onClick={resetSearch} style={{ cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#012374', background: 'none', border: 'none' }}>Edit ingredients</button>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                    <div className="font-serif-italic" style={{ fontSize: 26, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>
+                      {cuisine !== 'Any cuisine' ? `Gentle ${cuisine} ideas` : 'A few gentle ideas for you'}
+                    </div>
+                    <button
+                      onClick={() => setSearched(false)}
+                      style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      ← Edit search
+                    </button>
                   </div>
-                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {recipes.map((r, i) => (
-                      <RecipeCard key={i} r={r} idx={i} expanded={expanded === i} onToggle={() => setExpanded(expanded === i ? null : i)} saved={saved.has(i)} onSave={() => saveRecipe(i)} web />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {recipes.map(r => (
+                      <RecipeCard
+                        key={r.id}
+                        recipe={r}
+                        expanded={expanded === r.id}
+                        onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                        saved={saved.includes(r.id)}
+                        onSave={() => toggleSave(r.id)}
+                        web
+                      />
                     ))}
                   </div>
-                  <Disclaimer />
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* ── Mobile (< lg) ── */}
-      <div className="lg:hidden min-h-screen pb-24" style={{ background: '#F7EFE1' }}>
-        {/* Navy hero */}
-        <div style={{ background: '#012374', padding: '0 24px 72px', position: 'relative' }}>
-          <div style={{ paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#FFFDF9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)' }}>
-              <BackButton href="/home" />
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', letterSpacing: '.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
-              <div className="font-serif-italic" style={{ fontSize: '23px', color: '#FFFDF9', lineHeight: 1 }}>From your kitchen</div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ maxWidth: '640px', margin: '0 auto', marginTop: '-60px', padding: '0 20px' }}>
-          {!searched ? (
-            <>
-              <div className="font-serif-italic" style={{ fontSize: '27px', color: '#012374', lineHeight: 1.1, marginBottom: '16px' }}>Let&apos;s cook something kind.</div>
-              <div style={{ fontSize: '14px', color: '#16182A', opacity: .7, lineHeight: 1.5, marginBottom: '18px' }}>Tell Chatita what you have — no full list needed, no judgment.</div>
-              <InputPanel {...inputProps} />
-              <div style={{ marginTop: '10px', fontSize: '12px', color: '#16182A', opacity: .5, textAlign: 'center' }}>No scores, no judgment — just ideas that feel good.</div>
-            </>
-          ) : (
-            <>
-              <div style={{ background: '#FFFDF9', borderRadius: '16px', border: '1px solid rgba(1,35,116,0.08)', padding: '14px 16px', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: '12px', letterSpacing: '.14em', textTransform: 'uppercase', color: '#001A4D', opacity: .6, fontWeight: 600 }}>Cooking with</div>
-                  <button onClick={resetSearch} style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#012374', background: 'none', border: 'none' }}>Edit</button>
-                </div>
-                <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-                  {ingredients.map(ing => <span key={ing} style={{ background: '#F7EFE1', color: '#012374', padding: '7px 11px', borderRadius: '999px', fontSize: '13px', fontWeight: 500 }}>{ing}</span>)}
-                </div>
-              </div>
-
-              <div className="font-serif-italic" style={{ fontSize: '24px', color: '#012374', marginBottom: '14px' }}>A few gentle ideas for you</div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '13px' }}>
-                {recipes.map((r, i) => (
-                  <RecipeCard key={i} r={r} idx={i} expanded={expanded === i} onToggle={() => setExpanded(expanded === i ? null : i)} saved={saved.has(i)} onSave={() => saveRecipe(i)} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {error && <div style={{ marginTop: '12px', padding: '12px', borderRadius: '12px', background: 'rgba(181,86,46,0.1)', color: '#B5562E', fontSize: '13px' }}>{error}</div>}
-
-          <Disclaimer />
-        </div>
-
-        <BottomNav />
       </div>
     </>
   );
