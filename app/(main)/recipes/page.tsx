@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 
@@ -12,7 +12,7 @@ interface Recipe {
   description: string;
   carbEstimate: string;
   calorieEstimate: string;
-  bloodSugarImpact: 'low' | 'moderate';
+  bloodSugarImpact: 'low' | 'moderate' | 'high';
   prepTime: string;
   servings: number;
   cuisine: string;
@@ -26,138 +26,12 @@ interface Recipe {
 const IMPACT = {
   low:      { label: 'Gentle on blood sugar', color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   dot: '#1C7A4F' },
   moderate: { label: 'Enjoy mindfully',        color: '#9A6F18', bg: 'rgba(200,147,43,0.18)',  dot: '#C8932B' },
+  high:     { label: 'Save for special occasions', color: '#B5562E', bg: 'rgba(181,86,46,0.12)', dot: '#B5562E' },
 };
 
-// ─── Static fallback recipes ──────────────────────────────────────────────────
-
-const STATIC_RECIPES: Recipe[] = [
-  {
-    id: 'biryani',
-    title: 'Chicken & Cauliflower Biryani',
-    description: 'A lighter spin on a beloved classic — cauliflower stands in for half the rice, soaking up all the warming spices.',
-    carbEstimate: '28–34g',
-    calorieEstimate: '310 kcal',
-    bloodSugarImpact: 'low',
-    prepTime: '35 min',
-    servings: 4,
-    cuisine: 'Pakistani',
-    ingredients: ['500g chicken thighs, boneless', '1 small cauliflower, riced', '1 cup basmati rice', '1 cup plain yogurt', '2 onions, thinly sliced', '3 tbsp ghee or oil', '1 tsp cumin seeds', '2 tsp biryani masala', 'Fresh coriander and mint to finish'],
-    steps: [
-      'Marinate chicken in yogurt, biryani masala, and salt for at least 20 minutes.',
-      'In a heavy pot, fry onions in ghee until deep golden and crisp. Remove half for topping.',
-      'Add cumin seeds, then the chicken. Sear until lightly browned, about 8 minutes.',
-      'Add soaked rice and cauliflower rice. Pour in 1.5 cups of water.',
-      'Cover tightly and cook on low for 18–20 minutes until the rice is tender.',
-      'Rest covered for 5 minutes, then fluff gently and top with reserved onions and fresh herbs.',
-    ],
-    tips: [
-      'Ricing the cauliflower yourself (pulse in a food processor) gives the best texture.',
-      'The yogurt marinade is key — it tenderizes the chicken and adds gentle tang.',
-    ],
-  },
-  {
-    id: 'raita',
-    title: 'Cucumber & Mint Raita',
-    description: 'A cooling, probiotic-rich side that pairs beautifully with spiced dishes and helps slow carb absorption.',
-    carbEstimate: '5–7g',
-    calorieEstimate: '70 kcal',
-    bloodSugarImpact: 'low',
-    prepTime: '10 min',
-    servings: 4,
-    cuisine: 'Pakistani',
-    ingredients: ['2 cups plain full-fat yogurt', '1 cucumber, grated and squeezed dry', 'Small handful fresh mint, finely chopped', '1/2 tsp cumin, toasted and ground', 'Pinch of salt and chili flakes'],
-    steps: [
-      'Whisk the yogurt until smooth and creamy.',
-      'Fold in the cucumber, mint, and cumin.',
-      'Taste and adjust salt. Top with a pinch of chili flakes.',
-      'Chill for 10 minutes before serving for best flavor.',
-    ],
-    tips: [
-      'Squeezing the cucumber is important — it prevents the raita from going watery.',
-      'Toasting the cumin yourself makes a big difference in flavor.',
-    ],
-  },
-  {
-    id: 'daal',
-    title: 'Red Lentil Daal with Turmeric',
-    description: 'Slow-digesting lentils in a fragrant, golden broth. Protein and fiber together keep glucose rising gently.',
-    carbEstimate: '30–36g',
-    calorieEstimate: '280 kcal',
-    bloodSugarImpact: 'low',
-    prepTime: '30 min',
-    servings: 4,
-    cuisine: 'Pakistani',
-    ingredients: ['1.5 cups red lentils, rinsed', '1 onion, diced', '3 garlic cloves, minced', '1 tbsp fresh ginger, grated', '1 tsp turmeric', '1 tsp cumin', '400ml canned tomatoes', '1 tbsp ghee or butter', 'Fresh coriander to serve'],
-    steps: [
-      'Simmer lentils in 3 cups water with turmeric and a pinch of salt for 20 minutes until soft.',
-      'In a separate pan, fry onion in ghee until golden. Add garlic and ginger, cook 2 minutes.',
-      'Add cumin and tomatoes. Simmer 8 minutes until the sauce thickens.',
-      'Combine lentils and sauce. Adjust consistency with water.',
-      'Finish with a squeeze of lemon and fresh coriander.',
-    ],
-    tips: [
-      'Red lentils dissolve more than green — perfect for a creamy, souplike texture.',
-      'Serve with a small portion of rice or a warm roti for a balanced meal.',
-    ],
-  },
-  {
-    id: 'skillet',
-    title: 'Ginger Chicken & Veggie Skillet',
-    description: 'A quick weeknight one-pan that comes together in 20 minutes with minimal carbs and maximum flavor.',
-    carbEstimate: '10–14g',
-    calorieEstimate: '350 kcal',
-    bloodSugarImpact: 'low',
-    prepTime: '20 min',
-    servings: 2,
-    cuisine: 'Any',
-    ingredients: ['400g chicken breast, sliced thin', '2 cups broccoli florets', '1 red bell pepper, sliced', '2 tsp fresh ginger, grated', '2 garlic cloves', '2 tbsp low-sodium soy sauce', '1 tsp sesame oil', 'Sesame seeds to finish'],
-    steps: [
-      'Season chicken with a little salt and pepper.',
-      'Heat oil in a large skillet or wok over high heat. Sear chicken until golden, 4–5 minutes. Remove.',
-      'Add ginger and garlic. Stir 30 seconds until fragrant.',
-      'Add broccoli and pepper. Stir-fry 4 minutes.',
-      'Return chicken. Add soy sauce and sesame oil. Toss to coat.',
-      'Serve immediately, topped with sesame seeds.',
-    ],
-    tips: [
-      'High heat is the secret — it creates char and flavor rather than steaming the vegetables.',
-      'Swap broccoli for bok choy or snap peas depending on what you have.',
-    ],
-  },
-  {
-    id: 'salmonbowl',
-    title: 'Smoked Salmon & Avocado Bowl',
-    description: 'Healthy fats and omega-3s on a bed of greens — minimal carbs, maximum satisfaction.',
-    carbEstimate: '8–12g',
-    calorieEstimate: '420 kcal',
-    bloodSugarImpact: 'low',
-    prepTime: '10 min',
-    servings: 1,
-    cuisine: 'Any',
-    ingredients: ['100g smoked salmon', '1/2 ripe avocado, sliced', '2 cups mixed greens', '6 cherry tomatoes, halved', '1 tbsp capers', '1 tbsp extra-virgin olive oil', 'Juice of half a lemon', 'Cracked black pepper'],
-    steps: [
-      'Arrange greens in a bowl.',
-      'Layer salmon, avocado slices, and tomatoes.',
-      'Scatter capers over the top.',
-      'Drizzle with olive oil and lemon juice.',
-      'Finish with cracked pepper.',
-    ],
-    tips: [
-      'Choose wild salmon when possible for the best omega-3 profile.',
-      'If you want more substance, add a soft-boiled egg or a handful of cooked quinoa.',
-    ],
-  },
-];
-
-// ─── Common pairings + detect data ───────────────────────────────────────────
+// ─── Common pairings ──────────────────────────────────────────────────────────
 
 const COMMON_PAIRINGS = ['spinach', 'lentils', 'paneer', 'tomato', 'ginger', 'cumin', 'onion', 'garlic', 'zucchini', 'chickpeas', 'okra', 'eggplant'];
-
-const DETECT = {
-  fridge: ['greek yogurt', 'red bell pepper', 'feta', 'lettuce', 'tomato', 'red onion'],
-  pantry: ['chickpeas', 'brown rice', 'red lentils', 'cumin', 'olive oil', 'canned tomatoes'],
-};
-
 const CUISINES = ['Any cuisine', 'Pakistani', 'Indian', 'Mexican', 'Mediterranean'];
 
 // ─── Recipe card component ────────────────────────────────────────────────────
@@ -170,7 +44,7 @@ function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
   onSave: () => void;
   web?: boolean;
 }) {
-  const imp = IMPACT[recipe.bloodSugarImpact];
+  const imp = IMPACT[recipe.bloodSugarImpact] ?? IMPACT.low;
 
   return (
     <div style={{
@@ -198,7 +72,7 @@ function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
             <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>{recipe.carbEstimate} carbs</span>
             <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>·</span>
             <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>{recipe.prepTime}</span>
-            {recipe.cuisine !== 'Any' && (
+            {recipe.cuisine && recipe.cuisine !== 'Any' && (
               <>
                 <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)' }}>·</span>
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#012374', background: 'rgba(1,35,116,0.08)', padding: '4px 10px', borderRadius: 999 }}>{recipe.cuisine}</span>
@@ -295,17 +169,23 @@ function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
 
 export default function RecipesPage() {
   const [tab, setTab] = useState<'type' | 'fridge' | 'pantry'>('type');
-  const [ingredients, setIngredients] = useState<string[]>(['chicken', 'cauliflower', 'yogurt']);
-  const [photo, setPhoto] = useState<'fridge' | 'pantry' | null>(null);
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [cuisine, setCuisine] = useState('Any cuisine');
   const [customCuisine, setCustomCuisine] = useState('');
   const [craving, setCraving] = useState('');
   const [draft, setDraft] = useState('');
   const [searched, setSearched] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>('biryani');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>(STATIC_RECIPES);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [detectedIngredients, setDetectedIngredients] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const suggestions = COMMON_PAIRINGS.filter(x => !ingredients.includes(x)).slice(0, 6);
 
@@ -321,44 +201,64 @@ export default function RecipesPage() {
     setIngredients(prev => prev.filter(i => i !== ing));
   };
 
-  const onTakePhoto = () => {
-    if (tab !== 'fridge' && tab !== 'pantry') return;
-    const detected = DETECT[tab];
-    setPhoto(tab);
-    setIngredients(prev => {
-      const merged = [...prev];
-      for (const item of detected) {
-        if (!merged.includes(item)) merged.push(item);
-      }
-      return merged;
-    });
+  const handlePhotoFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setPhotoBase64(dataUrl);
+      setPhotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearPhoto = () => {
+    setPhotoBase64(null);
+    setPhotoPreview(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   const search = async () => {
+    if (!ingredients.length && !photoBase64) return;
     setLoading(true);
     setSearched(true);
+    setError(null);
     try {
       const res = await fetch('/api/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients, cuisine: cuisine === 'Any cuisine' ? customCuisine || 'Any' : cuisine, craving }),
+        body: JSON.stringify({
+          ingredients,
+          photoBase64: photoBase64 ?? undefined,
+          cuisine: cuisine === 'Any cuisine' ? (customCuisine || 'Any') : cuisine,
+          craving: craving || undefined,
+        }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.recipes?.length) {
-          setRecipes(data.recipes);
-          setExpanded(data.recipes[0]?.id ?? null);
-        } else {
-          setRecipes(STATIC_RECIPES);
-          setExpanded('biryani');
+      if (!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+      const rList: Recipe[] = (data.recipes ?? []).map((r: Omit<Recipe, 'id'>, i: number) => ({
+        ...r,
+        id: r.title?.toLowerCase().replace(/\s+/g, '-') ?? `recipe-${i}`,
+        bloodSugarImpact: (['low', 'moderate', 'high'].includes(r.bloodSugarImpact) ? r.bloodSugarImpact : 'low') as Recipe['bloodSugarImpact'],
+      }));
+      if (rList.length) {
+        setRecipes(rList);
+        setExpanded(rList[0].id);
+        if (data.detectedIngredients?.length) {
+          setDetectedIngredients(data.detectedIngredients);
+          setIngredients(prev => {
+            const merged = [...prev];
+            for (const item of data.detectedIngredients as string[]) {
+              if (!merged.includes(item.toLowerCase())) merged.push(item.toLowerCase());
+            }
+            return merged;
+          });
         }
       } else {
-        setRecipes(STATIC_RECIPES);
-        setExpanded('biryani');
+        setError('No recipes returned. Try adjusting your ingredients or cuisine.');
       }
     } catch {
-      setRecipes(STATIC_RECIPES);
-      setExpanded('biryani');
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -368,12 +268,31 @@ export default function RecipesPage() {
     setSaved(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const canSearch = ingredients.length > 0 || !!photoBase64;
+
   // ── Input panel (shared between mobile and web) ──
   const InputPanel = ({ web }: { web?: boolean }) => (
     <div style={{
       background: '#FFFDF9', borderRadius: 22, padding: web ? 24 : 20,
       border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)',
     }}>
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); }}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); }}
+      />
+
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, background: '#F7EFE1', borderRadius: 14, padding: 5 }}>
         {(['type', 'fridge', 'pantry'] as const).map(t => (
@@ -459,17 +378,14 @@ export default function RecipesPage() {
         </div>
       )}
 
-      {/* Fridge / Pantry tabs */}
+      {/* Fridge / Pantry tabs — real camera + gallery */}
       {(tab === 'fridge' || tab === 'pantry') && (
         <div style={{ marginTop: 16 }}>
-          {photo !== tab ? (
-            <div
-              onClick={onTakePhoto}
-              style={{
-                border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: 18,
-                background: '#F7EFE1', padding: '34px 20px', textAlign: 'center', cursor: 'pointer',
-              }}
-            >
+          {!photoPreview ? (
+            <div style={{
+              border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: 18,
+              background: '#F7EFE1', padding: '28px 20px', textAlign: 'center',
+            }}>
               <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(1,35,116,0.07)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#012374" strokeWidth="1.7"/>
@@ -478,39 +394,69 @@ export default function RecipesPage() {
                 </svg>
               </div>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#012374', marginTop: 12 }}>Snap your {tab}</div>
-              <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.62)', marginTop: 4, lineHeight: 1.45 }}>Chatita spots the ingredients for you — you can edit them after.</div>
-              <button style={{ marginTop: 14, background: '#012374', color: '#FFFDF9', border: 'none', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
-                Take a photo
-              </button>
+              <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.62)', marginTop: 4, lineHeight: 1.45 }}>
+                Chatita spots the ingredients and builds recipes from what it sees.
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14 }}>
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Take a photo
+                </button>
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  style={{ background: 'transparent', color: '#012374', border: '1.5px solid rgba(1,35,116,0.3)', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Choose from gallery
+                </button>
+              </div>
             </div>
           ) : (
             <div>
-              <div style={{ background: 'rgba(1,35,116,0.08)', borderRadius: 14, padding: '28px 20px', textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 14, color: '#012374', fontWeight: 600 }}>Chatita spotted {DETECT[tab].length} items</div>
-                <div style={{ fontSize: 12.5, color: 'rgba(22,24,42,0.6)', marginTop: 4 }}>from your {tab}</div>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {ingredients.map(ing => (
-                  <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: 999, fontSize: 13.5, fontWeight: 500 }}>
-                    {ing}
-                    <span onClick={() => removeIngredient(ing)} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                    </span>
-                  </span>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
-                <input
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addIngredient()}
-                  placeholder="Add more ingredients…"
-                  style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)', borderRadius: 13, padding: '11px 14px', fontFamily: 'inherit', fontSize: 14, color: '#16182A', outline: 'none' }}
-                />
-                <button onClick={() => addIngredient()} style={{ width: 46, background: '#012374', borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round"/></svg>
+              <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoPreview} alt="Photo preview" style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+                <button
+                  onClick={clearPhoto}
+                  style={{
+                    position: 'absolute', top: 10, right: 10, width: 30, height: 30,
+                    borderRadius: '50%', background: 'rgba(22,24,42,0.7)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
                 </button>
               </div>
+              <div style={{ fontSize: 13, color: '#1C7A4F', background: 'rgba(28,122,79,0.1)', borderRadius: 10, padding: '9px 14px', marginBottom: 12 }}>
+                Photo ready — Chatita will detect ingredients and create recipes from it.
+              </div>
+            </div>
+          )}
+
+          {/* Manual ingredient input alongside the photo */}
+          <div style={{ display: 'flex', gap: 9, marginTop: 10 }}>
+            <input
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addIngredient()}
+              placeholder="Add more ingredients…"
+              style={{ flex: 1, background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.14)', borderRadius: 13, padding: '11px 14px', fontFamily: 'inherit', fontSize: 14, color: '#16182A', outline: 'none' }}
+            />
+            <button onClick={() => addIngredient()} style={{ width: 46, background: '#012374', borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+          {ingredients.length > 0 && (
+            <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {ingredients.map(ing => (
+                <span key={ing} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#012374', color: '#FFFDF9', padding: '9px 13px', borderRadius: 999, fontSize: 13.5, fontWeight: 500 }}>
+                  {ing}
+                  <span onClick={() => removeIngredient(ing)} style={{ cursor: 'pointer', display: 'flex', opacity: .8 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                  </span>
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -546,7 +492,7 @@ export default function RecipesPage() {
           />
           {customCuisine && (
             <button
-              onClick={() => { setCuisine(customCuisine); }}
+              onClick={() => setCuisine(customCuisine)}
               style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '0 16px', borderRadius: 13, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
               Add
@@ -569,16 +515,22 @@ export default function RecipesPage() {
       {/* CTA */}
       <button
         onClick={search}
-        disabled={loading}
+        disabled={loading || !canSearch}
         style={{
-          marginTop: 22, width: '100%', background: loading ? 'rgba(1,35,116,0.5)' : '#012374',
+          marginTop: 22, width: '100%',
+          background: loading || !canSearch ? 'rgba(1,35,116,0.5)' : '#012374',
           color: '#FFFDF9', borderRadius: 15, padding: '15px', textAlign: 'center',
-          fontSize: 15, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+          fontSize: 15, fontWeight: 600, cursor: loading || !canSearch ? 'default' : 'pointer',
           boxShadow: '0 12px 26px -14px rgba(1,35,116,.6)', border: 'none', fontFamily: 'inherit',
         }}
       >
         {loading ? 'Finding recipes…' : 'Find gentle recipes'}
       </button>
+      {!canSearch && (
+        <div style={{ marginTop: 8, fontSize: 12, color: 'rgba(22,24,42,0.5)', textAlign: 'center' }}>
+          Add ingredients or take a photo to get started
+        </div>
+      )}
     </div>
   );
 
@@ -592,7 +544,7 @@ export default function RecipesPage() {
             Cook with what you have.
           </h1>
           <p style={{ fontSize: 14, color: '#16182A', opacity: 0.72, marginTop: 6, lineHeight: 1.5 }}>
-            Tell Chatita what&apos;s in your kitchen and get gentle recipe ideas that work for you.
+            Tell Chatita what&apos;s in your kitchen — or snap your fridge — and get gentle recipe ideas that work for you.
           </p>
         </div>
 
@@ -603,21 +555,38 @@ export default function RecipesPage() {
         {/* Mobile results */}
         {searched && (
           <div style={{ padding: '20px 16px 0' }}>
-            <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 14 }}>
-              A few gentle ideas
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {recipes.map(r => (
-                <RecipeCard
-                  key={r.id}
-                  recipe={r}
-                  expanded={expanded === r.id}
-                  onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                  saved={saved.includes(r.id)}
-                  onSave={() => toggleSave(r.id)}
-                />
-              ))}
-            </div>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(22,24,42,0.55)', fontSize: 14 }}>
+                Chatita is finding recipes for you…
+              </div>
+            ) : error ? (
+              <div style={{ background: '#FFFDF9', borderRadius: 16, padding: '20px', textAlign: 'center', color: 'rgba(22,24,42,0.6)', fontSize: 14 }}>
+                {error}
+              </div>
+            ) : (
+              <>
+                {detectedIngredients.length > 0 && (
+                  <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#012374' }}>
+                    <strong>Detected in photo:</strong> {detectedIngredients.join(', ')}
+                  </div>
+                )}
+                <div className="font-serif-italic" style={{ fontSize: 22, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 14 }}>
+                  A few gentle ideas
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {recipes.map(r => (
+                    <RecipeCard
+                      key={r.id}
+                      recipe={r}
+                      expanded={expanded === r.id}
+                      onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                      saved={saved.includes(r.id)}
+                      onSave={() => toggleSave(r.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -639,7 +608,7 @@ export default function RecipesPage() {
             Cook with what you have.
           </h1>
           <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 8, lineHeight: 1.55 }}>
-            Tell Chatita what&apos;s in your kitchen and get gentle recipe ideas tailored to your body.
+            Tell Chatita what&apos;s in your kitchen — or snap your fridge — and get gentle recipes tailored to your body.
           </p>
 
           {/* 2-col grid */}
@@ -666,8 +635,19 @@ export default function RecipesPage() {
                     Your recipe ideas will appear here
                   </div>
                   <p style={{ fontSize: 14, color: 'rgba(22,24,42,0.55)', lineHeight: 1.6, marginTop: 10, maxWidth: 320 }}>
-                    Add your ingredients, choose a cuisine, and Chatita will find gentle dishes that work for you.
+                    Add your ingredients or snap your fridge, choose a cuisine, and Chatita will find gentle dishes that work for you.
                   </p>
+                </div>
+              ) : loading ? (
+                <div style={{
+                  border: '1.5px dashed rgba(1,35,116,0.2)', borderRadius: 22, padding: '60px 40px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 16, color: 'rgba(22,24,42,0.55)' }}>Chatita is finding recipes for you…</div>
+                </div>
+              ) : error ? (
+                <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '30px', textAlign: 'center', color: 'rgba(22,24,42,0.6)', fontSize: 15 }}>
+                  {error}
                 </div>
               ) : (
                 <div>
@@ -676,12 +656,17 @@ export default function RecipesPage() {
                       {cuisine !== 'Any cuisine' ? `Gentle ${cuisine} ideas` : 'A few gentle ideas for you'}
                     </div>
                     <button
-                      onClick={() => setSearched(false)}
+                      onClick={() => { setSearched(false); setDetectedIngredients([]); }}
                       style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       ← Edit search
                     </button>
                   </div>
+                  {detectedIngredients.length > 0 && (
+                    <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '12px 18px', marginBottom: 16, fontSize: 13.5, color: '#012374' }}>
+                      <strong>Detected in your photo:</strong> {detectedIngredients.join(', ')}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {recipes.map(r => (
                       <RecipeCard

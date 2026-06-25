@@ -141,105 +141,94 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { ingredients, photoBase64 } = await request.json();
+    const { ingredients, photoBase64, cuisine, craving } = await request.json();
 
     if (!ENABLE_AI || !process.env.ANTHROPIC_API_KEY) {
-      // $0 fallback
       return NextResponse.json({
         mode: '$0',
         recipes: getFallbackRecipes(ingredients || []),
+        detectedIngredients: [],
       });
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Build the content array — text prompt + optional fridge photo
     const contentBlocks: Anthropic.MessageParam['content'] = [];
 
     if (photoBase64) {
+      // Detect media type from data URL prefix
+      let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg';
+      if (photoBase64.startsWith('data:image/png')) mediaType = 'image/png';
+      else if (photoBase64.startsWith('data:image/webp')) mediaType = 'image/webp';
       const base64Data = photoBase64.includes(',') ? photoBase64.split(',')[1] : photoBase64;
       contentBlocks.push({
         type: 'image',
-        source: {
-          type: 'base64',
-          media_type: 'image/jpeg',
-          data: base64Data,
-        },
-      });
-      contentBlocks.push({
-        type: 'text',
-        text: 'This is a photo of my fridge/pantry. Please identify the ingredients you can see.',
+        source: { type: 'base64', media_type: mediaType, data: base64Data },
       });
     }
 
-    const ingredientsList = ingredients && ingredients.length > 0
-      ? `Available ingredients: ${ingredients.join(', ')}`
-      : '';
+    const ingredientsList = ingredients?.length > 0 ? `Available ingredients: ${ingredients.join(', ')}` : '';
+    const cuisineNote = cuisine && cuisine !== 'Any' ? `Cuisine preference: ${cuisine}` : '';
+    const cravingNote = craving ? `What they're craving: ${craving}` : '';
 
     contentBlocks.push({
       type: 'text',
-      text: `You are a diabetes-friendly recipe assistant. Generate 3-5 diabetes-friendly recipes.
+      text: `You are a warm, culturally-sensitive diabetes nutrition companion. Generate exactly 3 diabetes-friendly recipes.
 
+${photoBase64 ? 'The photo above shows the user\'s fridge or pantry. First identify all visible ingredients, then use those (plus any listed below) to create recipes.' : ''}
 ${ingredientsList}
-${photoBase64 ? 'Use the ingredients visible in the photo above, plus any listed.' : ''}
+${cuisineNote}
+${cravingNote}
 
-Requirements:
-- Each recipe must be low-glycemic and suitable for someone managing blood sugar
-- Prioritize lean proteins, healthy fats, and non-starchy vegetables
-- Include estimated carbs per serving (keep under 30g if possible)
-- Keep recipes simple (under 30 minutes prep time)
-- Be encouraging and supportive — keep a warm, grandmotherly tone. Use inclusive, gender-neutral language — do not use mijo, mija, mi amor, querido, querida, sweetheart, or any gendered terms
+ADA-ALIGNED REQUIREMENTS:
+- Low-glycemic: focus on fiber, protein, healthy fats alongside moderate carbs
+- Never restrict cultural foods — adapt portions or preparation
+- Carbs per serving ideally under 35g; always include fiber context
+- Warm, supportive tone. Gender-neutral language. No "mijo/mija/sweetheart" etc.
 
-Respond in JSON format:
+Respond ONLY with valid JSON (no markdown):
 {
+  "detectedIngredients": ["ingredient1", "ingredient2"],
   "recipes": [
     {
       "title": "Recipe Name",
-      "description": "Short, appetizing description",
-      "carbEstimate": "15-20g per serving",
-      "calorieEstimate": "300-350 cal per serving",
+      "description": "Short, appetizing description (1-2 sentences)",
+      "carbEstimate": "15–20g",
+      "calorieEstimate": "300–350 kcal",
       "bloodSugarImpact": "low",
-      "ingredients": ["ingredient 1", "ingredient 2"],
+      "cuisine": "Mexican",
+      "prepTime": "20 min",
+      "servings": 2,
+      "ingredients": ["ingredient with quantity"],
       "steps": ["Step 1", "Step 2"],
-      "tips": ["Tip 1 for diabetes management"],
-      "prepTime": "20 minutes",
-      "servings": 2
+      "tips": ["Practical diabetes tip for this dish"]
     }
   ]
 }
 
-bloodSugarImpact must be one of: "low", "moderate", "high"
-Generate exactly 3 recipes.`,
+detectedIngredients: list ingredients visible in the photo (empty array if no photo).
+bloodSugarImpact: "low" | "moderate" | "high".
+cuisine: the dish's cultural origin (e.g. "Pakistani", "Mexican", "Mediterranean", "Any").`,
     });
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2500,
-      messages: [
-        {
-          role: 'user',
-          content: contentBlocks,
-        },
-      ],
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: contentBlocks }],
     });
 
     const content = message.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response format');
-    }
+    if (content.type !== 'text') throw new Error('Unexpected response format');
 
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Could not parse AI response');
-    }
+    let raw = content.text.trim();
+    if (raw.startsWith('```')) raw = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
 
-    const aiResponse = JSON.parse(jsonMatch[0]);
+    const aiResponse = JSON.parse(raw);
 
     return NextResponse.json({
       mode: 'ai',
       recipes: aiResponse.recipes || [],
+      detectedIngredients: aiResponse.detectedIngredients || [],
     });
   } catch (error) {
     console.error('Recipes error:', error);
