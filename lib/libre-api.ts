@@ -125,8 +125,14 @@ export class LibreLinkUpClient {
 
       const data: LibreAuthResponse = await response.json();
 
+      if (data.status === 2) {
+        // API is redirecting to a different regional server.
+        // This usually means the wrong region was selected.
+        throw new Error('WRONG_REGION');
+      }
+
       if (data.status !== 0) {
-        throw new Error('LibreLinkUp login failed: Invalid credentials');
+        throw new Error(`LibreLinkUp login failed: status ${data.status}`);
       }
 
       this.authToken = data.data.authTicket.token;

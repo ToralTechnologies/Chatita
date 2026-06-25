@@ -42,15 +42,15 @@ export async function POST(request: Request) {
       authResult = await client.login(email, password);
     } catch (error: any) {
       console.error('LibreLinkUp login failed:', error);
-      return NextResponse.json(
-        {
-          error:
-            error.message.includes('401') || error.message.includes('Invalid')
-              ? 'Invalid email or password'
-              : 'Failed to connect to LibreLinkUp. Please try again.',
-        },
-        { status: 400 }
-      );
+      let userMessage = 'Failed to connect to LibreLinkUp. Please try again.';
+      if (error.message === 'WRONG_REGION') {
+        userMessage = `Wrong region selected. Your LibreLinkUp account is not registered in the ${region} region. Try EU or AP instead.`;
+      } else if (error.message.includes('401') || error.message.includes('Invalid') || error.message.includes('status 4')) {
+        userMessage = 'Invalid email or password. Make sure you are using your LibreLinkUp credentials (not your FreeStyle Libre app credentials).';
+      } else if (error.message.includes('403')) {
+        userMessage = 'Access denied by LibreLinkUp. Open the LibreLinkUp app on your phone, accept any Terms of Service prompts, and try again.';
+      }
+      return NextResponse.json({ error: userMessage }, { status: 400 });
     }
 
     // Store integration in database
