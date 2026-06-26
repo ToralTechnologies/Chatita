@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
-import BackButton from '@/components/back-button';
 
-// ── Static recipe data ──────────────────────────────────────────────────────
+// ── Types & constants ────────────────────────────────────────────────────────
 
 type ImpactLevel = 'low' | 'moderate';
 
@@ -87,92 +86,54 @@ const RECIPES: Recipe[] = [
   },
 ];
 
-// ── Impact badge config ─────────────────────────────────────────────────────
-
 const IMPACT_CONFIG: Record<ImpactLevel, { bg: string; color: string; label: string; dot: string }> = {
-  low: {
-    bg: 'rgba(28,122,79,0.12)',
-    color: '#1C7A4F',
-    label: 'Gentle on blood sugar',
-    dot: '#1C7A4F',
-  },
-  moderate: {
-    bg: 'rgba(200,147,43,0.18)',
-    color: '#9A6F18',
-    label: 'Enjoy mindfully',
-    dot: '#C8932B',
-  },
+  low:      { bg: 'rgba(28,122,79,0.12)',   color: '#1C7A4F', label: 'Gentle on blood sugar', dot: '#1C7A4F' },
+  moderate: { bg: 'rgba(200,147,43,0.18)',  color: '#9A6F18', label: 'Enjoy mindfully',        dot: '#C8932B' },
 };
 
-// ── Subcomponents ───────────────────────────────────────────────────────────
-
-function HeartIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z"
-        fill="#012374"
-        stroke="#012374"
-        strokeWidth="1.6"
-      />
-    </svg>
-  );
-}
+// ── RecipeCard (standalone component, not nested) ────────────────────────────
 
 interface RecipeCardProps {
   recipe: Recipe;
   expanded: boolean;
   onToggle: () => void;
-  onRemove: () => void;
+  onRemove: (e: React.MouseEvent) => void;
   web?: boolean;
 }
 
 function RecipeCard({ recipe, expanded, onToggle, onRemove, web }: RecipeCardProps) {
   const impact = IMPACT_CONFIG[recipe.impact];
-  const borderRadius = web ? '20px' : '18px';
+  const pad = web ? '22px 24px' : '16px';
+  const expPad = web ? '0 24px 22px' : '0 16px 16px';
+  const titleSize = web ? '21px' : '18px';
+  const heartSize = web ? '36px' : '32px';
+  const pillPad = web ? '7px 13px' : '6px 11px';
+  const pillFs = web ? '13px' : '12px';
+  const stepFs = web ? '14px' : '13.5px';
+  const dotSize = web ? '8px' : '7px';
+  const numSize = web ? '23px' : '22px';
 
   return (
-    <div
-      style={{
-        background: '#FFFDF9',
-        borderRadius,
-        border: '1px solid rgba(1,35,116,0.07)',
-        boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Card header — clickable to expand */}
-      <button
-        onClick={onToggle}
-        style={{
-          width: '100%',
-          padding: web ? '20px 20px 14px' : '16px 16px 12px',
-          textAlign: 'left',
-          display: 'block',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-          <span
-            className="font-serif-italic"
-            style={{
-              fontSize: web ? '21px' : '18px',
-              color: '#012374',
-              lineHeight: 1.2,
-              flex: 1,
-              display: 'block',
-            }}
-          >
+    <div style={{
+      background: '#FFFDF9',
+      borderRadius: web ? '20px' : '18px',
+      border: '1px solid rgba(1,35,116,0.08)',
+      overflow: 'hidden',
+      boxShadow: '0 10px 24px -20px rgba(1,35,116,.5)',
+    }}>
+      {/* Header row — click to expand */}
+      <div onClick={onToggle} style={{ cursor: 'pointer', padding: pad }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+          <span className="font-serif" style={{ fontSize: titleSize, color: '#012374', lineHeight: 1.18 }}>
             {recipe.title}
           </span>
-          {/* Heart / remove button */}
+          {/* Heart button */}
           <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            onClick={onRemove}
             style={{
-              width: '32px',
-              height: '32px',
+              flexShrink: 0,
+              width: heartSize,
+              height: heartSize,
               borderRadius: '50%',
               background: '#F7EFE1',
               border: 'none',
@@ -180,138 +141,95 @@ function RecipeCard({ recipe, expanded, onToggle, onRemove, web }: RecipeCardPro
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              flexShrink: 0,
             }}
             title="Remove from saved"
           >
-            <HeartIcon />
+            <svg width={web ? 18 : 17} height={web ? 18 : 17} viewBox="0 0 24 24" fill="#012374">
+              <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z" stroke="#012374" strokeWidth="1.6"/>
+            </svg>
           </button>
         </div>
 
-        <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.65)', marginTop: '6px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '13px', color: '#16182A', opacity: 0.7, lineHeight: 1.45, marginTop: '7px' }}>
           {recipe.desc}
         </p>
 
-        {/* Badges row */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-          {/* Impact badge */}
-          <span
-            style={{
-              background: impact.bg,
-              color: impact.color,
-              borderRadius: '999px',
-              padding: '5px 10px',
-              fontSize: '12px',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: impact.dot,
-                flexShrink: 0,
-              }}
-            />
+        {/* Badge row */}
+        <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+          {/* Impact */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: dotSize === '8px' ? '7px' : '6px',
+            background: impact.bg, color: impact.color,
+            padding: pillPad, borderRadius: '999px', fontSize: pillFs, fontWeight: 600,
+          }}>
+            <span style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: impact.dot, flexShrink: 0 }} />
             {impact.label}
           </span>
-          {/* Carbs chip */}
-          <span
-            style={{
-              background: '#F7EFE1',
-              color: '#012374',
-              borderRadius: '999px',
-              padding: '5px 10px',
-              fontSize: '12px',
-              fontWeight: 500,
-            }}
-          >
+          {/* Carbs */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            background: '#F7EFE1', color: '#012374',
+            padding: pillPad, borderRadius: '999px', fontSize: pillFs, fontWeight: 600,
+          }}>
             {recipe.carbs}
           </span>
-          {/* Cuisine chip */}
-          <span
-            style={{
-              background: 'rgba(1,35,116,0.07)',
-              color: '#012374',
-              borderRadius: '999px',
-              padding: '5px 10px',
-              fontSize: '12px',
-              fontWeight: 500,
-            }}
-          >
+          {/* Cuisine */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            background: 'rgba(200,147,43,0.14)', color: '#9A6F18',
+            padding: pillPad, borderRadius: '999px', fontSize: pillFs, fontWeight: 600,
+          }}>
             {recipe.cuisine}
           </span>
         </div>
-      </button>
+      </div>
 
-      {/* Expanded content */}
+      {/* Expanded section */}
       {expanded && (
-        <div style={{ padding: web ? '0 20px 20px' : '0 16px 16px' }}>
-          {/* Steps */}
-          <p
-            style={{
-              fontSize: '11px',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'rgba(1,35,116,0.5)',
-              fontWeight: 700,
-              marginBottom: '10px',
-            }}
-          >
-            How to make it
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ padding: expPad }}>
+          <div style={{
+            borderTop: '1px solid rgba(1,35,116,0.07)',
+            paddingTop: '13px',
+            fontSize: '12px',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: '#001A4D',
+            opacity: 0.6,
+            fontWeight: 600,
+          }}>
+            Steps
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {recipe.steps.map((step, i) => (
-              <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '50%',
-                    background: '#012374',
-                    color: '#FFFDF9',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: '1px',
-                  }}
-                >
+              <div key={i} style={{ display: 'flex', gap: web ? '12px' : '11px', alignItems: 'flex-start' }}>
+                <span style={{
+                  flexShrink: 0,
+                  width: numSize, height: numSize,
+                  borderRadius: '50%',
+                  background: '#012374', color: '#FFFDF9',
+                  fontSize: '12px', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginTop: '1px',
+                }}>
                   {i + 1}
                 </span>
-                <span style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.5 }}>{step}</span>
+                <span style={{ fontSize: stepFs, color: '#16182A', lineHeight: 1.5 }}>{step}</span>
               </div>
             ))}
           </div>
-
-          {/* Tip box */}
-          <div
-            style={{
-              background: 'rgba(200,147,43,0.12)',
-              borderRadius: '12px',
-              padding: '13px',
-              marginTop: '14px',
-            }}
-          >
-            <p
-              style={{
-                fontSize: '11px',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: '#9A6F18',
-                fontWeight: 700,
-                marginBottom: '5px',
-              }}
-            >
+          {/* Why it's gentle box */}
+          <div style={{
+            marginTop: '14px',
+            background: 'rgba(200,147,43,0.12)',
+            borderRadius: web ? '13px' : '12px',
+            padding: web ? '15px' : '13px',
+          }}>
+            <div style={{ fontSize: '11px', letterSpacing: '0.06em', color: '#9A6F18', fontWeight: 700, textTransform: 'uppercase' }}>
               Why it&apos;s gentle
-            </p>
-            <p style={{ fontSize: '13px', color: '#16182A', lineHeight: 1.5 }}>{recipe.tip}</p>
+            </div>
+            <div style={{ fontSize: web ? '13.5px' : '13px', color: '#16182A', lineHeight: 1.45, marginTop: '7px' }}>
+              {recipe.tip}
+            </div>
           </div>
         </div>
       )}
@@ -319,9 +237,10 @@ function RecipeCard({ recipe, expanded, onToggle, onRemove, web }: RecipeCardPro
   );
 }
 
-// ── Main page ───────────────────────────────────────────────────────────────
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SavedRecipesPage() {
+  const router = useRouter();
   const [saved, setSaved] = useState<string[]>(['biryani', 'raita', 'salmonbowl', 'skillet']);
   const [filter, setFilter] = useState('All');
   const [expanded, setExpanded] = useState<string | null>('biryani');
@@ -329,281 +248,264 @@ export default function SavedRecipesPage() {
   const savedRecipes = RECIPES.filter((r) => saved.includes(r.id));
   const cuisines = Array.from(new Set(savedRecipes.map((r) => r.cuisine)));
   const filterChips = ['All', ...cuisines];
+  const shown = filter === 'All' ? savedRecipes : savedRecipes.filter((r) => r.cuisine === filter);
 
-  const displayedRecipes =
-    filter === 'All' ? savedRecipes : savedRecipes.filter((r) => r.cuisine === filter);
-
-  const handleRemove = (id: string) => {
+  const handleRemove = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSaved((prev) => prev.filter((s) => s !== id));
     if (expanded === id) setExpanded(null);
   };
 
-  const handleToggle = (id: string) => {
-    setExpanded((prev) => (prev === id ? null : id));
+  const handleToggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
+
+  const resetAll = () => {
+    setSaved(RECIPES.map((r) => r.id));
+    setFilter('All');
   };
 
-  // ── Filter chips ──────────────────────────────────────────────────────────
-
-  function FilterChips() {
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-        {filterChips.map((chip) => {
-          const active = filter === chip;
-          return (
-            <button
-              key={chip}
-              onClick={() => setFilter(chip)}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '999px',
-                fontSize: '13px',
-                fontWeight: active ? 600 : 500,
-                background: active ? '#012374' : '#FFFDF9',
-                color: active ? '#FFFDF9' : '#012374',
-                border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
-                cursor: 'pointer',
-              }}
-            >
-              {chip === 'All' ? 'All recipes' : chip}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ── Empty state ───────────────────────────────────────────────────────────
-
-  function EmptyState({ web }: { web?: boolean }) {
-    return (
-      <div
-        style={{
-          textAlign: 'center',
-          padding: web ? '60px 20px' : '48px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z"
-            stroke="#012374"
-            strokeWidth="1.6"
-            fill="none"
-            opacity={0.3}
-          />
-        </svg>
-        <span className="font-serif-italic" style={{ fontSize: '22px', color: '#012374', opacity: 0.5 }}>
-          No saved recipes yet
-        </span>
-        <Link
-          href="/recipes"
-          style={{
-            marginTop: '4px',
-            padding: '10px 22px',
-            borderRadius: '999px',
-            background: '#012374',
-            color: '#FFFDF9',
-            fontSize: '14px',
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          Browse recipes
-        </Link>
-      </div>
-    );
-  }
-
-  // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
-
-  const MobileLayout = (
-    <div className="lg:hidden mobile-page-pb" style={{ background: '#F7EFE1', minHeight: '100vh' }}>
-      {/* Page header */}
-      <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
-        <BackButton href="/recipes" />
-        <p
-          style={{
-            fontSize: '11px',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'rgba(1,35,116,0.5)',
-            fontWeight: 700,
-            marginTop: '16px',
-          }}
-        >
-          RECIPES
-        </p>
-        <h1 className="font-serif-italic" style={{ fontSize: '30px', color: '#012374', marginTop: '2px', lineHeight: 1.1 }}>
-          Saved for you
-        </h1>
-
-        {savedRecipes.length > 0 && (
-          <div style={{ marginTop: '12px' }}>
-            <p style={{ fontSize: '14px', color: '#16182A' }}>
-              <span className="font-serif-italic" style={{ fontSize: '18px', color: '#012374' }}>
-                {savedRecipes.length}
-              </span>{' '}
-              {savedRecipes.length === 1 ? 'saved recipe' : 'saved recipes'}
-            </p>
-            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.55)', marginTop: '2px' }}>
-              A gentle little cookbook you&apos;ve built, one meal at a time.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {savedRecipes.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          {/* Filter chips */}
-          <div style={{ padding: '16px 20px 0' }}>
-            <FilterChips />
-          </div>
-
-          {/* Recipe cards */}
-          <div style={{ padding: '14px 20px 0', display: 'flex', flexDirection: 'column', gap: '13px' }}>
-            {displayedRecipes.length === 0 ? (
-              <EmptyState />
-            ) : (
-              displayedRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  expanded={expanded === recipe.id}
-                  onToggle={() => handleToggle(recipe.id)}
-                  onRemove={() => handleRemove(recipe.id)}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Info tip */}
-          <div
+  const renderFilterChips = () => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+      {filterChips.map((chip) => {
+        const active = filter === chip;
+        return (
+          <button
+            key={chip}
+            onClick={() => setFilter(chip)}
             style={{
-              margin: '20px 20px 0',
-              background: 'rgba(200,147,43,0.12)',
-              borderRadius: '14px',
-              padding: '13px 14px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              padding: '9px 15px',
+              borderRadius: '999px',
+              fontSize: '13.5px',
+              fontWeight: 600,
+              background: active ? '#012374' : '#FFFDF9',
+              color: active ? '#FFFDF9' : '#012374',
+              border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
+              whiteSpace: 'nowrap',
             }}
           >
-            <p style={{ fontSize: '12.5px', color: '#9A6F18', lineHeight: 1.5 }}>
-              Tracking what you eat helps you spot patterns in how your body responds to different meals.
-            </p>
-          </div>
-        </>
-      )}
-
-      <BottomNav />
+            {chip === 'All' ? 'All recipes' : chip}
+          </button>
+        );
+      })}
     </div>
   );
 
-  // ── WEB LAYOUT ────────────────────────────────────────────────────────────
-
-  const WebLayout = (
-    <div className="hidden lg:flex" style={{ minHeight: '100vh', background: '#F7EFE1' }}>
-      <WebNav />
-
-      <main style={{ flex: 1, padding: '34px 44px', overflowY: 'auto' }}>
-        {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <div>
-            <p
-              style={{
-                fontSize: '11px',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'rgba(1,35,116,0.5)',
-                fontWeight: 700,
-              }}
-            >
-              RECIPES · SAVED
-            </p>
-            <h1 className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', marginTop: '4px', lineHeight: 1.1 }}>
-              Your saved recipes.
-            </h1>
-            <p style={{ fontSize: '14px', color: 'rgba(22,24,42,0.55)', marginTop: '6px' }}>
-              A gentle little cookbook you&apos;ve built, one meal at a time.
-            </p>
-          </div>
-
-          {savedRecipes.length > 0 && (
-            <div
-              style={{
-                background: '#FFFDF9',
-                borderRadius: '18px',
-                border: '1px solid rgba(1,35,116,0.07)',
-                padding: '16px 22px',
-                textAlign: 'center',
-                minWidth: '110px',
-              }}
-            >
-              <span className="font-serif-italic" style={{ fontSize: '30px', color: '#012374' }}>
-                {savedRecipes.length}
-              </span>
-              <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>
-                {savedRecipes.length === 1 ? 'recipe kept' : 'recipes kept'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {savedRecipes.length === 0 ? (
-          <div
-            style={{
-              background: '#FFFDF9',
-              borderRadius: '22px',
-              border: '2px dashed rgba(1,35,116,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <EmptyState web />
-          </div>
-        ) : (
-          <>
-            {/* Filter chips */}
-            <div style={{ marginBottom: '20px' }}>
-              <FilterChips />
-            </div>
-
-            {/* 2-column grid */}
-            {displayedRecipes.length === 0 ? (
-              <EmptyState web />
-            ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '18px',
-                }}
-              >
-                {displayedRecipes.map((recipe) => (
-                  <RecipeCard
-                    key={recipe.id}
-                    recipe={recipe}
-                    expanded={expanded === recipe.id}
-                    onToggle={() => handleToggle(recipe.id)}
-                    onRemove={() => handleRemove(recipe.id)}
-                    web
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </main>
+  const renderEmptyState = (web?: boolean) => (
+    <div style={{
+      textAlign: 'center',
+      padding: web ? '70px 40px' : '40px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    }}>
+      <div style={{
+        width: web ? '68px' : '64px',
+        height: web ? '68px' : '64px',
+        borderRadius: '20px',
+        background: web ? '#F7EFE1' : '#FFFDF9',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: web ? 'none' : '0 8px 20px -16px rgba(1,35,116,.5)',
+      }}>
+        <svg width={web ? 32 : 30} height={web ? 32 : 30} viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z" stroke="#012374" strokeWidth="1.6"/>
+        </svg>
+      </div>
+      <div className="font-serif-italic" style={{ fontSize: web ? '27px' : '23px', color: '#012374', marginTop: '16px' }}>
+        No saved recipes yet
+      </div>
+      <div style={{
+        fontSize: web ? '15px' : '14px',
+        color: '#16182A',
+        opacity: 0.66,
+        lineHeight: 1.5,
+        marginTop: '6px',
+        maxWidth: web ? '420px' : undefined,
+      }}>
+        When you find a recipe you love, tap{' '}
+        <span style={{ fontWeight: 600, color: '#012374' }}>Save this recipe</span>{' '}
+        and it&apos;ll wait for you here.
+      </div>
+      <button
+        onClick={() => router.push('/recipes')}
+        style={{
+          marginTop: web ? '20px' : '18px',
+          display: 'inline-block',
+          background: '#012374',
+          color: '#FFFDF9',
+          padding: web ? '14px 26px' : '13px 22px',
+          borderRadius: web ? '14px' : '13px',
+          fontSize: web ? '15px' : '14px',
+          fontWeight: 600,
+          cursor: 'pointer',
+          border: 'none',
+          fontFamily: 'inherit',
+        }}
+      >
+        Browse recipes
+      </button>
     </div>
   );
 
   return (
     <>
-      {MobileLayout}
-      {WebLayout}
+      {/* ─── Mobile ─── */}
+      <div className="lg:hidden mobile-page-pb" style={{ background: '#F7EFE1', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
+        {/* Header */}
+        <div style={{ padding: '14px 20px 0', paddingTop: 'max(14px, env(safe-area-inset-top, 0px))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => router.back()}
+              style={{
+                width: '38px', height: '38px',
+                borderRadius: '12px',
+                background: '#FFFDF9',
+                border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M15 5l-7 7 7 7" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div>
+              <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
+                Recipes
+              </div>
+              <div className="font-serif-italic" style={{ fontSize: '23px', color: '#012374', lineHeight: 1 }}>
+                Saved for you
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ padding: '0 20px', overflowY: 'auto' }}>
+          {savedRecipes.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <>
+              {/* Count + subtitle */}
+              <div style={{ marginTop: '18px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div className="font-serif-italic" style={{ fontSize: '27px', color: '#012374' }}>
+                  {savedRecipes.length} {savedRecipes.length === 1 ? 'saved recipe' : 'saved recipes'}
+                </div>
+              </div>
+              <div style={{ fontSize: '13.5px', color: '#16182A', opacity: 0.7, lineHeight: 1.45, marginTop: '4px' }}>
+                A gentle little cookbook you&apos;ve built, one meal at a time.
+              </div>
+
+              {/* Filter chips */}
+              <div style={{ marginTop: '16px' }}>
+                {renderFilterChips()}
+              </div>
+
+              {/* Cards */}
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '13px' }}>
+                {shown.length === 0 ? (
+                  renderEmptyState()
+                ) : (
+                  shown.map((recipe) => (
+                    <RecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      expanded={expanded === recipe.id}
+                      onToggle={() => handleToggle(recipe.id)}
+                      onRemove={(e) => handleRemove(recipe.id, e)}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <BottomNav />
+      </div>
+
+      {/* ─── Web ─── */}
+      <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
+        <WebNav />
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '34px 44px 44px' }}>
+          {/* Page header */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '20px' }}>
+            <div>
+              <div style={{ fontSize: '12px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
+                Recipes · saved
+              </div>
+              <div className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', lineHeight: 1.05, marginTop: '6px' }}>
+                Your saved recipes.
+              </div>
+              <div style={{ fontSize: '16px', color: '#16182A', opacity: 0.72, marginTop: '4px' }}>
+                A gentle little cookbook you&apos;ve built, one meal at a time.
+              </div>
+            </div>
+
+            {savedRecipes.length > 0 && (
+              <div style={{
+                background: '#FFFDF9',
+                border: '1px solid rgba(1,35,116,0.08)',
+                borderRadius: '16px',
+                padding: '14px 20px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}>
+                <div className="font-serif" style={{ fontSize: '30px', color: '#012374', lineHeight: 1 }}>
+                  {savedRecipes.length}
+                </div>
+                <div style={{ fontSize: '12px', color: '#16182A', opacity: 0.55, marginTop: '3px' }}>
+                  {savedRecipes.length === 1 ? 'recipe kept' : 'recipes kept'}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {savedRecipes.length === 0 ? (
+            <div style={{
+              marginTop: '30px',
+              background: '#FFFDF9',
+              border: '1px dashed rgba(1,35,116,0.16)',
+              borderRadius: '22px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}>
+              {renderEmptyState(true)}
+            </div>
+          ) : (
+            <>
+              {/* Filter chips */}
+              <div style={{ marginTop: '24px' }}>
+                {renderFilterChips()}
+              </div>
+
+              {/* 2-column grid */}
+              <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', alignItems: 'start' }}>
+                {shown.length === 0 ? (
+                  <div style={{ gridColumn: '1 / -1' }}>{renderEmptyState(true)}</div>
+                ) : (
+                  shown.map((recipe) => (
+                    <RecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      expanded={expanded === recipe.id}
+                      onToggle={() => handleToggle(recipe.id)}
+                      onRemove={(e) => handleRemove(recipe.id, e)}
+                      web
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }
