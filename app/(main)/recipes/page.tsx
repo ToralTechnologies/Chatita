@@ -558,6 +558,12 @@ export default function RecipesPage() {
           Add ingredients or take a photo to get started
         </div>
       )}
+      <div style={{ borderTop: '1px solid rgba(1,35,116,0.08)', marginTop: 18, paddingTop: 16, display: 'flex', justifyContent: 'center' }}>
+        <a href="/saved-recipes" style={{ fontSize: 13, color: '#C8932B', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="#C8932B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          View saved recipes
+        </a>
+      </div>
     </div>
   );
 

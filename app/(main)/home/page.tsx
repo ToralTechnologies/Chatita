@@ -97,6 +97,16 @@ const FEATURE_CARDS = [
       </svg>
     ),
   },
+  {
+    href: '/saved-recipes',
+    title: 'Saved recipes',
+    subtitle: 'Your collection',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="#012374" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 function getDayLabel() {

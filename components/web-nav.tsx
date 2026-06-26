@@ -33,6 +33,33 @@ const NAV = [
     ),
   },
   {
+    href: '/saved-recipes', label: 'Saved recipes',
+    icon: (op: number) => (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="#FFFDF9" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity={op}/>
+      </svg>
+    ),
+  },
+  {
+    href: '/menu-scanner', label: 'Scan a menu',
+    icon: (op: number) => (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+        <circle cx="12" cy="12.5" r="3.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+        <path d="M8 6l1.5-2h5L16 6" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+      </svg>
+    ),
+  },
+  {
+    href: '/meal-plan', label: 'Meal plan',
+    icon: (op: number) => (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="18" rx="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+        <path d="M16 2v4M8 2v4M3 10h18" stroke="#FFFDF9" strokeWidth="1.6" strokeLinecap="round" opacity={op}/>
+      </svg>
+    ),
+  },
+  {
     href: '/restaurant-finder', label: 'Restaurants',
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
