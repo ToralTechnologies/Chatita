@@ -36,15 +36,21 @@ const CUISINES = ['Any cuisine', 'Pakistani', 'Indian', 'Mexican', 'Mediterranea
 
 // ─── Recipe card component ────────────────────────────────────────────────────
 
-function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
+function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web, userIngredients }: {
   recipe: Recipe;
   expanded: boolean;
   onToggle: () => void;
   saved: boolean;
   onSave: () => void;
   web?: boolean;
+  userIngredients?: string[];
 }) {
   const imp = IMPACT[recipe.bloodSugarImpact] ?? IMPACT.low;
+  const extras = userIngredients && userIngredients.length > 0
+    ? recipe.ingredients.filter(ri =>
+        !userIngredients.some(ui => ri.toLowerCase().includes(ui.toLowerCase()))
+      )
+    : [];
 
   return (
     <div style={{
@@ -91,6 +97,25 @@ function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web }: {
       {/* Expanded content */}
       {expanded && (
         <div style={{ marginTop: 20 }}>
+          {/* Extra ingredients callout */}
+          {extras.length > 0 && (
+            <div style={{
+              background: 'rgba(200,147,43,0.1)', borderRadius: 14,
+              padding: '13px 16px', marginBottom: 18,
+              border: '1px solid rgba(200,147,43,0.22)',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9A6F18', marginBottom: 8 }}>
+                You&apos;ll also need
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {extras.map((e, i) => (
+                  <span key={i} style={{ background: 'rgba(200,147,43,0.18)', color: '#7A5010', borderRadius: 999, padding: '5px 12px', fontSize: 12.5, fontWeight: 500 }}>
+                    {e}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Stats row */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
             {[
@@ -183,6 +208,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [detectedIngredients, setDetectedIngredients] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [usedPhoto, setUsedPhoto] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -220,6 +246,7 @@ export default function RecipesPage() {
 
   const search = async () => {
     if (!ingredients.length && !photoBase64) return;
+    setUsedPhoto(!!photoBase64);
     setLoading(true);
     setSearched(true);
     setError(null);
@@ -565,7 +592,7 @@ export default function RecipesPage() {
               </div>
             ) : (
               <>
-                {detectedIngredients.length > 0 && (
+                {usedPhoto && detectedIngredients.length > 0 && (
                   <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#012374' }}>
                     <strong>Detected in photo:</strong> {detectedIngredients.join(', ')}
                   </div>
@@ -582,6 +609,7 @@ export default function RecipesPage() {
                       onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
                       saved={saved.includes(r.id)}
                       onSave={() => toggleSave(r.id)}
+                      userIngredients={ingredients}
                     />
                   ))}
                 </div>
@@ -656,13 +684,13 @@ export default function RecipesPage() {
                       {cuisine !== 'Any cuisine' ? `Gentle ${cuisine} ideas` : 'A few gentle ideas for you'}
                     </div>
                     <button
-                      onClick={() => { setSearched(false); setDetectedIngredients([]); }}
+                      onClick={() => { setSearched(false); setDetectedIngredients([]); setUsedPhoto(false); }}
                       style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       ← Edit search
                     </button>
                   </div>
-                  {detectedIngredients.length > 0 && (
+                  {usedPhoto && detectedIngredients.length > 0 && (
                     <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '12px 18px', marginBottom: 16, fontSize: 13.5, color: '#012374' }}>
                       <strong>Detected in your photo:</strong> {detectedIngredients.join(', ')}
                     </div>
@@ -677,6 +705,7 @@ export default function RecipesPage() {
                         saved={saved.includes(r.id)}
                         onSave={() => toggleSave(r.id)}
                         web
+                        userIngredients={ingredients}
                       />
                     ))}
                   </div>
