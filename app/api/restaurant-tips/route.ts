@@ -2,8 +2,15 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
+import { prisma } from '@/lib/prisma';
+import { buildRegionalPromptSnippet } from '@/lib/health/regional-layers';
 
 const ENABLE_AI = process.env.ENABLE_AI_ANALYSIS === 'true';
+
+function parseArr(v: string | null | undefined): string[] {
+  if (!v) return [];
+  try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch { return []; }
+}
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +20,37 @@ export async function POST(request: Request) {
     }
 
     const { restaurantName, cuisine, dishes } = await request.json();
+
+    // Fetch user's cultural profile for personalized guidance
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        countryOrRegion: true,
+        stapleCarbs: true,
+        commonProteins: true,
+        dietaryRestrictions: true,
+        religiousFoodNeeds: true,
+        foodAccessContext: true,
+        foodsToKeep: true,
+      },
+    });
+
+    const regionalSnippet = buildRegionalPromptSnippet(user?.countryOrRegion);
+    const stapleCarbs = parseArr(user?.stapleCarbs);
+    const commonProteins = parseArr(user?.commonProteins);
+    const dietaryRestrictions = parseArr(user?.dietaryRestrictions);
+    const foodsToKeep = parseArr(user?.foodsToKeep);
+    const religiousFoodNeeds = user?.religiousFoodNeeds;
+    const foodAccessContext = user?.foodAccessContext;
+
+    const culturalContext = [
+      stapleCarbs.length ? `User's staple carbs: ${stapleCarbs.join(', ')}` : '',
+      commonProteins.length ? `User's common proteins: ${commonProteins.join(', ')}` : '',
+      dietaryRestrictions.length ? `Dietary restrictions: ${dietaryRestrictions.join(', ')}` : '',
+      religiousFoodNeeds ? `Religious/cultural food needs: ${religiousFoodNeeds}` : '',
+      foodsToKeep.length ? `Foods user doesn't want to give up: ${foodsToKeep.join(', ')}` : '',
+      foodAccessContext === 'food_pantry' ? 'User sometimes relies on a food pantry — keep suggestions realistic and accessible.' : '',
+    ].filter(Boolean).join('\n');
 
     if (!ENABLE_AI || !process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({
@@ -25,11 +63,13 @@ export async function POST(request: Request) {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
-    const prompt = `You are a diabetes-aware nutrition companion helping someone choose what to order at a restaurant. Your approach is culturally sensitive and balance-focused — you help people enjoy their food, not avoid it.
+    const prompt = `You are a diabetes-aware nutrition companion helping someone choose what to order at a restaurant. You use IDF and WHO global diabetes education principles as your baseline — balanced, culturally adaptive, and non-shaming.
 
 Restaurant: ${restaurantName}
 Cuisine: ${cuisine}
 Dishes they're considering: ${dishes.join(', ')}
+${culturalContext ? `\nUser's food context:\n${culturalContext}` : ''}
+${regionalSnippet ? `\n${regionalSnippet}` : ''}
 
 For EACH dish, provide balanced, culturally aware guidance. Then give overall meal advice.
 

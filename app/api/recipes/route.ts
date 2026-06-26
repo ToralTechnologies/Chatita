@@ -2,8 +2,15 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
+import { prisma } from '@/lib/prisma';
+import { buildRegionalPromptSnippet } from '@/lib/health/regional-layers';
 
 const ENABLE_AI = process.env.ENABLE_AI_ANALYSIS === 'true';
+
+function parseArr(v: string | null | undefined): string[] {
+  if (!v) return [];
+  try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch { return []; }
+}
 
 interface Recipe {
   title: string;
@@ -151,6 +158,41 @@ export async function POST(request: Request) {
       });
     }
 
+    // Fetch user cultural profile for personalized recipe suggestions
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        countryOrRegion: true,
+        culturalFoodBackground: true,
+        stapleCarbs: true,
+        commonProteins: true,
+        commonVegetables: true,
+        dietaryRestrictions: true,
+        religiousFoodNeeds: true,
+        foodAccessContext: true,
+        foodsToKeep: true,
+      },
+    });
+
+    const regionalSnippet = buildRegionalPromptSnippet(user?.countryOrRegion);
+    const stapleCarbs = parseArr(user?.stapleCarbs);
+    const commonProteins = parseArr(user?.commonProteins);
+    const commonVegetables = parseArr(user?.commonVegetables);
+    const dietaryRestrictions = parseArr(user?.dietaryRestrictions);
+    const foodsToKeep = parseArr(user?.foodsToKeep);
+
+    const userCulturalContext = [
+      user?.countryOrRegion ? `User is from: ${user.countryOrRegion}` : '',
+      user?.culturalFoodBackground ? `Food background: ${user.culturalFoodBackground}` : '',
+      stapleCarbs.length ? `Staple carbs (incorporate into recipes): ${stapleCarbs.join(', ')}` : '',
+      commonProteins.length ? `Common proteins: ${commonProteins.join(', ')}` : '',
+      commonVegetables.length ? `Common vegetables: ${commonVegetables.join(', ')}` : '',
+      dietaryRestrictions.length ? `Dietary restrictions (respect strictly): ${dietaryRestrictions.join(', ')}` : '',
+      user?.religiousFoodNeeds ? `Religious/cultural food needs: ${user.religiousFoodNeeds}` : '',
+      foodsToKeep.length ? `Foods user wants to keep in their diet: ${foodsToKeep.join(', ')}` : '',
+      user?.foodAccessContext === 'food_pantry' ? 'User sometimes uses a food pantry — prioritize recipes using shelf-stable or budget-friendly ingredients.' : '',
+    ].filter(Boolean).join('\n');
+
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const contentBlocks: Anthropic.MessageParam['content'] = [];
@@ -173,12 +215,14 @@ export async function POST(request: Request) {
 
     contentBlocks.push({
       type: 'text',
-      text: `You are a warm, culturally-sensitive diabetes nutrition companion. Generate exactly 3 diabetes-friendly recipes.
+      text: `You are a warm, culturally-sensitive diabetes nutrition companion. Generate exactly 3 diabetes-friendly recipes that fit this user's actual food culture and life.
 
 ${photoBase64 ? 'The photo above shows the user\'s fridge or pantry. First identify all visible ingredients, then use those (plus any listed below) to create recipes.' : ''}
 ${ingredientsList}
 ${cuisineNote}
 ${cravingNote}
+${userCulturalContext ? `\nUser's food profile (use this to make recipes feel familiar and relevant):\n${userCulturalContext}` : ''}
+${regionalSnippet ? `\n${regionalSnippet}` : ''}
 
 GLOBAL DIABETES NUTRITION PRINCIPLES (IDF/WHO baseline):
 - Balance over restriction: fiber + protein + healthy fats + appropriate carbs. Low-carb alone ≠ better.

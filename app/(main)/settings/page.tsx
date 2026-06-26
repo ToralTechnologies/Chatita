@@ -10,6 +10,7 @@ import LanguageSwitcher from '@/components/language-switcher';
 import HealthProfileCard from '@/components/health-profile-card';
 import ThemeToggle from '@/components/theme-toggle';
 import BackButton from '@/components/back-button';
+import CulturalFoodProfileCard from '@/components/cultural-food-profile-card';
 import { useTranslation } from '@/lib/i18n/context';
 import { Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
@@ -524,6 +525,7 @@ function SettingsContent() {
           {banners}
           <div style={card}><LanguageSwitcher /></div>
           <HealthProfileCard />
+          <CulturalFoodProfileCard />
           {dexcomCard}
           {libreCard}
           {reportsCard}
@@ -551,9 +553,10 @@ function SettingsContent() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, alignItems: 'start' }}>
-            {/* Left column: health profile + language */}
+            {/* Left column: health profile + cultural profile + language */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <HealthProfileCard />
+              <CulturalFoodProfileCard />
               <div style={card}><LanguageSwitcher /></div>
             </div>
 

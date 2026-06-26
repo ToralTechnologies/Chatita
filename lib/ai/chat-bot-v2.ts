@@ -2,6 +2,7 @@
 // Only called when ENABLE_AI_CHAT=true
 
 import { ChatHealthContext } from '@/types';
+import { buildRegionalPromptSnippet } from '@/lib/health/regional-layers';
 
 interface ChatResponse {
   message: string;
@@ -134,10 +135,14 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     }
   }
 
+  const regionalSnippet = buildRegionalPromptSnippet(healthCtx?.culturalProfile?.countryOrRegion);
   const healthContextBlock =
     sections.length > 0
       ? `\n\n== CURRENT USER HEALTH DATA ==\n${sections.join('\n')}\n== END HEALTH DATA ==`
       : '';
+  const regionalBlock = regionalSnippet
+    ? `\n\n== REGIONAL GUIDANCE LAYER ==\n${regionalSnippet}\n== END REGIONAL LAYER ==`
+    : '';
 
   return `You are Chatita, a global, bilingual diabetes companion. Your mission is to help people understand their food, blood sugar, and daily choices through culturally relevant, non-judgmental guidance grounded in global clinical best practices from the International Diabetes Federation (IDF) and World Health Organization (WHO).
 
@@ -253,7 +258,7 @@ Always remind users: "Your personal target range may be different — these are 
 General reference targets (IDF/ADA — not a prescription):
 - Fasting / before meals: 80–130 mg/dL
 - 1–2 hours after meals: less than 180 mg/dL
-- CGM time in range: 70–180 mg/dL${healthContextBlock}
+- CGM time in range: 70–180 mg/dL${healthContextBlock}${regionalBlock}
 
 RESPONSE FORMAT:
 Respond ONLY with a valid JSON object. No text before or after the JSON. No markdown code blocks.
