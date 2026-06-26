@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
-import MealForm from '@/components/meal-form';
+import MealForm, { MealFormData } from '@/components/meal-form';
 import { useTranslation } from '@/lib/i18n/context';
 import { MealType } from '@/types';
 
@@ -23,6 +23,9 @@ interface MealData {
   restaurantName?: string | null;
   restaurantAddress?: string | null;
   restaurantPlaceId?: string | null;
+  mealName?: string | null;
+  source?: string | null;
+  portionEatenPercent?: number | null;
   eatenAt: string;
 }
 
@@ -68,22 +71,7 @@ export default function EditMealPage() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const handleSubmit = async (formData: {
-    detectedFoods: string[];
-    calories?: number;
-    carbs?: number;
-    protein?: number;
-    fat?: number;
-    fiber?: number;
-    sugar?: number;
-    sodium?: number;
-    portionSize?: string;
-    mealType: MealType;
-    feeling?: string;
-    restaurantName?: string;
-    restaurantAddress?: string;
-    restaurantPlaceId?: string;
-  }) => {
+  const handleSubmit = async (formData: MealFormData) => {
     setSaving(true);
     try {
       const res = await fetch(`/api/meals/${id}`, {
@@ -152,6 +140,9 @@ export default function EditMealPage() {
     restaurantName: meal.restaurantName ?? undefined,
     restaurantAddress: meal.restaurantAddress ?? undefined,
     restaurantPlaceId: meal.restaurantPlaceId ?? undefined,
+    mealName: meal.mealName ?? undefined,
+    source: meal.source ?? undefined,
+    portionEatenPercent: meal.portionEatenPercent ?? undefined,
   };
 
   return (

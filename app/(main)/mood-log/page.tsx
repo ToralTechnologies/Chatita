@@ -16,6 +16,17 @@ interface MoodEntry {
   havingCravings: boolean;
   notes: string | null;
   recordedAt: string;
+  // Extended
+  moodIntensity?: number | null;
+  energyLevel?: number | null;
+  hungerLevel?: number | null;
+  fullnessLevel?: number | null;
+  cravings?: string | null;
+  symptoms?: string | null;
+  contextTags?: string | null;
+  userWords?: string | null;
+  foodMoodConnection?: string | null;
+  supportWanted?: string | null;
 }
 
 // ── Mood config ────────────────────────────────────────────────────────────────
@@ -130,6 +141,34 @@ function EntryCard({ entry, web }: { entry: MoodEntry; web?: boolean }) {
               <span key={t} style={{ padding: '3px 9px', borderRadius: 99, fontSize: 11, background: 'rgba(1,35,116,0.07)', color: 'rgba(22,24,42,0.7)' }}>{t}</span>
             ))}
           </div>
+        )}
+        {/* Extended stats row */}
+        {(entry.energyLevel || entry.hungerLevel || entry.fullnessLevel) && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 7, flexWrap: 'wrap' }}>
+            {entry.energyLevel && <span style={{ fontSize: 11, color: 'rgba(22,24,42,0.55)' }}>Energy: {entry.energyLevel}/10</span>}
+            {entry.hungerLevel && <span style={{ fontSize: 11, color: 'rgba(22,24,42,0.55)' }}>Hunger: {entry.hungerLevel}/10</span>}
+            {entry.fullnessLevel && <span style={{ fontSize: 11, color: 'rgba(22,24,42,0.55)' }}>Fullness: {entry.fullnessLevel}/10</span>}
+          </div>
+        )}
+        {/* Parsed JSON arrays */}
+        {(() => {
+          const cravings = entry.cravings ? (() => { try { return JSON.parse(entry.cravings!); } catch { return []; } })() : [];
+          const symptoms = entry.symptoms ? (() => { try { return JSON.parse(entry.symptoms!); } catch { return []; } })() : [];
+          const ctags = entry.contextTags ? (() => { try { return JSON.parse(entry.contextTags!); } catch { return []; } })() : [];
+          const allTags = [...cravings, ...symptoms, ...ctags];
+          return allTags.length > 0 ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+              {allTags.map((t: string) => (
+                <span key={t} style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, background: 'rgba(1,35,116,0.06)', color: 'rgba(22,24,42,0.65)' }}>{t}</span>
+              ))}
+            </div>
+          ) : null;
+        })()}
+        {/* User's own words */}
+        {entry.userWords && (
+          <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.65)', marginTop: 6, lineHeight: 1.5, fontStyle: 'italic' }}>
+            &ldquo;{entry.userWords}&rdquo;
+          </p>
         )}
         {entry.notes && (
           <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.6)', marginTop: 6, lineHeight: 1.5, fontStyle: 'italic' }}>

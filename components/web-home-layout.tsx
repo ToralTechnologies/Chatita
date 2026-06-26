@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import WebNav from '@/components/web-nav';
-import { Mood, UserContext } from '@/types';
+import { Mood, UserContext, MoodCheckInData } from '@/types';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
 
@@ -13,7 +13,7 @@ interface WebHomeLayoutProps {
   userData?: any;
   userContext: UserContext;
   onGlucoseUpdate?: (value: number, context?: GlucoseContext, relatedMealId?: string, notes?: string) => void;
-  onMoodSave?: (mood: Mood, stress: number) => void;
+  onMoodSave?: (data: MoodCheckInData) => void;
   onContextSave?: (ctx: UserContext) => void;
 }
 

@@ -22,6 +22,7 @@ export async function GET(request: Request) {
           OR: [
             { aiSummary: { contains: search, mode: 'insensitive' } },
             { detectedFoods: { contains: search, mode: 'insensitive' } },
+            { mealName: { contains: search, mode: 'insensitive' } },
           ],
         }),
         ...(mealType && { mealType }),
@@ -48,11 +49,12 @@ export async function POST(request: Request) {
     const {
       photoBase64,
       detectedFoods,
-      foodEntries, // NEW: Individual food items with detailed nutrition
+      foodEntries,
       aiSummary,
       aiConfidence,
       aiMode,
       nutritionSource,
+      // Core nutrition
       calories,
       carbs,
       protein,
@@ -61,39 +63,58 @@ export async function POST(request: Request) {
       sugar,
       sodium,
       portionSize,
+      // Meal identity
+      mealName,
+      source,
+      portionEatenPercent,
+      estimateConfidence,
+      // Extended nutrition
+      addedSugar,
+      saturatedFat,
+      transFat,
+      cholesterol,
+      potassium,
+      // Context
       mealType,
       feeling,
       restaurantName,
       restaurantAddress,
       restaurantPlaceId,
       eatenAt,
+      // Glucose
+      preMealGlucose,
+      postMealGlucose,
+      cgmTrend,
+      glucoseSymptoms,
+      // Medication
+      medicationTaken,
+      medicationName,
+      medicationDose,
+      medicationTime,
+      medicationNotes,
+      isGlp1,
+      glp1Symptoms,
+      // Snack
+      snackReason,
+      wasLowGlucoseTreatment,
+      // Inline hydration (creates a linked HydrationLog)
+      drinkType,
+      drinkAmountOz,
+      drinkSweetened,
+      drinkCarbsG,
+      drinkCaffeine,
     } = body;
 
-    // Auto-detect meal type if not provided
     const finalMealType = mealType || detectMealTypeFromTime();
 
-    // Determine nutrition source
     let finalNutritionSource = nutritionSource || 'manual';
-    if (aiMode === 'ai' && !nutritionSource) {
-      finalNutritionSource = 'ai';
-    }
+    if (aiMode === 'ai' && !nutritionSource) finalNutritionSource = 'ai';
+    if (foodEntries?.length > 0 && !nutritionSource) finalNutritionSource = 'usda';
 
-    // Allow photo-only OR food-list-only OR foodEntries (not requiring all)
-    // At least one must be present
     if (!photoBase64 && (!detectedFoods || detectedFoods.length === 0) && (!foodEntries || foodEntries.length === 0)) {
-      return NextResponse.json(
-        { error: 'Either a photo or food items are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Either a photo or food items are required' }, { status: 400 });
     }
 
-    // If foodEntries exist, update nutritionSource to reflect database source
-    if (foodEntries && foodEntries.length > 0 && !nutritionSource) {
-      finalNutritionSource = 'usda'; // Most likely from USDA/barcode database
-    }
-
-    // SECURITY: EXIF GPS data (if extracted from photo) is intentionally NOT stored here.
-    // The Meal model has no GPS column and no GPS field is passed to prisma.meal.create().
     const meal = await prisma.meal.create({
       data: {
         userId: session.user.id,
@@ -103,6 +124,12 @@ export async function POST(request: Request) {
         aiConfidence: aiConfidence || null,
         aiMode: aiMode || null,
         nutritionSource: finalNutritionSource,
+        // Meal identity
+        mealName: mealName || null,
+        source: source || null,
+        portionEatenPercent: portionEatenPercent ? parseFloat(portionEatenPercent) : null,
+        estimateConfidence: estimateConfidence || null,
+        // Core nutrition
         calories: calories || null,
         carbs: carbs || null,
         protein: protein || null,
@@ -111,14 +138,37 @@ export async function POST(request: Request) {
         sugar: sugar || null,
         sodium: sodium || null,
         portionSize: portionSize || null,
+        // Extended nutrition
+        addedSugar: addedSugar || null,
+        saturatedFat: saturatedFat || null,
+        transFat: transFat || null,
+        cholesterol: cholesterol || null,
+        potassium: potassium || null,
+        // Context
         mealType: finalMealType,
         feeling: feeling || null,
         restaurantName: restaurantName || null,
         restaurantAddress: restaurantAddress || null,
         restaurantPlaceId: restaurantPlaceId || null,
         ...(eatenAt && { eatenAt: new Date(eatenAt) }),
-        // NEW: Create FoodEntry records if provided
-        ...(foodEntries && foodEntries.length > 0 && {
+        // Glucose
+        preMealGlucose: preMealGlucose || null,
+        postMealGlucose: postMealGlucose || null,
+        cgmTrend: cgmTrend || null,
+        glucoseSymptoms: glucoseSymptoms?.length ? JSON.stringify(glucoseSymptoms) : null,
+        // Medication
+        medicationTaken: medicationTaken ?? null,
+        medicationName: medicationName || null,
+        medicationDose: medicationDose || null,
+        medicationTime: medicationTime || null,
+        medicationNotes: medicationNotes || null,
+        isGlp1: isGlp1 ?? null,
+        glp1Symptoms: glp1Symptoms?.length ? JSON.stringify(glp1Symptoms) : null,
+        // Snack
+        snackReason: snackReason || null,
+        wasLowGlucoseTreatment: wasLowGlucoseTreatment ?? null,
+        // Food entries
+        ...(foodEntries?.length > 0 && {
           foodEntries: {
             create: foodEntries.map((food: any) => ({
               foodName: food.foodName,
@@ -140,24 +190,31 @@ export async function POST(request: Request) {
           },
         }),
       },
-      include: {
-        foodEntries: true, // Return the created food entries
-      },
+      include: { foodEntries: true },
     });
+
+    // Create inline hydration log if drink was logged with this meal
+    if (drinkType && drinkAmountOz && parseFloat(drinkAmountOz) > 0) {
+      await prisma.hydrationLog.create({
+        data: {
+          userId: session.user.id,
+          mealId: meal.id,
+          drinkType,
+          amountOz: parseFloat(drinkAmountOz),
+          sweetened: drinkSweetened ?? null,
+          drinkCarbsG: drinkCarbsG ? parseFloat(drinkCarbsG) : null,
+          caffeine: drinkCaffeine ?? null,
+          addToDailyWaterTotal: true,
+        },
+      }).catch((err) => console.error('Hydration log error:', err));
+    }
 
     // Create follow-up check-in for 2 hours after meal
     const scheduledFor = new Date(meal.eatenAt.getTime() + 2 * 60 * 60 * 1000);
     if (scheduledFor > new Date()) {
       await prisma.mealFollowUp.create({
-        data: {
-          mealId: meal.id,
-          userId: session.user.id,
-          scheduledFor,
-        },
-      }).catch((err) => {
-        // Non-critical: don't fail meal save if follow-up creation fails
-        console.error('Follow-up creation error:', err);
-      });
+        data: { mealId: meal.id, userId: session.user.id, scheduledFor },
+      }).catch((err) => console.error('Follow-up creation error:', err));
     }
 
     return NextResponse.json({ meal }, { status: 201 });
@@ -167,14 +224,10 @@ export async function POST(request: Request) {
   }
 }
 
-// Helper function to auto-detect meal type based on time
 function detectMealTypeFromTime(): string {
   const hour = new Date().getHours();
-
   if (hour >= 5 && hour < 11) return 'breakfast';
   if (hour >= 11 && hour < 15) return 'lunch';
   if (hour >= 15 && hour < 18) return 'snack';
-  if (hour >= 18 || hour < 5) return 'dinner';
-
-  return 'snack'; // fallback
+  return 'dinner';
 }

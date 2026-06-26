@@ -59,26 +59,33 @@ export async function PATCH(
     const body = await request.json();
     const {
       detectedFoods,
-      calories,
-      carbs,
-      protein,
-      fat,
-      fiber,
-      sugar,
-      sodium,
-      portionSize,
-      mealType,
-      feeling,
-      restaurantName,
-      restaurantAddress,
-      restaurantPlaceId,
-      eatenAt,
+      // Core nutrition
+      calories, carbs, protein, fat, fiber, sugar, sodium, portionSize,
+      // Meal identity
+      mealName, source, portionEatenPercent, estimateConfidence,
+      // Extended nutrition
+      addedSugar, saturatedFat, transFat, cholesterol, potassium,
+      // Context
+      mealType, feeling, restaurantName, restaurantAddress, restaurantPlaceId, eatenAt,
+      // Glucose
+      preMealGlucose, postMealGlucose, cgmTrend, glucoseSymptoms,
+      // Medication
+      medicationTaken, medicationName, medicationDose, medicationTime, medicationNotes,
+      isGlp1, glp1Symptoms,
+      // Snack
+      snackReason, wasLowGlucoseTreatment,
+      // Inline hydration
+      drinkType, drinkAmountOz, drinkSweetened, drinkCarbsG, drinkCaffeine,
     } = body;
 
     const updatedMeal = await prisma.meal.update({
       where: { id },
       data: {
         ...(detectedFoods !== undefined && { detectedFoods: JSON.stringify(detectedFoods) }),
+        ...(mealName !== undefined && { mealName }),
+        ...(source !== undefined && { source }),
+        ...(portionEatenPercent !== undefined && { portionEatenPercent }),
+        ...(estimateConfidence !== undefined && { estimateConfidence }),
         ...(calories !== undefined && { calories }),
         ...(carbs !== undefined && { carbs }),
         ...(protein !== undefined && { protein }),
@@ -87,14 +94,48 @@ export async function PATCH(
         ...(sugar !== undefined && { sugar }),
         ...(sodium !== undefined && { sodium }),
         ...(portionSize !== undefined && { portionSize }),
+        ...(addedSugar !== undefined && { addedSugar }),
+        ...(saturatedFat !== undefined && { saturatedFat }),
+        ...(transFat !== undefined && { transFat }),
+        ...(cholesterol !== undefined && { cholesterol }),
+        ...(potassium !== undefined && { potassium }),
         ...(mealType !== undefined && { mealType }),
         ...(feeling !== undefined && { feeling }),
         ...(restaurantName !== undefined && { restaurantName }),
         ...(restaurantAddress !== undefined && { restaurantAddress }),
         ...(restaurantPlaceId !== undefined && { restaurantPlaceId }),
         ...(eatenAt !== undefined && { eatenAt: new Date(eatenAt) }),
+        ...(preMealGlucose !== undefined && { preMealGlucose }),
+        ...(postMealGlucose !== undefined && { postMealGlucose }),
+        ...(cgmTrend !== undefined && { cgmTrend }),
+        ...(glucoseSymptoms !== undefined && { glucoseSymptoms: glucoseSymptoms ? JSON.stringify(glucoseSymptoms) : null }),
+        ...(medicationTaken !== undefined && { medicationTaken }),
+        ...(medicationName !== undefined && { medicationName }),
+        ...(medicationDose !== undefined && { medicationDose }),
+        ...(medicationTime !== undefined && { medicationTime }),
+        ...(medicationNotes !== undefined && { medicationNotes }),
+        ...(isGlp1 !== undefined && { isGlp1 }),
+        ...(glp1Symptoms !== undefined && { glp1Symptoms: glp1Symptoms ? JSON.stringify(glp1Symptoms) : null }),
+        ...(snackReason !== undefined && { snackReason }),
+        ...(wasLowGlucoseTreatment !== undefined && { wasLowGlucoseTreatment }),
       },
     });
+
+    // Add hydration log if drink data was submitted
+    if (drinkType && drinkAmountOz && parseFloat(drinkAmountOz) > 0) {
+      await prisma.hydrationLog.create({
+        data: {
+          userId: session.user.id,
+          mealId: id,
+          drinkType,
+          amountOz: parseFloat(drinkAmountOz),
+          sweetened: drinkSweetened ?? null,
+          drinkCarbsG: drinkCarbsG ? parseFloat(drinkCarbsG) : null,
+          caffeine: drinkCaffeine ?? null,
+          addToDailyWaterTotal: true,
+        },
+      }).catch((err) => console.error('Hydration log error (edit):', err));
+    }
 
     return NextResponse.json({ meal: updatedMeal });
   } catch (error) {

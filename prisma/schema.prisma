@@ -58,6 +58,8 @@ model User {
   mealFollowUps       MealFollowUp[]
   chatPreference      ChatPreference?
   aiUsage             AiUsage[]
+  hydrationLogs       HydrationLog[]
+  guidanceInsights    GuidanceInsight[]
 }
 
 // NextAuth models for OAuth and session management
@@ -107,7 +109,7 @@ model Meal {
   photoUrl      String?   // or base64 blob
   photoBase64   String?   @db.Text
   detectedFoods String?   @db.Text // JSON array
-  foodEntries   FoodEntry[] // NEW: Detailed individual foods in this meal
+  foodEntries   FoodEntry[] // Detailed individual foods in this meal
 
   // AI-first fields
   aiSummary     String?   // "chicken tacos with salsa"
@@ -115,6 +117,14 @@ model Meal {
   aiMode        String?   // 'ai' | '$0'
   nutritionSource String? @default("manual") // 'ai' | 'manual' | 'user-edited' | 'usda' | 'barcode'
 
+  // Meal identity
+  mealName      String?   // User-provided name e.g. "Curry chicken with rice"
+  source        String?   // home, restaurant, packaged, food_pantry, leftovers, other
+  portionEatenPercent Float? // 25, 50, 75, 100, or custom
+  estimateConfidence  String? // exact, estimated, not_sure
+  timeFinished  DateTime?
+
+  // Core nutrition
   calories      Float?
   carbs         Float?
   protein       Float?
@@ -124,10 +134,36 @@ model Meal {
   sodium        Float?
   portionSize   String?
 
+  // Extended nutrition
+  addedSugar    Float?
+  saturatedFat  Float?
+  transFat      Float?
+  cholesterol   Float?
+  potassium     Float?
+
   // Restaurant location tracking
-  restaurantName    String? // Name of restaurant if meal was from restaurant
-  restaurantAddress String? // Address of restaurant
-  restaurantPlaceId String? // Google Place ID for reference
+  restaurantName    String?
+  restaurantAddress String?
+  restaurantPlaceId String?
+
+  // Glucose context
+  preMealGlucose   Float?
+  postMealGlucose  Float?   // 2-hour reading
+  cgmTrend         String?  // rising, stable, falling
+  glucoseSymptoms  String?  @db.Text // JSON array
+
+  // Medication context
+  medicationTaken  Boolean?
+  medicationName   String?
+  medicationDose   String?
+  medicationTime   String?  // "08:00" format
+  medicationNotes  String?  @db.Text
+  isGlp1           Boolean?
+  glp1Symptoms     String?  @db.Text // JSON array
+
+  // Snack context
+  snackReason              String?  // hungry, craving, low_glucose, before_exercise, after_exercise, nausea, need_more_protein, routine, other
+  wasLowGlucoseTreatment   Boolean?
 
   feeling       String?   @db.Text // How user felt after meal
   mealType      String?   // breakfast, lunch, dinner, snack
@@ -135,11 +171,11 @@ model Meal {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // NEW: Link to glucose readings for correlation
+  // Relations
   relatedGlucoseReadings GlucoseEntry[]
-
-  // Follow-up check-in
-  followUp          MealFollowUp?
+  hydrationLogs          HydrationLog[]
+  moodEntries            MoodEntry[]
+  followUp               MealFollowUp?
 
   @@index([userId, eatenAt])
 }
@@ -331,17 +367,39 @@ model MoodEntry {
   mood        String   // happy, grateful, calm, neutral, tired, anxious, sad
   stressLevel Int      // 1-10
 
-  // Contextual flags
-  notFeelingWell    Boolean @default(false)
-  onPeriod          Boolean @default(false)
+  // Contextual flags (legacy — kept for backward compat)
+  notFeelingWell     Boolean @default(false)
+  onPeriod           Boolean @default(false)
   feelingOverwhelmed Boolean @default(false)
-  havingCravings    Boolean @default(false)
+  havingCravings     Boolean @default(false)
+
+  // Extended mood fields
+  moodIntensity      Int?    // 1-10
+  energyLevel        Int?    // 1-10
+  hungerLevel        Int?    // 1-10
+  fullnessLevel      Int?    // 1-10
+  cravings           String? @db.Text // JSON array: ["sweet","salty","carbs"]
+  symptoms           String? @db.Text // JSON array: ["headache","nausea","tired"]
+  contextTags        String? @db.Text // JSON array: ["poor_sleep","high_stress","injection_day"]
+
+  // Free-text user voice
+  userWords          String? @db.Text // "I feel overwhelmed because I had class"
+  foodMoodConnection String? @db.Text // "I didn't drink water and skipped breakfast"
+  supportWanted      String? @db.Text // "Give me a quick snack idea"
+
+  // AI summary (generated separately, not overwriting user words)
+  aiSummary          String? @db.Text
+
+  // Optional link to a meal
+  mealId      String?
+  meal        Meal?    @relation(fields: [mealId], references: [id], onDelete: SetNull)
 
   notes       String?  @db.Text
   recordedAt  DateTime @default(now())
   createdAt   DateTime @default(now())
 
   @@index([userId, recordedAt])
+  @@index([mealId])
 }
 
 model ChatMessage {
@@ -540,4 +598,46 @@ model MealFollowUp {
 
   @@index([userId, status])
   @@index([userId, scheduledFor])
+}
+
+// Hydration / drink tracking
+model HydrationLog {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealId   String?
+  meal     Meal?    @relation(fields: [mealId], references: [id], onDelete: SetNull)
+  loggedAt DateTime @default(now())
+
+  drinkType            String   // water, coffee, tea, juice, soda, agua_fresca, electrolyte, broth, other
+  amountOz             Float
+  sweetened            Boolean?
+  drinkCarbsG          Float?
+  caffeine             Boolean?
+  addToDailyWaterTotal Boolean  @default(true)
+
+  @@index([userId, loggedAt])
+  @@index([mealId])
+}
+
+// Daily guidance insights (gentle suggestions based on today's logs)
+model GuidanceInsight {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date     String   // YYYY-MM-DD
+
+  type     String   // low_protein, low_fiber, low_water, high_added_sugar, high_sodium,
+                    // carb_heavy_day, glp1_low_intake, low_glucose_safety, high_glucose_safety,
+                    // meal_idea, snack_idea, mood_food_pattern
+  message  String   @db.Text
+  reason   String   @db.Text
+  suggestedActions String? @db.Text // JSON array
+
+  dismissed    Boolean @default(false)
+  userFeedback String? // helpful, not_helpful, not_now
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }

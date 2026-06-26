@@ -13,7 +13,7 @@ import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import ThemeToggle from '@/components/theme-toggle';
 import WebHomeLayout from '@/components/web-home-layout';
-import { Mood, UserContext } from '@/types';
+import { Mood, UserContext, MoodCheckInData } from '@/types';
 import { MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
 import { useTheme } from '@/lib/theme-context';
@@ -149,13 +149,13 @@ export default function HomePage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleMoodSave = async (mood: Mood, stressLevel: number, notes?: string) => {
-    setUserContext(prev => ({ ...prev, mood }));
+  const handleMoodSave = async (data: MoodCheckInData) => {
+    setUserContext(prev => ({ ...prev, mood: data.mood }));
     try {
       await fetch('/api/mood', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mood, stressLevel, notes }),
+        body: JSON.stringify(data),
       });
     } catch (err) { console.error(err); }
   };

@@ -49,7 +49,7 @@ async function buildHealthContext(
     }),
     prisma.meal.findMany({
       where: { userId, eatenAt: { gte: startOfToday } },
-      select: { calories: true, carbs: true, protein: true, fiber: true },
+      select: { calories: true, carbs: true, protein: true, fiber: true, sodium: true, addedSugar: true },
     }),
   ]);
 
@@ -106,11 +106,23 @@ async function buildHealthContext(
   if (todayMeals.length > 0) {
     const sumField = (field: keyof typeof todayMeals[0]) =>
       Math.round(todayMeals.reduce((sum, m) => sum + ((m[field] as number | null) ?? 0), 0));
+    // Pull today's hydration total
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const hydrationLogs = await prisma.hydrationLog.findMany({
+      where: { userId, loggedAt: { gte: startOfDay }, addToDailyWaterTotal: true },
+      select: { amountOz: true },
+    });
+    const waterOzLogged = Math.round(hydrationLogs.reduce((s, l) => s + l.amountOz, 0));
+
     ctx.todayNutrition = {
       caloriesConsumed: sumField('calories'),
       carbsConsumed: sumField('carbs'),
       proteinConsumed: sumField('protein'),
       fiberConsumed: sumField('fiber'),
+      sodiumConsumed: sumField('sodium'),
+      addedSugarConsumed: sumField('addedSugar'),
+      waterOzLogged,
       mealsLogged: todayMeals.length,
     };
   }
