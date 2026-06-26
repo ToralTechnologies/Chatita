@@ -260,7 +260,7 @@ export default function HomePage() {
       {/* ── Content overlapping the hero ── */}
       <div
         className="max-w-2xl mx-auto"
-        style={{ marginTop: '-60px', padding: '0 20px' }}
+        style={{ marginTop: '-60px', padding: '0 20px', position: 'relative', zIndex: 1 }}
       >
         {/* Glucose card — overlapping the navy */}
         <GlucoseWidget

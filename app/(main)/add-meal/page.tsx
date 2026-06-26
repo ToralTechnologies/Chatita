@@ -304,7 +304,7 @@ export default function AddMealPage() {
     </div>
   );
 
-  const FoodEditor = ({ bgInput }: { bgInput: string }) => (
+  const renderFoodEditor = (bgInput: string) => (
     <div>
       <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginBottom: '8px' }}>Foods</p>
       <div style={{ display: 'flex', gap: '8px' }}>
@@ -324,7 +324,7 @@ export default function AddMealPage() {
     </div>
   );
 
-  const FeelingInput = ({ bgInput }: { bgInput: string }) => (
+  const renderFeelingInput = (bgInput: string) => (
     <div>
       <p style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'rgba(1,35,116,0.5)', fontWeight: 700, marginBottom: '8px' }}>How are you feeling?</p>
       <textarea value={state.feeling} onChange={(e) => update({ feeling: e.target.value })} placeholder="Optional — anything on your mind before this meal?" rows={2} style={{ width: '100%', padding: '10px 13px', borderRadius: '12px', border: '1px solid rgba(1,35,116,0.15)', background: bgInput, fontSize: '13px', color: '#001A4D', outline: 'none', resize: 'none', boxSizing: 'border-box' as const }} />
@@ -403,7 +403,7 @@ export default function AddMealPage() {
         {state.phase === 'manual' && (
           <>
             <p className="font-serif-italic" style={{ fontSize: '20px', color: '#012374' }}>What are you eating?</p>
-            <FoodEditor bgInput="#FFFDF9" />
+            {renderFoodEditor("#FFFDF9")}
             <button onClick={handleGetGuidance} disabled={state.foods.length === 0} style={{ padding: '12px', borderRadius: '999px', background: state.foods.length > 0 ? '#012374' : 'rgba(1,35,116,0.3)', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: state.foods.length > 0 ? 'pointer' : 'not-allowed' }}>
               Get eating guidance →
             </button>
@@ -434,8 +434,8 @@ export default function AddMealPage() {
               </div>
             )}
             <MealTypeSelector />
-            <FoodEditor bgInput="#FFFDF9" />
-            <FeelingInput bgInput="#FFFDF9" />
+            {renderFoodEditor("#FFFDF9")}
+            {renderFeelingInput("#FFFDF9")}
             <div style={{ display: 'flex', gap: '10px' }}>
               {!state.imagePreview && (
                 <button onClick={() => update({ phase: 'manual', aiResult: null, saved: false })} style={{ flex: 1, padding: '12px', borderRadius: '999px', background: 'transparent', color: '#012374', fontSize: '14px', fontWeight: 600, border: '1px solid rgba(1,35,116,0.25)', cursor: 'pointer' }}>
@@ -492,7 +492,7 @@ export default function AddMealPage() {
             {state.phase === 'scanning' && <ScanningBox label={state.imagePreview ? 'Analyzing your plate…' : 'Getting your eating plan…'} />}
             {state.phase === 'manual' && (
               <>
-                <FoodEditor bgInput="#F7EFE1" />
+                {renderFoodEditor("#F7EFE1")}
                 <button onClick={handleGetGuidance} disabled={state.foods.length === 0} style={{ padding: '12px', borderRadius: '999px', background: state.foods.length > 0 ? '#012374' : 'rgba(1,35,116,0.3)', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: state.foods.length > 0 ? 'pointer' : 'not-allowed' }}>
                   Get eating guidance →
                 </button>
@@ -511,8 +511,8 @@ export default function AddMealPage() {
                   </div>
                 )}
                 <MealTypeSelector />
-                <FoodEditor bgInput="#F7EFE1" />
-                <FeelingInput bgInput="#F7EFE1" />
+                {renderFoodEditor("#F7EFE1")}
+                {renderFeelingInput("#F7EFE1")}
                 <button onClick={handleSave} disabled={state.saved} style={{ padding: '13px', borderRadius: '999px', background: state.saved ? '#1C7A4F' : '#012374', color: '#FFFDF9', fontSize: '15px', fontWeight: 700, border: 'none', cursor: state.saved ? 'default' : 'pointer' }}>
                   {state.saved ? '✓ Meal saved' : 'Save meal'}
                 </button>
