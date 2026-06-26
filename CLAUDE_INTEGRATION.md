@@ -49,7 +49,7 @@ Chatita uses **Claude 3.5 Sonnet** from Anthropic for AI-powered features. This 
 // User uploads photo → base64 encoding
 const analysis = await analyzeMealPhoto(photoBase64);
 
-// Claude analyzes with ADA-focused prompt
+// Claude analyzes with IDF/WHO global nutrition principles prompt
 // Returns: {
 //   detectedFoods: ["grilled chicken", "broccoli", "brown rice"],
 //   nutrition: { calories: 450, carbs: 35, protein: 40, ... },
@@ -59,7 +59,7 @@ const analysis = await analyzeMealPhoto(photoBase64);
 ```
 
 #### Special Features:
-- **ADA-Aligned Prompts**: Instructions mention American Diabetes Association guidelines
+- **Global-First Prompts**: Instructions use IDF/WHO global diabetes education principles as baseline; ADA referenced as U.S. regional layer
 - **Conservative Estimates**: Claude trained to be cautious with nutritional guesses
 - **Carb & Fiber Focus**: Emphasizes diabetes-critical nutrients
 - **Graceful Fallback**: Falls back to manual mode if API fails
@@ -261,7 +261,7 @@ Key Instructions:
 ### Why This Works:
 1. **Role Definition**: Sets expert context
 2. **Audience Specification**: Tailors to diabetes needs
-3. **ADA Reference**: Ensures medical accuracy
+3. **IDF/WHO Reference**: Global clinical foundation ensures accuracy across cultures and regions
 4. **Conservative Approach**: Prioritizes safety
 5. **Structured Output**: Ensures parseable responses
 
@@ -386,7 +386,7 @@ curl -X POST http://localhost:3000/api/analyze-meal \
 
 Chatita uses **Claude 3.5 Sonnet** for intelligent meal analysis:
 - ✅ Accurate food detection
-- ✅ ADA-aligned nutrition estimates
+- ✅ Global-first nutrition estimates (IDF/WHO baseline, ADA as U.S. regional layer)
 - ✅ Fast and cost-effective
 - ✅ Privacy-focused implementation
 - ✅ Graceful fallback to manual mode

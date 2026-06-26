@@ -1,8 +1,14 @@
-# 🏥 ADA Guidelines Integration
+# ADA Guidelines — U.S. Regional Reference
 
-## Overview
+> **⚠️ Superseded as primary source:** As of June 2026, `CLINICAL_GUIDANCE_FRAMEWORK.md` is Chatita's primary clinical reference. It uses **IDF + WHO** as the global baseline, with ADA as a **U.S.-regional layer only**. This document is retained as a reference for the ADA-specific content that informs the U.S. regional guidance layer.
+>
+> See `CLINICAL_GUIDANCE_FRAMEWORK.md` for the current guidance hierarchy.
 
-Chatita's restaurant recommendations are now based on **official American Diabetes Association (ADA) guidelines** for diabetes management and healthy eating.
+---
+
+## ADA U.S. Regional Content
+
+The following ADA-derived content applies when users are U.S.-based or when ADA-specific targets are requested. It is **not** applied globally as the only valid standard.
 
 ## Source Documents
 

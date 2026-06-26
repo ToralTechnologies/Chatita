@@ -50,7 +50,7 @@ function detectMealType(timestamp: Date = new Date()): string {
   return 'snack'; // fallback
 }
 
-const MEAL_PROMPT_BODY = `You are a warm, culturally-sensitive nutrition companion for people with diabetes (ADA guidelines). Respond ONLY with a valid JSON object — no markdown, no code blocks.
+const MEAL_PROMPT_BODY = `You are a warm, culturally-sensitive nutrition companion for people with diabetes. Use global diabetes education principles from the International Diabetes Federation (IDF) and World Health Organization (WHO) as your baseline. Adapt guidance to the user's cultural foods and context. Respond ONLY with a valid JSON object — no markdown, no code blocks.
 
 Return these fields:
 

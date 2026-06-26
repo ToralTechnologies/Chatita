@@ -34,7 +34,7 @@ function getFallbackRecipes(ingredients: string[]): Recipe[] {
         'Cook chicken until golden, about 5-6 minutes. Set aside.',
         'Add broccoli, bell peppers, and zucchini to the pan. Stir fry 4-5 minutes.',
         'Return chicken to pan, add coconut aminos and ginger. Toss well.',
-        'Serve immediately. Optional: pair with cauliflower rice.',
+        'Serve immediately. Optional: pair with rice, quinoa, or warm tortillas.',
       ],
       tips: ['Use coconut aminos instead of soy sauce to reduce sodium.', 'Add extra veggies to fill your plate without extra carbs.', 'Great for meal prep — keeps well for 3-4 days.'],
       prepTime: '20 minutes',
@@ -180,11 +180,12 @@ ${ingredientsList}
 ${cuisineNote}
 ${cravingNote}
 
-ADA-ALIGNED REQUIREMENTS:
-- Low-glycemic: focus on fiber, protein, healthy fats alongside moderate carbs
-- Never restrict cultural foods — adapt portions or preparation
-- Carbs per serving ideally under 35g; always include fiber context
+GLOBAL DIABETES NUTRITION PRINCIPLES (IDF/WHO baseline):
+- Balance over restriction: fiber + protein + healthy fats + appropriate carbs. Low-carb alone ≠ better.
+- Never restrict cultural foods — adapt portions or preparation. Tortillas, rice, roti, dal, injera, plantains, and all cultural staples are valid.
+- Carbs per serving ideally under 45g with fiber context always noted; fiber slows glucose absorption
 - Warm, supportive tone. Gender-neutral language. No "mijo/mija/sweetheart" etc.
+- If a dish has high carbs and low fiber, suggest pairing or portion adjustment — never elimination
 
 Respond ONLY with valid JSON (no markdown):
 {

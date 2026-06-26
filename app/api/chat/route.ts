@@ -34,6 +34,20 @@ async function buildHealthContext(
         dailyCalorieTarget: true,
         dailyCarbTarget: true,
         mealsPerDay: true,
+        // Cultural Food Profile
+        countryOrRegion: true,
+        culturalFoodBackground: true,
+        stapleCarbs: true,
+        commonProteins: true,
+        commonVegetables: true,
+        commonDrinks: true,
+        dietaryRestrictions: true,
+        religiousFoodNeeds: true,
+        foodBudgetLevel: true,
+        foodAccessContext: true,
+        cookingFrequency: true,
+        foodPantryUse: true,
+        foodsToKeep: true,
       },
     }),
     prisma.glucoseEntry.findFirst({
@@ -75,6 +89,32 @@ async function buildHealthContext(
       dailyCarbTarget: user.dailyCarbTarget ?? undefined,
       mealsPerDay: user.mealsPerDay ?? undefined,
     };
+  }
+
+  // Cultural Food Profile
+  if (user) {
+    const parseArr = (v: string | null | undefined) => {
+      if (!v) return undefined;
+      try { const a = JSON.parse(v); return Array.isArray(a) && a.length ? a : undefined; } catch { return undefined; }
+    };
+    const cp = {
+      countryOrRegion: user.countryOrRegion ?? undefined,
+      culturalFoodBackground: user.culturalFoodBackground ?? undefined,
+      stapleCarbs: parseArr(user.stapleCarbs),
+      commonProteins: parseArr(user.commonProteins),
+      commonVegetables: parseArr(user.commonVegetables),
+      commonDrinks: parseArr(user.commonDrinks),
+      dietaryRestrictions: parseArr(user.dietaryRestrictions),
+      religiousFoodNeeds: user.religiousFoodNeeds ?? undefined,
+      foodBudgetLevel: user.foodBudgetLevel ?? undefined,
+      foodAccessContext: user.foodAccessContext ?? undefined,
+      cookingFrequency: user.cookingFrequency ?? undefined,
+      foodPantryUse: user.foodPantryUse ?? undefined,
+      foodsToKeep: parseArr(user.foodsToKeep),
+    };
+    if (Object.values(cp).some((v) => v !== undefined)) {
+      ctx.culturalProfile = cp;
+    }
   }
 
   // Add glucose if we have a recent reading

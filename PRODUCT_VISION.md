@@ -170,7 +170,7 @@ This is critical for underserved populations.
 ## 12. Clinical Governance (Pre-Scale)
 
 Before scaling, build:
-- Source guidelines (ADA Standards of Care, evidence-based nutrition guidance)
+- Source guidelines (IDF global recommendations, WHO HEARTS-D, ADA Standards of Care as U.S. regional layer, evidence-based nutrition guidance)
 - Clinical review process
 - Audit logs
 - Human review layer
@@ -179,7 +179,7 @@ Before scaling, build:
 ### AI → Clinical Rules → User (not AI → User)
 Potential workflow:
 1. AI generates recommendation
-2. Clinical framework checks against ADA guidelines
+2. Clinical framework checks against IDF/WHO global principles + ADA for U.S. users
 3. Approved guidance displayed to user
 
 ---

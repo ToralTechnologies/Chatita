@@ -117,6 +117,24 @@ export interface UserHealthProfile {
   mealsPerDay?: number;
 }
 
+// Cultural food context for globally adaptive guidance
+export interface CulturalFoodProfile {
+  countryOrRegion?: string;
+  culturalFoodBackground?: string;
+  stapleCarbs?: string[];
+  commonProteins?: string[];
+  commonVegetables?: string[];
+  commonDrinks?: string[];
+  dietaryRestrictions?: string[];
+  religiousFoodNeeds?: string;
+  foodBudgetLevel?: string;
+  foodAccessContext?: string;
+  cookingFrequency?: string;
+  foodPantryUse?: boolean;
+  comfortFoods?: string[];
+  foodsToKeep?: string[];
+}
+
 // Insight pattern
 export interface InsightPattern {
   type: string;
@@ -194,6 +212,9 @@ export interface ChatHealthContext {
 
   // Extended health profile for personalized guidance
   userProfile?: UserHealthProfile;
+
+  // Cultural food profile for globally adaptive guidance
+  culturalProfile?: CulturalFoodProfile;
 
   // Today's cumulative nutrition (to judge meals in daily context)
   todayNutrition?: TodayNutrition;

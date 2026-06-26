@@ -83,36 +83,35 @@ export async function POST(request: Request) {
       },
     });
 
-    // ADA-aligned clinical safety flags — deterministic, non-AI
+    // Global glucose safety flags (IDF/WHO/ADA consensus thresholds) — deterministic, non-AI
     let emergencyFlag = false;
     let emergencySeverity: 'critical-low' | 'low' | 'critical-high' | null = null;
 
-    // Calculate ADA flags
-    type AdaLevel = 'very-low' | 'low' | 'in-range' | 'above-target' | 'high-check-ketones' | 'very-high';
-    let adaFlags: { level: AdaLevel; category: string; action: string };
+    type GlucoseLevel = 'very-low' | 'low' | 'in-range' | 'above-target' | 'high-check-ketones' | 'very-high';
+    let glucoseFlags: { level: GlucoseLevel; category: string; action: string };
 
     if (entry.value < 54) {
       emergencyFlag = true;
       emergencySeverity = 'critical-low';
-      adaFlags = { level: 'very-low', category: 'Very low — treat immediately', action: 'treat-emergency' };
+      glucoseFlags = { level: 'very-low', category: 'Very low — treat immediately', action: 'treat-emergency' };
     } else if (entry.value < 70) {
       emergencySeverity = 'low';
-      adaFlags = { level: 'low', category: 'Low — treat now', action: 'treat-15-15' };
+      glucoseFlags = { level: 'low', category: 'Low — treat now', action: 'treat-15-15' };
     } else if (entry.value <= 180) {
-      adaFlags = { level: 'in-range', category: 'In target range', action: 'none' };
+      glucoseFlags = { level: 'in-range', category: 'In target range', action: 'none' };
     } else if (entry.value <= 239) {
-      adaFlags = { level: 'above-target', category: 'Above target', action: 'log-context' };
+      glucoseFlags = { level: 'above-target', category: 'Above target', action: 'log-context' };
     } else if (entry.value <= 299) {
       emergencyFlag = true;
       emergencySeverity = 'critical-high';
-      adaFlags = { level: 'high-check-ketones', category: 'High — check ketones', action: 'check-ketones' };
+      glucoseFlags = { level: 'high-check-ketones', category: 'High — check ketones', action: 'check-ketones' };
     } else {
       emergencyFlag = true;
       emergencySeverity = 'critical-high';
-      adaFlags = { level: 'very-high', category: 'Very high — contact care team', action: 'urgent-care' };
+      glucoseFlags = { level: 'very-high', category: 'Very high — contact care team', action: 'urgent-care' };
     }
 
-    return NextResponse.json({ entry, emergencyFlag, emergencySeverity, adaFlags }, { status: 201 });
+    return NextResponse.json({ entry, emergencyFlag, emergencySeverity, glucoseFlags }, { status: 201 });
   } catch (error) {
     console.error('Glucose create error:', error);
     return NextResponse.json(

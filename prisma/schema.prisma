@@ -38,6 +38,24 @@ model User {
   dailyCalorieTarget Int?
   dailyCarbTarget    Int?               // grams per day
   mealsPerDay        Int?     @default(3)
+
+  // Cultural Food Profile — all fields optional, user-driven
+  countryOrRegion          String?              // e.g. "Mexico", "India", "Nigeria"
+  culturalFoodBackground   String?   @db.Text   // free-text: "I grew up eating ..."
+  commonMeals              String?   @db.Text   // JSON array of typical meals
+  stapleCarbs              String?   @db.Text   // JSON array: ["tortillas","rice","beans"]
+  commonProteins           String?   @db.Text   // JSON array: ["chicken","beans","eggs"]
+  commonVegetables         String?   @db.Text   // JSON array
+  commonDrinks             String?   @db.Text   // JSON array: ["agua fresca","horchata","tea"]
+  dietaryRestrictions      String?   @db.Text   // JSON array: ["halal","vegetarian","kosher","lactose-free"]
+  religiousFoodNeeds       String?              // free-text, optional
+  foodBudgetLevel          String?              // 'low' | 'medium' | 'high'
+  foodAccessContext        String?              // 'food_pantry' | 'grocery' | 'restaurant_heavy' | 'mixed'
+  cookingFrequency         String?              // 'rarely' | 'sometimes' | 'often' | 'daily'
+  foodPantryUse            Boolean?  @default(false)
+  comfortFoods             String?   @db.Text   // JSON array — foods user finds comfort in
+  foodsToKeep              String?   @db.Text   // JSON array — foods user does not want to give up
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
