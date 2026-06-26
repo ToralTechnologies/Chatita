@@ -31,13 +31,24 @@ model User {
   age               Int?
   heightCm          Float?              // centimeters
   weightKg          Float?              // kilograms
-  activityLevel     String?             // 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  // Backward-compatible: old values (sedentary/light/moderate/active/very_active) still stored as-is
+  // New preferred values: mostly_sitting | lightly_active | moderately_active | very_active | not_sure | prefer_not_to_say
+  activityLevel     String?
   weightGoal        String?             // 'lose' | 'gain' | 'maintain'
   otherConditions   String?   @db.Text  // JSON array: ["heart_disease","kidney_disease","hypertension"]
   currentMedications String?  @db.Text  // JSON array of medication names
   dailyCalorieTarget Int?
   dailyCarbTarget    Int?               // grams per day
   mealsPerDay        Int?     @default(3)
+
+  // Movement & Activity Profile — all fields optional
+  preferredMovementTypes String?   @db.Text   // JSON array: ["walking","chores","dancing",...]
+  exerciseFrequency      String?              // 'daily'|'most_days'|'few_times_week'|'rarely'|'never'|'not_sure'
+  averageDailySteps      Int?
+  hasPhysicalJob         Boolean?  @default(false)
+  mobilityLimitations    String?   @db.Text   // free-text
+  movementGoal           String?              // 'more_energy'|'manage_glucose'|'lose_weight'|'feel_better'|'other'
+  movementNotes          String?   @db.Text   // free-text
 
   // Cultural Food Profile — all fields optional, user-driven
   countryOrRegion          String?              // e.g. "Mexico", "India", "Nigeria"
@@ -78,6 +89,7 @@ model User {
   aiUsage             AiUsage[]
   hydrationLogs       HydrationLog[]
   guidanceInsights    GuidanceInsight[]
+  activityLogs        ActivityLog[]
 }
 
 // NextAuth models for OAuth and session management
@@ -658,4 +670,40 @@ model GuidanceInsight {
   createdAt DateTime @default(now())
 
   @@index([userId, date])
+}
+
+// Daily movement/activity log
+model ActivityLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @default(now())
+
+  // What they did
+  activityType      String?  // walking|strength|chores|dancing|sports|physical_work|stretching|chair_exercise|biking|swimming|other
+  activityMinutes   Int?
+  activityIntensity String?  // light|moderate|vigorous|not_sure
+  steps             Int?
+
+  // Meal relationship (optional — can link a walk to a meal)
+  relatedToMeal Boolean @default(false)
+  mealId        String? // soft link — no FK enforced for flexibility
+  mealTiming    String? // before_meal|after_meal|not_related
+
+  // Glucose context
+  glucoseBeforeActivity Float?
+  glucoseAfterActivity  Float?
+
+  // How user felt
+  energyBefore Int?     // 1–10
+  energyAfter  Int?     // 1–10
+  moodAfter    String?
+  symptoms     String?  @db.Text  // JSON array
+  notes        String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([mealId])
 }

@@ -4,6 +4,39 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
+const MOVEMENT_TYPES = [
+  { value: 'walking', label: 'Walking' },
+  { value: 'chores', label: 'Chores / housework' },
+  { value: 'dancing', label: 'Dancing' },
+  { value: 'gym', label: 'Gym / workout' },
+  { value: 'strength_training', label: 'Strength training' },
+  { value: 'sports', label: 'Sports' },
+  { value: 'physical_work', label: 'Physical job / manual labor' },
+  { value: 'chair_exercises', label: 'Chair exercises' },
+  { value: 'stretching_yoga', label: 'Stretching / yoga' },
+  { value: 'biking', label: 'Biking' },
+  { value: 'swimming', label: 'Swimming' },
+  { value: 'not_active_right_now', label: 'Not currently active' },
+  { value: 'other', label: 'Other' },
+];
+
+const ACTIVITY_LEVEL_OPTIONS = [
+  { value: 'mostly_sitting', label: 'Mostly sitting (desk job, limited movement)' },
+  { value: 'lightly_active', label: 'Lightly active (some walking, light chores)' },
+  { value: 'moderately_active', label: 'Moderately active (regular movement most days)' },
+  { value: 'very_active', label: 'Very active (intense or daily movement)' },
+  { value: 'not_sure', label: 'Not sure' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+];
+
+const MOVEMENT_GOAL_OPTIONS = [
+  { value: 'more_energy', label: 'More energy throughout the day' },
+  { value: 'manage_glucose', label: 'Help manage glucose levels' },
+  { value: 'lose_weight', label: 'Support weight goals' },
+  { value: 'feel_better', label: 'Just feel better overall' },
+  { value: 'other', label: 'Other' },
+];
+
 const DIETARY_OPTIONS = [
   'Halal', 'Kosher', 'Vegetarian', 'Vegan', 'Gluten-free',
   'Lactose-free', 'Nut-free', 'No pork', 'No beef',
@@ -92,6 +125,7 @@ export default function ProfileSetupPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showMovement, setShowMovement] = useState(false);
   const [showCultural, setShowCultural] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -100,6 +134,16 @@ export default function ProfileSetupPage() {
     targetGlucoseMin: 70,
     targetGlucoseMax: 180,
   });
+
+  const [movement, setMovement] = useState({
+    activityLevel: '',
+    preferredMovementTypes: [] as string[],
+    movementGoal: '',
+    hasPhysicalJob: false,
+    mobilityLimitations: '',
+  });
+
+  const setMov = (k: keyof typeof movement, v: unknown) => setMovement((m) => ({ ...m, [k]: v }));
 
   const [cultural, setCultural] = useState({
     countryOrRegion: '',
@@ -129,6 +173,16 @@ export default function ProfileSetupPage() {
       const payload: Record<string, unknown> = {
         ...formData,
       };
+
+      if (showMovement) {
+        Object.assign(payload, {
+          activityLevel: movement.activityLevel || undefined,
+          preferredMovementTypes: movement.preferredMovementTypes.length ? movement.preferredMovementTypes : undefined,
+          movementGoal: movement.movementGoal || undefined,
+          hasPhysicalJob: movement.hasPhysicalJob,
+          mobilityLimitations: movement.mobilityLimitations || undefined,
+        });
+      }
 
       if (showCultural) {
         Object.assign(payload, {
@@ -240,6 +294,101 @@ export default function ProfileSetupPage() {
                 Default: 70–180 mg/dL (consult your doctor for your personal target)
               </p>
             </div>
+          </div>
+
+          {/* Movement & Activity section */}
+          <div className="bg-white rounded-card shadow-card p-6">
+            <button
+              type="button"
+              onClick={() => setShowMovement((v) => !v)}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="text-left">
+                <p className="font-medium text-sm">Movement & Activity</p>
+                <p className="text-xs text-gray-500 mt-0.5">Optional — helps Chatita understand your movement context</p>
+              </div>
+              <span className="text-primary text-sm">{showMovement ? 'Hide ▲' : 'Add ▼'}</span>
+            </button>
+
+            {showMovement && (
+              <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  All fields are optional and private. This helps Chatita give context-aware, non-judgmental guidance. You don't need to exercise — movement means anything that gets you moving.
+                </p>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">How would you describe your general activity? <span className="text-gray-400">(optional)</span></label>
+                  <select
+                    value={movement.activityLevel}
+                    onChange={(e) => setMov('activityLevel', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">— Not sure / skip —</option>
+                    {ACTIVITY_LEVEL_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Types of movement you do <span className="text-gray-400">(select all that apply)</span></label>
+                  <div className="flex flex-wrap gap-2">
+                    {MOVEMENT_TYPES.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => {
+                          const curr = movement.preferredMovementTypes;
+                          setMov('preferredMovementTypes', curr.includes(t.value)
+                            ? curr.filter((v) => v !== t.value)
+                            : [...curr, t.value]);
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${movement.preferredMovementTypes.includes(t.value)
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary'}`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">What would movement support look like for you? <span className="text-gray-400">(optional)</span></label>
+                  <select
+                    value={movement.movementGoal}
+                    onChange={(e) => setMov('movementGoal', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">— Skip —</option>
+                    {MOVEMENT_GOAL_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={movement.hasPhysicalJob}
+                    onChange={(e) => setMov('hasPhysicalJob', e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm text-gray-700">My job or daily routine already involves physical activity (e.g. standing, lifting, moving)</span>
+                </label>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Any mobility limitations or physical considerations? <span className="text-gray-400">(optional)</span></label>
+                  <textarea
+                    value={movement.mobilityLimitations}
+                    onChange={(e) => setMov('mobilityLimitations', e.target.value)}
+                    placeholder="e.g. knee pain, back injury, limited stamina..."
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cultural Food Profile toggle */}

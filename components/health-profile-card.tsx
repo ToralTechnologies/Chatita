@@ -22,11 +22,17 @@ interface HealthProfile {
 
 const DIABETES_TYPES = ['Type1', 'Type2', 'Gestational', 'PreDiabetes', 'Other'];
 const ACTIVITY_LEVELS = [
-  { value: 'sedentary', label: 'Sedentary (little or no exercise)' },
-  { value: 'light', label: 'Light (1–3 days/week)' },
-  { value: 'moderate', label: 'Moderate (3–5 days/week)' },
-  { value: 'active', label: 'Active (6–7 days/week)' },
-  { value: 'very_active', label: 'Very active (intense daily exercise)' },
+  { value: 'mostly_sitting', label: 'Mostly sitting (desk job, limited movement)' },
+  { value: 'lightly_active', label: 'Lightly active (some walking, light chores)' },
+  { value: 'moderately_active', label: 'Moderately active (regular movement most days)' },
+  { value: 'very_active', label: 'Very active (intense or daily movement)' },
+  { value: 'not_sure', label: 'Not sure' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+  // legacy values — shown if stored in DB
+  { value: 'sedentary', label: 'Sedentary' },
+  { value: 'light', label: 'Light activity' },
+  { value: 'moderate', label: 'Moderate activity' },
+  { value: 'active', label: 'Active' },
 ];
 const WEIGHT_GOALS = [
   { value: 'lose', label: 'Lose weight' },
@@ -309,7 +315,7 @@ export default function HealthProfileCard() {
                 className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" style={{ borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: 'var(--bg-card-alt)', color: 'var(--text-primary)' }}
               >
                 <option value="">— Select —</option>
-                {ACTIVITY_LEVELS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                {ACTIVITY_LEVELS.filter(a => !['sedentary','light','moderate','active'].includes(a.value)).map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
               </select>
             </div>
           </div>

@@ -13,6 +13,7 @@ import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import ThemeToggle from '@/components/theme-toggle';
 import WebHomeLayout from '@/components/web-home-layout';
+import MovementCard from '@/components/movement-card';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
 import { MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
@@ -364,6 +365,11 @@ export default function HomePage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#C8932B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </Link>
           </div>
+        </div>
+
+        {/* ── Movement card ── */}
+        <div style={{ marginTop: '16px' }}>
+          <MovementCard />
         </div>
 
         {/* ── Context tags ── */}

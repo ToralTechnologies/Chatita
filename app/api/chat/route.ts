@@ -34,6 +34,13 @@ async function buildHealthContext(
         dailyCalorieTarget: true,
         dailyCarbTarget: true,
         mealsPerDay: true,
+        // Movement profile
+        preferredMovementTypes: true,
+        exerciseFrequency: true,
+        averageDailySteps: true,
+        hasPhysicalJob: true,
+        mobilityLimitations: true,
+        movementGoal: true,
         // Cultural Food Profile
         countryOrRegion: true,
         culturalFoodBackground: true,
@@ -79,6 +86,10 @@ async function buildHealthContext(
     const conditions = user.otherConditions ? (() => { try { return JSON.parse(user.otherConditions!); } catch { return []; } })() : [];
     const meds = user.currentMedications ? (() => { try { return JSON.parse(user.currentMedications!); } catch { return []; } })() : [];
 
+    const parseArr = (v: string | null | undefined) => {
+      if (!v) return undefined;
+      try { const a = JSON.parse(v); return Array.isArray(a) && a.length ? a : undefined; } catch { return undefined; }
+    };
     ctx.userProfile = {
       age: user.age ?? undefined,
       activityLevel: (user.activityLevel as any) ?? undefined,
@@ -88,6 +99,12 @@ async function buildHealthContext(
       dailyCalorieTarget: user.dailyCalorieTarget ?? undefined,
       dailyCarbTarget: user.dailyCarbTarget ?? undefined,
       mealsPerDay: user.mealsPerDay ?? undefined,
+      preferredMovementTypes: parseArr((user as any).preferredMovementTypes),
+      exerciseFrequency: (user as any).exerciseFrequency ?? undefined,
+      averageDailySteps: (user as any).averageDailySteps ?? undefined,
+      hasPhysicalJob: (user as any).hasPhysicalJob ?? undefined,
+      mobilityLimitations: (user as any).mobilityLimitations ?? undefined,
+      movementGoal: (user as any).movementGoal ?? undefined,
     };
   }
 

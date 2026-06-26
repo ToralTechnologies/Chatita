@@ -6,7 +6,34 @@ export type MealSource = 'home' | 'restaurant' | 'packaged' | 'food_pantry' | 'l
 export type EstimateConfidence = 'exact' | 'estimated' | 'not_sure';
 export type Mood = 'happy' | 'grateful' | 'calm' | 'neutral' | 'tired' | 'anxious' | 'sad';
 export type ChatRole = 'user' | 'assistant';
-export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+// New preferred values. Old values (sedentary/light/moderate/active) are still accepted for backward compat.
+export type ActivityLevel =
+  | 'mostly_sitting'
+  | 'lightly_active'
+  | 'moderately_active'
+  | 'very_active'
+  | 'not_sure'
+  | 'prefer_not_to_say'
+  // legacy — kept for backward compatibility with existing stored data
+  | 'sedentary'
+  | 'light'
+  | 'moderate'
+  | 'active';
+
+export type MovementType =
+  | 'walking'
+  | 'chores'
+  | 'dancing'
+  | 'gym'
+  | 'strength_training'
+  | 'sports'
+  | 'physical_work'
+  | 'chair_exercises'
+  | 'stretching_yoga'
+  | 'biking'
+  | 'swimming'
+  | 'not_active_right_now'
+  | 'other';
 export type WeightGoal = 'lose' | 'gain' | 'maintain';
 export type OtherCondition = 'heart_disease' | 'kidney_disease' | 'hypertension';
 export type SnackReason = 'hungry' | 'craving' | 'low_glucose' | 'before_exercise' | 'after_exercise' | 'nausea' | 'need_more_protein' | 'routine' | 'other';
@@ -115,6 +142,36 @@ export interface UserHealthProfile {
   dailyCalorieTarget?: number;
   dailyCarbTarget?: number;
   mealsPerDay?: number;
+  // Movement profile
+  preferredMovementTypes?: MovementType[];
+  exerciseFrequency?: string;
+  averageDailySteps?: number;
+  hasPhysicalJob?: boolean;
+  mobilityLimitations?: string;
+  movementGoal?: string;
+  movementNotes?: string;
+}
+
+// Activity log entry
+export interface ActivityLogEntry {
+  id: string;
+  userId: string;
+  date: string;
+  activityType?: string;
+  activityMinutes?: number;
+  activityIntensity?: string;
+  steps?: number;
+  relatedToMeal: boolean;
+  mealId?: string;
+  mealTiming?: string;
+  glucoseBeforeActivity?: number;
+  glucoseAfterActivity?: number;
+  energyBefore?: number;
+  energyAfter?: number;
+  moodAfter?: string;
+  symptoms?: string[];
+  notes?: string;
+  createdAt: string;
 }
 
 // Cultural food context for globally adaptive guidance

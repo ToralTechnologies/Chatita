@@ -25,6 +25,14 @@ const PROFILE_SELECT = {
   dailyCalorieTarget: true,
   dailyCarbTarget: true,
   mealsPerDay: true,
+  // Movement & Activity Profile
+  preferredMovementTypes: true,
+  exerciseFrequency: true,
+  averageDailySteps: true,
+  hasPhysicalJob: true,
+  mobilityLimitations: true,
+  movementGoal: true,
+  movementNotes: true,
   // Cultural Food Profile
   countryOrRegion: true,
   culturalFoodBackground: true,
@@ -53,6 +61,7 @@ function parsedProfile(user: Record<string, unknown>) {
     ...user,
     otherConditions: parseJsonField(user.otherConditions as string),
     currentMedications: parseJsonField(user.currentMedications as string),
+    preferredMovementTypes: parseJsonField(user.preferredMovementTypes as string),
     commonMeals: parseJsonField(user.commonMeals as string),
     stapleCarbs: parseJsonField(user.stapleCarbs as string),
     commonProteins: parseJsonField(user.commonProteins as string),
@@ -113,6 +122,14 @@ export async function PATCH(request: Request) {
       dailyCalorieTarget,
       dailyCarbTarget,
       mealsPerDay,
+      // Movement & Activity Profile
+      preferredMovementTypes,
+      exerciseFrequency,
+      averageDailySteps,
+      hasPhysicalJob,
+      mobilityLimitations,
+      movementGoal,
+      movementNotes,
       // Cultural Food Profile
       countryOrRegion,
       culturalFoodBackground,
@@ -150,6 +167,14 @@ export async function PATCH(request: Request) {
         ...(dailyCalorieTarget !== undefined && { dailyCalorieTarget: dailyCalorieTarget ? Number(dailyCalorieTarget) : null }),
         ...(dailyCarbTarget !== undefined && { dailyCarbTarget: dailyCarbTarget ? Number(dailyCarbTarget) : null }),
         ...(mealsPerDay !== undefined && { mealsPerDay: mealsPerDay ? Number(mealsPerDay) : null }),
+        // Movement & Activity Profile
+        ...(preferredMovementTypes !== undefined && { preferredMovementTypes: Array.isArray(preferredMovementTypes) ? JSON.stringify(preferredMovementTypes) : null }),
+        ...(exerciseFrequency !== undefined && { exerciseFrequency: exerciseFrequency || null }),
+        ...(averageDailySteps !== undefined && { averageDailySteps: averageDailySteps ? Number(averageDailySteps) : null }),
+        ...(hasPhysicalJob !== undefined && { hasPhysicalJob: Boolean(hasPhysicalJob) }),
+        ...(mobilityLimitations !== undefined && { mobilityLimitations: mobilityLimitations || null }),
+        ...(movementGoal !== undefined && { movementGoal: movementGoal || null }),
+        ...(movementNotes !== undefined && { movementNotes: movementNotes || null }),
         // Cultural Food Profile
         ...(countryOrRegion !== undefined && { countryOrRegion: countryOrRegion || null }),
         ...(culturalFoodBackground !== undefined && { culturalFoodBackground: culturalFoodBackground || null }),
