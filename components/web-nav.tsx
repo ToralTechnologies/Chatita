@@ -49,6 +49,24 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: '/mood-log', label: 'Mood journal',
+    icon: (op: number) => (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+        <path d="M8.5 14s1 1.5 3.5 1.5 3.5-1.5 3.5-1.5M9 9.5h.01M15 9.5h.01" stroke="#FFFDF9" strokeWidth="1.8" strokeLinecap="round" opacity={op}/>
+      </svg>
+    ),
+  },
+  {
+    href: '/settings', label: 'Settings',
+    icon: (op: number) => (
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
+        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#FFFDF9" strokeWidth="1.6" strokeLinecap="round" opacity={op}/>
+      </svg>
+    ),
+  },
 ];
 
 export default function WebNav() {
