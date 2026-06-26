@@ -31,6 +31,8 @@ interface PageState {
   feeling: string;
   saved: boolean;
   error: string | null;
+  correcting: boolean;
+  correctionText: string;
 }
 
 // ── Tone styles ───────────────────────────────────────────────────────────────
@@ -202,6 +204,8 @@ export default function AddMealPage() {
     feeling: '',
     saved: false,
     error: null,
+    correcting: false,
+    correctionText: '',
   });
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -262,6 +266,24 @@ export default function AddMealPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ foods: state.foods, mealType: state.mealType, notes: state.feeling }),
     }).catch(() => {});
+  };
+
+  const handleCorrect = async () => {
+    const corrected = state.correctionText.split(',').map(f => f.trim()).filter(Boolean);
+    if (!corrected.length) return;
+    update({ correcting: false, correctionText: '', phase: 'scanning', foods: corrected, aiResult: null, error: null });
+    try {
+      const res = await fetch('/api/analyze-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foods: corrected }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      update({ phase: 'detected', aiResult: data, foods: data.detectedFoods.length ? data.detectedFoods : corrected });
+    } catch (err) {
+      update({ phase: 'detected', error: (err as Error).message || 'Could not get guidance. Try again.' });
+    }
   };
 
   const addFood = () => {
@@ -427,6 +449,36 @@ export default function AddMealPage() {
               </div>
             )}
             <DetectedFoodsCard />
+            {/* Correction flow */}
+            {!state.correcting ? (
+              <button
+                onClick={() => update({ correcting: true })}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: '#9A6F18', background: 'rgba(200,147,43,0.1)', border: '1px solid rgba(200,147,43,0.2)', borderRadius: 12, padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#9A6F18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#9A6F18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Not right? Correct it
+              </button>
+            ) : (
+              <div style={{ background: '#FFFDF9', borderRadius: 16, border: '1.5px solid rgba(200,147,43,0.28)', padding: '16px' }}>
+                <p style={{ fontSize: 11, color: '#9A6F18', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 10 }}>What is it really?</p>
+                <textarea
+                  value={state.correctionText}
+                  onChange={e => update({ correctionText: e.target.value })}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCorrect(); } }}
+                  placeholder="e.g. chicken biryani, naan bread, raita"
+                  rows={2}
+                  style={{ width: '100%', padding: '10px 13px', borderRadius: 12, border: '1px solid rgba(1,35,116,0.14)', background: '#F7EFE1', fontSize: 13.5, color: '#001A4D', outline: 'none', resize: 'none' as const, boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
+                />
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button onClick={handleCorrect} disabled={!state.correctionText.trim()} style={{ flex: 2, padding: '10px', borderRadius: 999, background: state.correctionText.trim() ? '#012374' : 'rgba(1,35,116,0.3)', color: '#FFFDF9', fontSize: 13, fontWeight: 700, border: 'none', cursor: state.correctionText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                    Regenerate →
+                  </button>
+                  <button onClick={() => update({ correcting: false, correctionText: '' })} style={{ flex: 1, padding: '10px', borderRadius: 999, background: 'transparent', color: 'rgba(22,24,42,0.5)', fontSize: 13, border: '1px solid rgba(22,24,42,0.2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             {state.aiResult?.guidance && <GuidanceCard guidance={state.aiResult.guidance} />}
             {!state.aiResult?.guidance && state.aiResult?.message && (
               <div style={{ background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '13px 14px' }}>
@@ -533,6 +585,36 @@ export default function AddMealPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '16px' }}>
                 <DetectedFoodsCard />
+                {/* Correction flow */}
+                {!state.correcting ? (
+                  <button
+                    onClick={() => update({ correcting: true })}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#9A6F18', background: 'rgba(200,147,43,0.1)', border: '1px solid rgba(200,147,43,0.2)', borderRadius: 12, padding: '9px 16px', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="#9A6F18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#9A6F18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Not right? Correct it
+                  </button>
+                ) : (
+                  <div style={{ background: '#FFFDF9', borderRadius: 18, border: '1.5px solid rgba(200,147,43,0.28)', padding: '18px' }}>
+                    <p style={{ fontSize: 11, color: '#9A6F18', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 12 }}>What is it really?</p>
+                    <textarea
+                      value={state.correctionText}
+                      onChange={e => update({ correctionText: e.target.value })}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCorrect(); } }}
+                      placeholder="e.g. chicken biryani, naan bread, raita"
+                      rows={2}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1px solid rgba(1,35,116,0.14)', background: '#F7EFE1', fontSize: 14, color: '#001A4D', outline: 'none', resize: 'none' as const, boxSizing: 'border-box' as const, fontFamily: 'inherit' }}
+                    />
+                    <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                      <button onClick={handleCorrect} disabled={!state.correctionText.trim()} style={{ flex: 2, padding: '11px', borderRadius: 999, background: state.correctionText.trim() ? '#012374' : 'rgba(1,35,116,0.3)', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: state.correctionText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                        Regenerate guidance →
+                      </button>
+                      <button onClick={() => update({ correcting: false, correctionText: '' })} style={{ flex: 1, padding: '11px', borderRadius: 999, background: 'transparent', color: 'rgba(22,24,42,0.5)', fontSize: 14, border: '1px solid rgba(22,24,42,0.2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {state.aiResult?.guidance && <GuidanceCard guidance={state.aiResult.guidance} web />}
                 {!state.aiResult?.guidance && state.aiResult?.message && (
                   <div style={{ background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '13px 14px' }}>
