@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
@@ -261,10 +262,17 @@ export default function AddMealPage() {
 
   const handleSave = async () => {
     update({ saved: true });
-    fetch('/api/analyze-meal', {
+    fetch('/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ foods: state.foods, mealType: state.mealType, notes: state.feeling }),
+      body: JSON.stringify({
+        detectedFoods: state.foods,
+        aiSummary: state.aiResult?.aiSummary,
+        aiConfidence: state.aiResult?.confidence,
+        aiMode: state.aiResult?.mode,
+        mealType: state.mealType,
+        feeling: state.feeling || undefined,
+      }),
     }).catch(() => {});
   };
 
@@ -280,7 +288,21 @@ export default function AddMealPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Analysis failed');
-      update({ phase: 'detected', aiResult: data, foods: data.detectedFoods.length ? data.detectedFoods : corrected });
+      const finalFoods = data.detectedFoods?.length ? data.detectedFoods : corrected;
+      // Auto-save the corrected meal to meal history
+      fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          detectedFoods: finalFoods,
+          aiSummary: data.aiSummary,
+          aiConfidence: data.confidence,
+          aiMode: data.mode,
+          mealType: state.mealType,
+          feeling: state.feeling || undefined,
+        }),
+      }).catch(() => {});
+      update({ phase: 'detected', aiResult: data, foods: finalFoods, saved: true });
     } catch (err) {
       update({ phase: 'detected', error: (err as Error).message || 'Could not get guidance. Try again.' });
     }
@@ -498,6 +520,12 @@ export default function AddMealPage() {
                 {state.saved ? '✓ Meal saved' : 'Save meal'}
               </button>
             </div>
+            {state.saved && (
+              <Link href="/meal-history" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '12px', borderRadius: '999px', background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.15)', color: '#012374', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>
+                View meal history
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </Link>
+            )}
           </>
         )}
 
@@ -568,6 +596,12 @@ export default function AddMealPage() {
                 <button onClick={handleSave} disabled={state.saved} style={{ padding: '13px', borderRadius: '999px', background: state.saved ? '#1C7A4F' : '#012374', color: '#FFFDF9', fontSize: '15px', fontWeight: 700, border: 'none', cursor: state.saved ? 'default' : 'pointer' }}>
                   {state.saved ? '✓ Meal saved' : 'Save meal'}
                 </button>
+                {state.saved && (
+                  <Link href="/meal-history" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '13px', borderRadius: '999px', background: '#F7EFE1', border: '1px solid rgba(1,35,116,0.15)', color: '#012374', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>
+                    View meal history
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </Link>
+                )}
               </>
             )}
           </div>

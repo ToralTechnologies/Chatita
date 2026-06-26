@@ -275,10 +275,38 @@ export default function HomePage() {
           <MealFollowUpBanner />
         </div>
 
+        {/* ── Quick log meal ── */}
+        <Link
+          href="/add-meal"
+          style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}
+        >
+          <div style={{
+            background: '#012374',
+            borderRadius: '18px',
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Quick log</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#FFFDF9', marginTop: '3px' }}>Log a meal</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="rgba(255,253,249,0.7)" strokeWidth="1.6"/>
+                <path d="M3 19h18" stroke="rgba(255,253,249,0.7)" strokeWidth="1.6" strokeLinecap="round"/>
+                <path d="M12 4v4" stroke="rgba(255,253,249,0.7)" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="rgba(255,253,249,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+          </div>
+        </Link>
+
         {/* ── Feature grid ── */}
         <div
           className="grid grid-cols-2 gap-[10px]"
-          style={{ marginTop: '20px' }}
+          style={{ marginTop: '12px' }}
         >
           {FEATURE_CARDS.map(({ href, title, subtitle, icon }) => (
             <Link
