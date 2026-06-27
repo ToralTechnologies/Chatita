@@ -68,7 +68,13 @@ export default function LoginPage() {
             height={64}
             className="mx-auto mb-5"
           />
-          <p className="text-sm" style={{ color: 'rgba(1,35,116,0.62)' }}>
+          <h1
+            className="font-serif-italic"
+            style={{ fontSize: '1.5rem', color: '#012374', marginBottom: '4px' }}
+          >
+            Welcome back
+          </h1>
+          <p className="text-sm" style={{ color: 'rgba(1,35,116,0.55)' }}>
             Sign in to continue
           </p>
         </div>
