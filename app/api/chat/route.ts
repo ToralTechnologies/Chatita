@@ -18,8 +18,10 @@ async function buildHealthContext(
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
 
-  // Fetch in parallel: full user profile, recent glucose, recent meals, today's all meals
-  const [user, recentGlucoseEntry, recentMealEntries, todayMeals] = await Promise.all([
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Fetch in parallel: full user profile, recent glucose, recent meals, today's all meals, recent sleep
+  const [user, recentGlucoseEntry, recentMealEntries, todayMeals, recentSleep] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -34,6 +36,12 @@ async function buildHealthContext(
         dailyCalorieTarget: true,
         dailyCarbTarget: true,
         mealsPerDay: true,
+        // Sleep & Cycle Profile
+        tracksSleep: true,
+        sleepGoalHours: true,
+        typicalBedtime: true,
+        typicalWakeTime: true,
+        tracksMenstrualCycle: true,
         // Movement profile
         preferredMovementTypes: true,
         exerciseFrequency: true,
@@ -72,6 +80,11 @@ async function buildHealthContext(
       where: { userId, eatenAt: { gte: startOfToday } },
       select: { calories: true, carbs: true, protein: true, fiber: true, sodium: true, addedSugar: true },
     }),
+    prisma.sleepLog.findFirst({
+      where: { userId, date: { gte: last24h } },
+      orderBy: { date: 'desc' },
+      select: { totalSleepMinutes: true, sleepQuality: true, wakeEnergy: true, stressBeforeBed: true, nighttimeWakeups: true },
+    }),
   ]);
 
   const ctx: ChatHealthContext = {
@@ -105,7 +118,24 @@ async function buildHealthContext(
       hasPhysicalJob: (user as any).hasPhysicalJob ?? undefined,
       mobilityLimitations: (user as any).mobilityLimitations ?? undefined,
       movementGoal: (user as any).movementGoal ?? undefined,
+      // Sleep & Cycle
+      tracksSleep: (user as any).tracksSleep ?? true,
+      sleepGoalHours: (user as any).sleepGoalHours ?? undefined,
+      typicalBedtime: (user as any).typicalBedtime ?? undefined,
+      typicalWakeTime: (user as any).typicalWakeTime ?? undefined,
+      tracksMenstrualCycle: (user as any).tracksMenstrualCycle ?? false,
     };
+
+    // Inject recent sleep into health context
+    if (recentSleep) {
+      (ctx as any).recentSleep = {
+        totalSleepMinutes: recentSleep.totalSleepMinutes,
+        sleepQuality: recentSleep.sleepQuality,
+        wakeEnergy: recentSleep.wakeEnergy,
+        stressBeforeBed: recentSleep.stressBeforeBed,
+        nighttimeWakeups: recentSleep.nighttimeWakeups,
+      };
+    }
   }
 
   // Cultural Food Profile

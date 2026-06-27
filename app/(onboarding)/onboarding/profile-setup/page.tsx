@@ -37,6 +37,14 @@ const MOVEMENT_GOAL_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+const CYCLE_TRACKING_OPTIONS = [
+  { value: 'yes', label: "Yes — I'd like to track this" },
+  { value: 'maybe', label: 'Maybe later' },
+  { value: 'no', label: 'No' },
+  { value: 'not_relevant', label: 'Not relevant to me' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+];
+
 const DIETARY_OPTIONS = [
   'Halal', 'Kosher', 'Vegetarian', 'Vegan', 'Gluten-free',
   'Lactose-free', 'Nut-free', 'No pork', 'No beef',
@@ -125,6 +133,7 @@ export default function ProfileSetupPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSleepBody, setShowSleepBody] = useState(false);
   const [showMovement, setShowMovement] = useState(false);
   const [showCultural, setShowCultural] = useState(false);
 
@@ -134,6 +143,19 @@ export default function ProfileSetupPage() {
     targetGlucoseMin: 70,
     targetGlucoseMax: 180,
   });
+
+  const [sleepBody, setSleepBody] = useState({
+    sleepGoalHours: '',
+    typicalBedtime: '',
+    typicalWakeTime: '',
+    sleepTrackingNotes: '',
+    cycleTrackingChoice: '',  // 'yes'|'maybe'|'no'|'not_relevant'|'prefer_not_to_say'
+    typicalCycleLength: '',
+    typicalPeriodLength: '',
+    cycleTrackingNotes: '',
+  });
+
+  const setSB = (k: keyof typeof sleepBody, v: string) => setSleepBody((s) => ({ ...s, [k]: v }));
 
   const [movement, setMovement] = useState({
     activityLevel: '',
@@ -173,6 +195,21 @@ export default function ProfileSetupPage() {
       const payload: Record<string, unknown> = {
         ...formData,
       };
+
+      if (showSleepBody) {
+        const wantsCycleTracking = sleepBody.cycleTrackingChoice === 'yes';
+        Object.assign(payload, {
+          tracksSleep: true,
+          sleepGoalHours: sleepBody.sleepGoalHours ? Number(sleepBody.sleepGoalHours) : undefined,
+          typicalBedtime: sleepBody.typicalBedtime || undefined,
+          typicalWakeTime: sleepBody.typicalWakeTime || undefined,
+          sleepTrackingNotes: sleepBody.sleepTrackingNotes || undefined,
+          tracksMenstrualCycle: wantsCycleTracking,
+          typicalCycleLength: wantsCycleTracking && sleepBody.typicalCycleLength ? Number(sleepBody.typicalCycleLength) : undefined,
+          typicalPeriodLength: wantsCycleTracking && sleepBody.typicalPeriodLength ? Number(sleepBody.typicalPeriodLength) : undefined,
+          cycleTrackingNotes: wantsCycleTracking && sleepBody.cycleTrackingNotes ? sleepBody.cycleTrackingNotes : undefined,
+        });
+      }
 
       if (showMovement) {
         Object.assign(payload, {
@@ -294,6 +331,142 @@ export default function ProfileSetupPage() {
                 Default: 70–180 mg/dL (consult your doctor for your personal target)
               </p>
             </div>
+          </div>
+
+          {/* Sleep & Body Patterns section */}
+          <div className="bg-white rounded-card shadow-card p-6">
+            <button
+              type="button"
+              onClick={() => setShowSleepBody((v) => !v)}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="text-left">
+                <p className="font-medium text-sm">Sleep & Body Patterns</p>
+                <p className="text-xs text-gray-500 mt-0.5">Optional — helps Chatita understand the full picture</p>
+              </div>
+              <span className="text-primary text-sm">{showSleepBody ? 'Hide ▲' : 'Add ▼'}</span>
+            </button>
+
+            {showSleepBody && (
+              <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Sleep can affect hunger, cravings, energy, mood, stress, and glucose patterns. This helps Chatita understand the full picture.
+                </p>
+
+                {/* Sleep fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sleep goal <span className="text-gray-400">(hours/night)</span></label>
+                    <input
+                      type="number"
+                      min={3}
+                      max={14}
+                      step={0.5}
+                      value={sleepBody.sleepGoalHours}
+                      onChange={(e) => setSB('sleepGoalHours', e.target.value)}
+                      placeholder="e.g. 7.5"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Typical bedtime</label>
+                    <input
+                      type="time"
+                      value={sleepBody.typicalBedtime}
+                      onChange={(e) => setSB('typicalBedtime', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Typical wake time</label>
+                    <input
+                      type="time"
+                      value={sleepBody.typicalWakeTime}
+                      onChange={(e) => setSB('typicalWakeTime', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sleep notes <span className="text-gray-400">(optional)</span></label>
+                  <textarea
+                    value={sleepBody.sleepTrackingNotes}
+                    onChange={(e) => setSB('sleepTrackingNotes', e.target.value)}
+                    placeholder="e.g. trouble falling asleep, frequent wakeups..."
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
+                </div>
+
+                {/* Cycle tracking question */}
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-sm font-medium mb-1">Menstrual cycle tracking, if relevant to you</p>
+                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                    Some people notice changes in appetite, mood, energy, cravings, or glucose patterns around their cycle. This is optional and only used to personalize your insights.
+                  </p>
+                  <div className="space-y-2">
+                    {CYCLE_TRACKING_OPTIONS.map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="cycleTracking"
+                          value={opt.value}
+                          checked={sleepBody.cycleTrackingChoice === opt.value}
+                          onChange={() => setSB('cycleTrackingChoice', opt.value)}
+                        />
+                        <span className="text-sm text-gray-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {sleepBody.cycleTrackingChoice === 'yes' && (
+                    <div className="mt-4 space-y-3 pl-4 border-l-2 border-primary/20">
+                      <p className="text-xs text-gray-500">All fields optional.</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Typical cycle length <span className="text-gray-400">(days)</span></label>
+                          <input
+                            type="number"
+                            min={15}
+                            max={60}
+                            value={sleepBody.typicalCycleLength}
+                            onChange={(e) => setSB('typicalCycleLength', e.target.value)}
+                            placeholder="e.g. 28"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Typical period length <span className="text-gray-400">(days)</span></label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={14}
+                            value={sleepBody.typicalPeriodLength}
+                            onChange={(e) => setSB('typicalPeriodLength', e.target.value)}
+                            placeholder="e.g. 5"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Notes about your cycle patterns <span className="text-gray-400">(optional)</span></label>
+                        <textarea
+                          value={sleepBody.cycleTrackingNotes}
+                          onChange={(e) => setSB('cycleTrackingNotes', e.target.value)}
+                          placeholder="e.g. glucose tends to run higher before period..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Movement & Activity section */}

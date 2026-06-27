@@ -82,6 +82,24 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     sections.push(`Today's nutrition:\n${lines.join('\n')}`);
   }
 
+  // --- Recent sleep ---
+  if (healthCtx?.recentSleep) {
+    const sl = healthCtx.recentSleep;
+    const sleepLines: string[] = [];
+    if (sl.totalSleepMinutes != null) {
+      const h = Math.floor(sl.totalSleepMinutes / 60);
+      const m = sl.totalSleepMinutes % 60;
+      sleepLines.push(`  - Sleep duration: ${h}h ${m}min`);
+    }
+    if (sl.sleepQuality) sleepLines.push(`  - Sleep quality: ${sl.sleepQuality}`);
+    if (sl.wakeEnergy != null) sleepLines.push(`  - Wake energy: ${sl.wakeEnergy}/10`);
+    if (sl.stressBeforeBed != null) sleepLines.push(`  - Stress before bed: ${sl.stressBeforeBed}/10`);
+    if (sl.nighttimeWakeups != null) sleepLines.push(`  - Night wakeups: ${sl.nighttimeWakeups}`);
+    if (sleepLines.length > 0) {
+      sections.push(`Recent sleep (last 24h — use cautious language, do not diagnose causes):\n${sleepLines.join('\n')}`);
+    }
+  }
+
   // --- Mood/status flags ---
   const flags: string[] = [];
   if (healthCtx?.mood) flags.push(`Mood: ${healthCtx.mood}`);
@@ -137,6 +155,12 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     if (p.hasPhysicalJob) profileLines.push(`  - Has physically active job: yes`);
     if (p.mobilityLimitations) profileLines.push(`  - Mobility considerations: ${p.mobilityLimitations}`);
     if (p.movementGoal) profileLines.push(`  - Movement goal: ${p.movementGoal}`);
+    // Sleep profile
+    if (p.sleepGoalHours) profileLines.push(`  - Sleep goal: ${p.sleepGoalHours}h/night`);
+    if (p.typicalBedtime) profileLines.push(`  - Typical bedtime: ${p.typicalBedtime}`);
+    if (p.typicalWakeTime) profileLines.push(`  - Typical wake time: ${p.typicalWakeTime}`);
+    // Cycle — only note if opted in
+    if (p.tracksMenstrualCycle) profileLines.push(`  - Menstrual cycle tracking: enabled (use cycle guidance rules)`);
     if (profileLines.length > 0) {
       sections.push(`Health profile:\n${profileLines.join('\n')}`);
     }
@@ -266,6 +290,28 @@ General reference targets (IDF/ADA — not a prescription):
 - Fasting / before meals: 80–130 mg/dL
 - 1–2 hours after meals: less than 180 mg/dL
 - CGM time in range: 70–180 mg/dL
+
+== SLEEP & BODY PATTERN GUIDANCE ==
+Sleep is a core part of health context. When reviewing meals, glucose, movement, mood, appetite, hydration, stress, or GLP-1 patterns, consider sleep quality and duration when available. Use cautious language — do not make definitive medical claims.
+
+Sleep guidance principles:
+1. NEVER say "your sleep caused your high glucose" — say "may affect" or "could be related"
+2. NEVER shame poor sleep — "Sleep can be hard to control, and many things affect it"
+3. Use: "may affect," "could be related," "a pattern worth tracking," "something to discuss with your care team"
+4. Good responses: "You logged less sleep and lower energy today. That may make cravings or appetite feel harder to manage."
+5. Avoid: "You need to sleep more," "Your sleep is the problem," "You failed because you slept poorly"
+
+Cycle tracking guidance (only when user has opted in):
+1. ONLY use cycle context if the user's profile shows tracksMenstrualCycle = true
+2. NEVER assume cycle data applies to everyone — do not mention periods unless user has opted in
+3. Do not make fertility, pregnancy, or gender assumptions
+4. Use the same cautious language: "may affect," "could be related," "a pattern worth tracking"
+5. Good responses: "You noted cravings and fatigue. A small protein-and-fiber snack may help you feel more steady."
+6. Avoid: "Your period caused your glucose spike," "Your hormones are the problem," "All women experience this"
+7. If glucose changes noticed around cycle: "This could be a pattern worth discussing with your care team — Chatita can help you track it over time."
+
+GLP-1 + sleep/cycle:
+If user is on GLP-1 (Ozempic, Mounjaro, Wegovy, Zepbound) and logs poor sleep or cycle symptoms: "If you're feeling fatigued, nauseated, or low-energy, rest and hydration come first. Movement and other goals can wait until your body feels ready."
 
 == MOVEMENT & ACTIVITY GUIDANCE ==
 Movement is personal and varies enormously — do not assume the user can or wants to exercise. Your role is to:

@@ -11,6 +11,7 @@ import HealthProfileCard from '@/components/health-profile-card';
 import ThemeToggle from '@/components/theme-toggle';
 import BackButton from '@/components/back-button';
 import CulturalFoodProfileCard from '@/components/cultural-food-profile-card';
+import SleepBodyProfileCard from '@/components/sleep-body-profile-card';
 import { useTranslation } from '@/lib/i18n/context';
 import { Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
@@ -526,6 +527,7 @@ function SettingsContent() {
           <div style={card}><LanguageSwitcher /></div>
           <HealthProfileCard />
           <CulturalFoodProfileCard />
+          <SleepBodyProfileCard />
           {dexcomCard}
           {libreCard}
           {reportsCard}
@@ -557,6 +559,7 @@ function SettingsContent() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <HealthProfileCard />
               <CulturalFoodProfileCard />
+              <SleepBodyProfileCard />
               <div style={card}><LanguageSwitcher /></div>
             </div>
 

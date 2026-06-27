@@ -25,6 +25,17 @@ const PROFILE_SELECT = {
   dailyCalorieTarget: true,
   dailyCarbTarget: true,
   mealsPerDay: true,
+  // Sleep Profile
+  tracksSleep: true,
+  sleepGoalHours: true,
+  typicalBedtime: true,
+  typicalWakeTime: true,
+  sleepTrackingNotes: true,
+  // Cycle Profile
+  tracksMenstrualCycle: true,
+  typicalCycleLength: true,
+  typicalPeriodLength: true,
+  cycleTrackingNotes: true,
   // Movement & Activity Profile
   preferredMovementTypes: true,
   exerciseFrequency: true,
@@ -122,6 +133,17 @@ export async function PATCH(request: Request) {
       dailyCalorieTarget,
       dailyCarbTarget,
       mealsPerDay,
+      // Sleep Profile
+      tracksSleep,
+      sleepGoalHours,
+      typicalBedtime,
+      typicalWakeTime,
+      sleepTrackingNotes,
+      // Cycle Profile
+      tracksMenstrualCycle,
+      typicalCycleLength,
+      typicalPeriodLength,
+      cycleTrackingNotes,
       // Movement & Activity Profile
       preferredMovementTypes,
       exerciseFrequency,
@@ -167,6 +189,17 @@ export async function PATCH(request: Request) {
         ...(dailyCalorieTarget !== undefined && { dailyCalorieTarget: dailyCalorieTarget ? Number(dailyCalorieTarget) : null }),
         ...(dailyCarbTarget !== undefined && { dailyCarbTarget: dailyCarbTarget ? Number(dailyCarbTarget) : null }),
         ...(mealsPerDay !== undefined && { mealsPerDay: mealsPerDay ? Number(mealsPerDay) : null }),
+        // Sleep Profile
+        ...(tracksSleep !== undefined && { tracksSleep: Boolean(tracksSleep) }),
+        ...(sleepGoalHours !== undefined && { sleepGoalHours: sleepGoalHours ? Number(sleepGoalHours) : null }),
+        ...(typicalBedtime !== undefined && { typicalBedtime: typicalBedtime || null }),
+        ...(typicalWakeTime !== undefined && { typicalWakeTime: typicalWakeTime || null }),
+        ...(sleepTrackingNotes !== undefined && { sleepTrackingNotes: sleepTrackingNotes || null }),
+        // Cycle Profile
+        ...(tracksMenstrualCycle !== undefined && { tracksMenstrualCycle: Boolean(tracksMenstrualCycle) }),
+        ...(typicalCycleLength !== undefined && { typicalCycleLength: typicalCycleLength ? Number(typicalCycleLength) : null }),
+        ...(typicalPeriodLength !== undefined && { typicalPeriodLength: typicalPeriodLength ? Number(typicalPeriodLength) : null }),
+        ...(cycleTrackingNotes !== undefined && { cycleTrackingNotes: cycleTrackingNotes || null }),
         // Movement & Activity Profile
         ...(preferredMovementTypes !== undefined && { preferredMovementTypes: Array.isArray(preferredMovementTypes) ? JSON.stringify(preferredMovementTypes) : null }),
         ...(exerciseFrequency !== undefined && { exerciseFrequency: exerciseFrequency || null }),

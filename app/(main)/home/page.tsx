@@ -14,6 +14,8 @@ import ChatInterface from '@/components/chat-interface';
 import ThemeToggle from '@/components/theme-toggle';
 import WebHomeLayout from '@/components/web-home-layout';
 import MovementCard from '@/components/movement-card';
+import SleepCard from '@/components/sleep-card';
+import CycleCard from '@/components/cycle-card';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
 import { MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
@@ -371,6 +373,18 @@ export default function HomePage() {
         <div style={{ marginTop: '16px' }}>
           <MovementCard />
         </div>
+
+        {/* ── Sleep card ── */}
+        <div style={{ marginTop: '10px' }}>
+          <SleepCard />
+        </div>
+
+        {/* ── Cycle card — only if user opted in ── */}
+        {userData?.tracksMenstrualCycle && (
+          <div style={{ marginTop: '10px' }}>
+            <CycleCard />
+          </div>
+        )}
 
         {/* ── Context tags ── */}
         <div style={{ marginTop: '24px' }}>

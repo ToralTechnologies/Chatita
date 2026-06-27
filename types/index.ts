@@ -20,6 +20,11 @@ export type ActivityLevel =
   | 'moderate'
   | 'active';
 
+export type SleepQuality = 'great' | 'good' | 'fair' | 'poor' | 'not_sure';
+export type CyclePhase = 'period' | 'follicular' | 'ovulation' | 'luteal' | 'not_sure';
+export type FlowLevel = 'light' | 'medium' | 'heavy' | 'not_sure';
+export type CycleSymptom = 'cramps' | 'headache' | 'bloating' | 'fatigue' | 'breast_tenderness' | 'mood_changes' | 'cravings' | 'nausea' | 'acne' | 'other';
+
 export type MovementType =
   | 'walking'
   | 'chores'
@@ -130,6 +135,43 @@ export interface UserContext {
   havingCravings?: boolean;
 }
 
+// Sleep log entry
+export interface SleepLogEntry {
+  id: string;
+  userId: string;
+  date: string;
+  sleepStart?: string;
+  wakeTime?: string;
+  totalSleepMinutes?: number;
+  sleepQuality?: SleepQuality;
+  wakeEnergy?: number;
+  nighttimeWakeups?: number;
+  stressBeforeBed?: number;
+  caffeineLaterInDay?: boolean;
+  notes?: string;
+  createdAt: string;
+}
+
+// Cycle log entry
+export interface CycleLogEntry {
+  id: string;
+  userId: string;
+  date: string;
+  periodStartDate?: string;
+  periodEndDate?: string;
+  cycleDay?: number;
+  cyclePhase?: CyclePhase;
+  flow?: FlowLevel;
+  symptoms?: CycleSymptom[];
+  cravings?: string;
+  appetiteChange?: string;
+  mood?: string;
+  energy?: number;
+  glucoseChangesNoticed?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 // Extended user health profile for personalized guidance
 export interface UserHealthProfile {
   age?: number;
@@ -142,6 +184,17 @@ export interface UserHealthProfile {
   dailyCalorieTarget?: number;
   dailyCarbTarget?: number;
   mealsPerDay?: number;
+  // Sleep profile
+  tracksSleep?: boolean;
+  sleepGoalHours?: number;
+  typicalBedtime?: string;
+  typicalWakeTime?: string;
+  sleepTrackingNotes?: string;
+  // Cycle profile (opt-in)
+  tracksMenstrualCycle?: boolean;
+  typicalCycleLength?: number;
+  typicalPeriodLength?: number;
+  cycleTrackingNotes?: string;
   // Movement profile
   preferredMovementTypes?: MovementType[];
   exerciseFrequency?: string;
@@ -275,4 +328,13 @@ export interface ChatHealthContext {
 
   // Today's cumulative nutrition (to judge meals in daily context)
   todayNutrition?: TodayNutrition;
+
+  // Recent sleep (from DB, last 24 hours)
+  recentSleep?: {
+    totalSleepMinutes?: number | null;
+    sleepQuality?: string | null;
+    wakeEnergy?: number | null;
+    stressBeforeBed?: number | null;
+    nighttimeWakeups?: number | null;
+  };
 }

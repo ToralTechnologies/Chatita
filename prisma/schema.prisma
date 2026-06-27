@@ -41,6 +41,19 @@ model User {
   dailyCarbTarget    Int?               // grams per day
   mealsPerDay        Int?     @default(3)
 
+  // Sleep Profile — tracksSleep defaults true (core feature)
+  tracksSleep         Boolean   @default(true)
+  sleepGoalHours      Float?
+  typicalBedtime      String?              // "22:30" HH:MM
+  typicalWakeTime     String?              // "06:30" HH:MM
+  sleepTrackingNotes  String?   @db.Text
+
+  // Menstrual Cycle Profile — opt-in only, defaults false
+  tracksMenstrualCycle  Boolean  @default(false)
+  typicalCycleLength    Int?               // days, reasonable range 15–60
+  typicalPeriodLength   Int?               // days, reasonable range 1–14
+  cycleTrackingNotes    String?  @db.Text
+
   // Movement & Activity Profile — all fields optional
   preferredMovementTypes String?   @db.Text   // JSON array: ["walking","chores","dancing",...]
   exerciseFrequency      String?              // 'daily'|'most_days'|'few_times_week'|'rarely'|'never'|'not_sure'
@@ -90,6 +103,8 @@ model User {
   hydrationLogs       HydrationLog[]
   guidanceInsights    GuidanceInsight[]
   activityLogs        ActivityLog[]
+  sleepLogs           SleepLog[]
+  cycleLogs           CycleLog[]
 }
 
 // NextAuth models for OAuth and session management
@@ -706,4 +721,56 @@ model ActivityLog {
 
   @@index([userId, date])
   @@index([mealId])
+}
+
+// Sleep log — available to all users (tracksSleep defaults true)
+model SleepLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @default(now())
+
+  sleepStart           DateTime?
+  wakeTime             DateTime?
+  totalSleepMinutes    Int?      // non-negative; calculated from start/wake or entered manually
+
+  sleepQuality         String?   // great | good | fair | poor | not_sure
+  wakeEnergy           Int?      // 1–10
+  nighttimeWakeups     Int?      // non-negative
+  stressBeforeBed      Int?      // 1–10
+  caffeineLaterInDay   Boolean?
+
+  notes                String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+// Menstrual cycle log — only used when tracksMenstrualCycle = true
+model CycleLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @default(now())
+
+  periodStartDate       DateTime?
+  periodEndDate         DateTime?
+  cycleDay              Int?      // positive if provided
+  cyclePhase            String?   // period | follicular | ovulation | luteal | not_sure
+  flow                  String?   // light | medium | heavy | not_sure
+
+  symptoms              String?   @db.Text  // JSON array: ["cramps","headache","bloating","fatigue",...]
+  cravings              String?
+  appetiteChange        String?   // increased | decreased | unchanged | not_sure
+  mood                  String?
+  energy                Int?      // 1–10
+  glucoseChangesNoticed String?   // free-text note
+  notes                 String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
 }
