@@ -9,13 +9,27 @@ interface MealCardProps {
     id: string;
     photoBase64?: string | null;
     description?: string | null;
+    aiSummary?: string | null;
     detectedFoods?: string | null;
+    mealName?: string | null;
+    portionSize?: string | null;
+    // Core nutrition
     calories?: number | null;
     carbs?: number | null;
     protein?: number | null;
     fat?: number | null;
+    fiber?: number | null;
+    sugar?: number | null;
+    sodium?: number | null;
+    // Extended nutrition
+    addedSugar?: number | null;
+    saturatedFat?: number | null;
+    transFat?: number | null;
+    cholesterol?: number | null;
+    potassium?: number | null;
     mealType?: string | null;
     feeling?: string | null;
+    nutritionSource?: string | null;
     eatenAt: Date | string;
   };
   onDelete?: (id: string) => void;
@@ -134,15 +148,43 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
           </div>
         )}
 
-        {/* Nutrition row */}
-        {(meal.calories || meal.carbs || meal.protein || meal.fat) && (
-          <div style={{ display: 'flex', gap: 12, background: '#F7EFE1', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
-            {meal.calories && <NutrStat label="cal" value={String(meal.calories)} />}
-            {meal.carbs && <NutrStat label="carbs" value={`${meal.carbs}g`} />}
-            {meal.protein && <NutrStat label="protein" value={`${meal.protein}g`} />}
-            {meal.fat && <NutrStat label="fat" value={`${meal.fat}g`} />}
-          </div>
-        )}
+        {/* Nutrition grid */}
+        {(meal.calories || meal.carbs || meal.protein || meal.fat || meal.fiber || meal.sugar || meal.sodium) && (() => {
+          const primary = [
+            { label: 'cal',     val: meal.calories  != null ? String(Math.round(meal.calories))  : null },
+            { label: 'carbs',   val: meal.carbs     != null ? `${Math.round(meal.carbs)}g`     : null },
+            { label: 'protein', val: meal.protein   != null ? `${Math.round(meal.protein)}g`   : null },
+            { label: 'fat',     val: meal.fat       != null ? `${Math.round(meal.fat)}g`       : null },
+            { label: 'fiber',   val: meal.fiber     != null ? `${Math.round(meal.fiber)}g`     : null },
+            { label: 'sugar',   val: meal.sugar     != null ? `${Math.round(meal.sugar)}g`     : null },
+            { label: 'sodium',  val: meal.sodium    != null ? `${Math.round(meal.sodium)}mg`   : null },
+          ].filter(i => i.val !== null);
+
+          const extended = [
+            { label: 'sat. fat',  val: meal.saturatedFat != null ? `${Math.round(meal.saturatedFat)}g`  : null },
+            { label: 'add. sugar',val: meal.addedSugar   != null ? `${Math.round(meal.addedSugar)}g`    : null },
+            { label: 'chol.',     val: meal.cholesterol  != null ? `${Math.round(meal.cholesterol)}mg`  : null },
+            { label: 'potassium', val: meal.potassium    != null ? `${Math.round(meal.potassium)}mg`    : null },
+            { label: 'trans fat', val: meal.transFat     != null ? `${Math.round(meal.transFat)}g`      : null },
+          ].filter(i => i.val !== null);
+
+          return (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))', gap: 6, background: '#F7EFE1', borderRadius: 12, padding: '10px 12px' }}>
+                {primary.map(({ label, val }) => (
+                  <NutrStat key={label} label={label} value={val!} />
+                ))}
+              </div>
+              {extended.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6, marginTop: 6, padding: '0 2px' }}>
+                  {extended.map(({ label, val }) => (
+                    <NutrStat key={label} label={label} value={val!} small />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Feeling note */}
         {meal.feeling && (
@@ -166,11 +208,11 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
   );
 }
 
-function NutrStat({ label, value }: { label: string; value: string }) {
+function NutrStat({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div style={{ textAlign: 'center', flex: 1 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#012374' }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'rgba(22,24,42,0.5)', marginTop: 1 }}>{label}</div>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: small ? 12 : 15, fontWeight: 700, color: small ? 'rgba(1,35,116,0.6)' : '#012374' }}>{value}</div>
+      <div style={{ fontSize: small ? 9.5 : 11, color: 'rgba(22,24,42,0.45)', marginTop: 1 }}>{label}</div>
     </div>
   );
 }

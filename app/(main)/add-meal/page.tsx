@@ -12,11 +12,28 @@ import type { MealGuidance } from '@/lib/ai/meal-analyzer';
 type Phase = 'idle' | 'scanning' | 'detected' | 'manual';
 type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 
+interface AiNutrition {
+  calories?: number;
+  carbs?: number;
+  protein?: number;
+  fat?: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  addedSugar?: number;
+  saturatedFat?: number;
+  transFat?: number;
+  cholesterol?: number;
+  potassium?: number;
+}
+
 interface AiResult {
   detectedFoods: string[];
   confidence: number;
   aiSummary?: string;
   nutritionSummary?: string;
+  nutrition?: AiNutrition;
+  portionSize?: string;
   guidance?: MealGuidance;
   mode: 'ai' | '$0';
   message?: string;
@@ -262,6 +279,7 @@ export default function AddMealPage() {
 
   const handleSave = async () => {
     update({ saved: true });
+    const n = state.aiResult?.nutrition ?? {};
     fetch('/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -271,6 +289,22 @@ export default function AddMealPage() {
         aiSummary: state.aiResult?.aiSummary,
         aiConfidence: state.aiResult?.confidence,
         aiMode: state.aiResult?.mode,
+        nutritionSource: state.aiResult?.mode === 'ai' ? 'ai' : 'manual',
+        portionSize: state.aiResult?.portionSize || undefined,
+        // Core nutrition from AI
+        calories: n.calories ?? undefined,
+        carbs: n.carbs ?? undefined,
+        protein: n.protein ?? undefined,
+        fat: n.fat ?? undefined,
+        fiber: n.fiber ?? undefined,
+        sugar: n.sugar ?? undefined,
+        sodium: n.sodium ?? undefined,
+        // Extended nutrition
+        addedSugar: n.addedSugar ?? undefined,
+        saturatedFat: n.saturatedFat ?? undefined,
+        transFat: n.transFat ?? undefined,
+        cholesterol: n.cholesterol ?? undefined,
+        potassium: n.potassium ?? undefined,
         mealType: state.mealType,
         feeling: state.feeling || undefined,
       }),
@@ -291,6 +325,7 @@ export default function AddMealPage() {
       if (!res.ok) throw new Error(data.error || 'Analysis failed');
       const finalFoods = data.detectedFoods?.length ? data.detectedFoods : corrected;
       // Auto-save the corrected meal to meal history
+      const cn = (data.nutrition as AiNutrition) ?? {};
       fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,6 +335,20 @@ export default function AddMealPage() {
           aiSummary: data.aiSummary,
           aiConfidence: data.confidence,
           aiMode: data.mode,
+          nutritionSource: data.mode === 'ai' ? 'ai' : 'manual',
+          portionSize: data.portionSize || undefined,
+          calories: cn.calories ?? undefined,
+          carbs: cn.carbs ?? undefined,
+          protein: cn.protein ?? undefined,
+          fat: cn.fat ?? undefined,
+          fiber: cn.fiber ?? undefined,
+          sugar: cn.sugar ?? undefined,
+          sodium: cn.sodium ?? undefined,
+          addedSugar: cn.addedSugar ?? undefined,
+          saturatedFat: cn.saturatedFat ?? undefined,
+          transFat: cn.transFat ?? undefined,
+          cholesterol: cn.cholesterol ?? undefined,
+          potassium: cn.potassium ?? undefined,
           mealType: state.mealType,
           feeling: state.feeling || undefined,
         }),
@@ -407,8 +456,32 @@ export default function AddMealPage() {
             ))}
           </div>
         )}
-        {result.nutritionSummary && (
-          <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.5)', marginTop: '8px' }}>{result.nutritionSummary}</p>
+        {/* Nutrition grid from AI */}
+        {result.nutrition && Object.keys(result.nutrition).length > 0 && (() => {
+          const n = result.nutrition!;
+          const items = [
+            { label: 'cal', val: n.calories != null ? String(Math.round(n.calories)) : null },
+            { label: 'carbs', val: n.carbs != null ? `${Math.round(n.carbs)}g` : null },
+            { label: 'protein', val: n.protein != null ? `${Math.round(n.protein)}g` : null },
+            { label: 'fat', val: n.fat != null ? `${Math.round(n.fat)}g` : null },
+            { label: 'fiber', val: n.fiber != null ? `${Math.round(n.fiber)}g` : null },
+            { label: 'sugar', val: n.sugar != null ? `${Math.round(n.sugar)}g` : null },
+            { label: 'sodium', val: n.sodium != null ? `${Math.round(n.sodium)}mg` : null },
+          ].filter(i => i.val !== null);
+          if (!items.length) return null;
+          return (
+            <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '6px' }}>
+              {items.map(({ label, val }) => (
+                <div key={label} style={{ background: '#F7EFE1', borderRadius: '10px', padding: '8px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#012374' }}>{val}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(22,24,42,0.5)', marginTop: '1px' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        {result.portionSize && (
+          <p style={{ fontSize: '11.5px', color: 'rgba(1,35,116,0.5)', marginTop: '8px' }}>Portion: {result.portionSize}</p>
         )}
       </div>
     );
