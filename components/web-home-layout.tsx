@@ -128,6 +128,8 @@ export default function WebHomeLayout({
   onContextSave,
 }: WebHomeLayoutProps) {
   const [showAddReading, setShowAddReading] = useState(false);
+  // 'checkin' = mood-first flow; 'reading' = glucose-first flow
+  const [flowType, setFlowType] = useState<'checkin' | 'reading'>('checkin');
   const [step, setStep] = useState(1);
   const [glucose, setGlucose] = useState('');
   const [meal, setMeal] = useState('');
@@ -138,6 +140,8 @@ export default function WebHomeLayout({
   const [factors, setFactors] = useState<string[]>([]);
   const [listening, setListening] = useState(false);
   const [readings, setReadings] = useState<GlucoseEntry[]>([]);
+  // reading flow: after done, offer mood add-on
+  const [offerMood, setOfferMood] = useState(false);
 
   const targetMin = userData?.targetGlucoseMin || (userContext as any)?.targetMin || 70;
   const targetMax = userData?.targetGlucoseMax || (userContext as any)?.targetMax || 180;
@@ -190,7 +194,8 @@ export default function WebHomeLayout({
 
   const bucket = BUCKETS[getBucket(moodVal)];
 
-  const handleOpenModal = () => {
+  const openCheckin = () => {
+    setFlowType('checkin');
     setStep(1);
     setGlucose('');
     setMeal('');
@@ -198,6 +203,20 @@ export default function WebHomeLayout({
     setMoodVal(0.5);
     setMoodWords([]);
     setFactors([]);
+    setOfferMood(false);
+    setShowAddReading(true);
+  };
+
+  const openAddReading = () => {
+    setFlowType('reading');
+    setStep(1);
+    setGlucose('');
+    setMeal('');
+    setBody([]);
+    setMoodVal(0.5);
+    setMoodWords([]);
+    setFactors([]);
+    setOfferMood(false);
     setShowAddReading(true);
   };
 
@@ -206,8 +225,13 @@ export default function WebHomeLayout({
     if (!isNaN(v) && v > 0) {
       onGlucoseUpdate?.(v, contextFromMeal(meal), undefined, body.join(', '));
     }
-    setStep(5);
+    if (flowType === 'checkin') {
+      setStep(5); // checkin flow: 4 steps → done
+    } else {
+      setStep(3); // reading flow: 2 steps → done (step 3)
+    }
   };
+
 
   const handleNumpad = (key: string) => {
     if (key === 'del') {
@@ -269,7 +293,7 @@ export default function WebHomeLayout({
             </p>
           </div>
           <button
-            onClick={handleOpenModal}
+            onClick={openAddReading}
             style={{
               background: '#012374', color: '#FFFDF9', border: 'none',
               padding: '11px 22px', borderRadius: 999, fontFamily: 'inherit',
@@ -390,7 +414,7 @@ export default function WebHomeLayout({
                 Log your mood, how your body feels, and your latest glucose — all in one gentle flow.
               </p>
               <button
-                onClick={handleOpenModal}
+                onClick={openCheckin}
                 style={{
                   marginTop: 20, background: '#FFFDF9', color: '#012374',
                   border: 'none', padding: '11px 22px', borderRadius: 999,
@@ -479,17 +503,23 @@ export default function WebHomeLayout({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-                    {step < 5 ? `Step ${step} of 4` : 'Done'}
+                    {flowType === 'checkin' && (step < 5 ? `Step ${step} of 4` : 'Done')}
+                    {flowType === 'reading' && (step < 3 ? `Step ${step} of 2` : 'Done')}
                   </div>
                   <div
                     className="font-serif-italic"
                     style={{ fontSize: 24, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginTop: 6 }}
                   >
-                    {step === 1 && "What's your reading?"}
-                    {step === 2 && 'When did you take it?'}
-                    {step === 3 && 'How does your body feel?'}
-                    {step === 4 && 'Your state of mind'}
-                    {step === 5 && 'Saved with care.'}
+                    {/* check-in flow */}
+                    {flowType === 'checkin' && step === 1 && 'Your state of mind'}
+                    {flowType === 'checkin' && step === 2 && 'How does your body feel?'}
+                    {flowType === 'checkin' && step === 3 && 'When did you take it?'}
+                    {flowType === 'checkin' && step === 4 && "What's your reading?"}
+                    {flowType === 'checkin' && step === 5 && 'Saved with care.'}
+                    {/* reading flow */}
+                    {flowType === 'reading' && step === 1 && "What's your reading?"}
+                    {flowType === 'reading' && step === 2 && 'When did you take it?'}
+                    {flowType === 'reading' && step === 3 && 'Saved with care.'}
                   </div>
                 </div>
                 <button
@@ -501,9 +531,9 @@ export default function WebHomeLayout({
               </div>
 
               {/* Progress bars */}
-              {step < 5 && (
+              {((flowType === 'checkin' && step < 5) || (flowType === 'reading' && step < 3)) && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-                  {[1, 2, 3, 4].map(i => (
+                  {Array.from({ length: flowType === 'checkin' ? 4 : 2 }, (_, i) => i + 1).map(i => (
                     <div key={i} style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(1,35,116,0.12)', overflow: 'hidden' }}>
                       <div style={{
                         height: '100%', borderRadius: 99, background: '#012374',
@@ -519,8 +549,133 @@ export default function WebHomeLayout({
             {/* Modal body */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
-              {/* Step 1: Reading */}
-              {step === 1 && (
+              {/* ── CHECK-IN FLOW ── */}
+
+              {/* Checkin Step 1: Mood */}
+              {flowType === 'checkin' && step === 1 && (
+                <div>
+                  <div style={{ display: 'flex', gap: 6, background: '#FFFDF9', borderRadius: 14, padding: 5, width: 'fit-content', marginBottom: 24 }}>
+                    {(['now', 'today'] as const).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setMoodType(t)}
+                        style={{
+                          padding: '9px 20px', borderRadius: 10, fontFamily: 'inherit',
+                          fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+                          background: moodType === t ? '#012374' : 'transparent',
+                          color: moodType === t ? '#FFFDF9' : '#012374',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {t === 'now' ? 'Right now' : 'Overall today'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                    <div style={{
+                      width: 150, height: 150, borderRadius: '50%',
+                      background: `radial-gradient(circle at 38% 38%, ${bucket.glow}, ${bucket.color})`,
+                      boxShadow: `0 20px 50px -14px ${bucket.color}99`,
+                      transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <div className="font-serif-italic" style={{ fontSize: 20, fontWeight: 700, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{bucket.label}</div>
+                      <div style={{ fontSize: 14, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>{bucket.es}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 22 }}>
+                    <input
+                      type="range" min={0} max={1} step={0.01} value={moodVal}
+                      onChange={e => { setMoodVal(parseFloat(e.target.value)); setMoodWords([]); }}
+                      style={{ width: '100%', accentColor: '#012374', cursor: 'pointer' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 4 }}>
+                      <span>Very unpleasant</span><span>Neutral</span><span>Very pleasant</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 20 }}>
+                    {bucket.words.slice(0, 6).map(w => (
+                      <button key={w} onClick={() => toggleMoodWord(w)} style={{
+                        padding: '9px 16px', borderRadius: 999, fontFamily: 'inherit',
+                        fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+                        background: moodWords.includes(w) ? '#012374' : '#FFFDF9',
+                        color: moodWords.includes(w) ? '#FFFDF9' : '#012374',
+                        border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                        transition: 'all 0.15s',
+                      }}>{w}</button>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 12 }}>
+                      What&apos;s influencing this?
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
+                      {FACTOR_CHIPS.map(f => (
+                        <button key={f} onClick={() => toggleFactor(f)} style={{
+                          padding: '9px 16px', borderRadius: 999, fontFamily: 'inherit',
+                          fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+                          background: factors.includes(f) ? 'rgba(1,35,116,0.12)' : '#FFFDF9',
+                          color: '#012374',
+                          border: factors.includes(f) ? '1px solid rgba(1,35,116,0.3)' : '1px solid rgba(1,35,116,0.15)',
+                          transition: 'all 0.15s',
+                        }}>{f}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Checkin Step 2: Body */}
+              {flowType === 'checkin' && step === 2 && (
+                <div>
+                  <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.72)', lineHeight: 1.55, marginBottom: 14 }}>
+                    How is your body feeling right now? Select all that apply.
+                  </p>
+                  <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '13px 16px', marginBottom: 20, fontSize: 13.5, color: '#012374', lineHeight: 1.5 }}>
+                    If you feel shaky, lightheaded, or sweaty — those can be signs of low blood sugar. Eating 15g of fast-acting carbs can help.
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {BODY_CHIPS.map(chip => (
+                      <button key={chip} onClick={() => toggleBody(chip)} style={{
+                        padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit',
+                        fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                        background: body.includes(chip) ? '#012374' : '#FFFDF9',
+                        color: body.includes(chip) ? '#FFFDF9' : '#012374',
+                        border: body.includes(chip) ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                        transition: 'all 0.15s',
+                      }}>{chip}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Checkin Step 3: Timing */}
+              {flowType === 'checkin' && step === 3 && (
+                <div>
+                  <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.72)', lineHeight: 1.55, marginBottom: 20 }}>
+                    Knowing when you took this reading helps Chatita understand patterns around your meals.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {MEAL_CHIPS.map(chip => (
+                      <button key={chip} onClick={() => setMeal(chip)} style={{
+                        padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit',
+                        fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                        background: meal === chip ? '#012374' : '#FFFDF9',
+                        color: meal === chip ? '#FFFDF9' : '#012374',
+                        border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                        transition: 'all 0.15s',
+                      }}>{chip}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Checkin Step 4: Glucose (optional) */}
+              {flowType === 'checkin' && step === 4 && (
                 <div>
                   <div style={{ background: '#FFFDF9', borderRadius: 18, padding: '24px 28px', textAlign: 'center', border: '1px solid rgba(1,35,116,0.08)' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10 }}>
@@ -591,196 +746,138 @@ export default function WebHomeLayout({
                 </div>
               )}
 
-              {/* Step 2: Timing */}
-              {step === 2 && (
+              {/* ── READING FLOW ── */}
+
+              {/* Reading Step 1: Glucose numpad */}
+              {flowType === 'reading' && step === 1 && (
+                <div>
+                  <div style={{ background: '#FFFDF9', borderRadius: 18, padding: '24px 28px', textAlign: 'center', border: '1px solid rgba(1,35,116,0.08)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10 }}>
+                      <span className="font-serif-italic" style={{ fontSize: 88, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 0.9 }}>
+                        {glucose || '—'}
+                      </span>
+                      {glucose && <span style={{ fontSize: 18, color: 'rgba(22,24,42,0.6)', paddingBottom: 14 }}>mg/dL</span>}
+                    </div>
+                    {glucose && (() => { const v = parseInt(glucose); const s = getStatus(v); return s ? <div style={{ marginTop: 12, display: 'inline-block', padding: '6px 14px', borderRadius: 999, background: s.bg, color: s.color, fontSize: 13, fontWeight: 600 }}>{s.label}</div> : null; })()}
+                  </div>
+                  <div onClick={handleListen} style={{ marginTop: 16, background: '#FFFDF9', borderRadius: 18, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 18, cursor: 'pointer', border: '1px solid rgba(1,35,116,0.08)' }}>
+                    <div style={{ width: 46, height: 46, borderRadius: '50%', background: listening ? '#E3171A' : '#012374', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" fill="#FFFDF9"/>
+                        <path d="M6 12a6 6 0 0 0 12 0M12 18v4M9 22h6" stroke="#FFFDF9" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#012374' }}>{listening ? 'Listening…' : 'Say your number'}</div>
+                      <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', marginTop: 3 }}>Tap the mic and read your glucose out loud</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 16 }}>
+                    {NUMPAD.map((key, i) => (
+                      <button key={i} onClick={() => key && handleNumpad(key)} style={{ background: key ? '#FFFDF9' : 'transparent', border: key ? '1px solid rgba(1,35,116,0.12)' : 'none', borderRadius: 14, padding: '18px 0', textAlign: 'center', fontSize: key === 'del' ? 18 : 26, color: '#012374', cursor: key ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                        {key === 'del' ? '⌫' : key}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reading Step 2: Timing */}
+              {flowType === 'reading' && step === 2 && (
                 <div>
                   <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.72)', lineHeight: 1.55, marginBottom: 20 }}>
                     Knowing when you took this reading helps Chatita understand patterns around your meals.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {MEAL_CHIPS.map(chip => (
-                      <button
-                        key={chip}
-                        onClick={() => setMeal(chip)}
-                        style={{
-                          padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit',
-                          fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                          background: meal === chip ? '#012374' : '#FFFDF9',
-                          color: meal === chip ? '#FFFDF9' : '#012374',
-                          border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {chip}
-                      </button>
+                      <button key={chip} onClick={() => setMeal(chip)} style={{ padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', background: meal === chip ? '#012374' : '#FFFDF9', color: meal === chip ? '#FFFDF9' : '#012374', border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{chip}</button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Step 3: Body */}
-              {step === 3 && (
-                <div>
-                  <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.72)', lineHeight: 1.55, marginBottom: 14 }}>
-                    How is your body feeling right now? Select all that apply.
-                  </p>
-                  <div style={{ background: 'rgba(1,35,116,0.06)', borderRadius: 14, padding: '13px 16px', marginBottom: 20, fontSize: 13.5, color: '#012374', lineHeight: 1.5 }}>
-                    If you feel shaky, lightheaded, or sweaty — those can be signs of low blood sugar. Eating 15g of fast-acting carbs can help.
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {BODY_CHIPS.map(chip => (
-                      <button
-                        key={chip}
-                        onClick={() => toggleBody(chip)}
-                        style={{
-                          padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit',
-                          fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                          background: body.includes(chip) ? '#012374' : '#FFFDF9',
-                          color: body.includes(chip) ? '#FFFDF9' : '#012374',
-                          border: body.includes(chip) ? 'none' : '1px solid rgba(1,35,116,0.2)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Mood */}
-              {step === 4 && (
-                <div>
-                  <div style={{ display: 'flex', gap: 6, background: '#FFFDF9', borderRadius: 14, padding: 5, width: 'fit-content', marginBottom: 24 }}>
-                    {(['now', 'today'] as const).map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setMoodType(t)}
-                        style={{
-                          padding: '9px 20px', borderRadius: 10, fontFamily: 'inherit',
-                          fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
-                          background: moodType === t ? '#012374' : 'transparent',
-                          color: moodType === t ? '#FFFDF9' : '#012374',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {t === 'now' ? 'Right now' : 'Overall today'}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 130, height: 130, borderRadius: '50%',
-                      background: `radial-gradient(circle at 38% 38%, ${bucket.glow}, ${bucket.color})`,
-                      boxShadow: `0 20px 50px -14px ${bucket.color}99`,
-                      transition: 'all 0.3s ease',
-                    }} />
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 17, fontWeight: 700, color: '#012374' }}>{bucket.label}</div>
-                      <div style={{ fontSize: 14, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>{bucket.es}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 20 }}>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={moodVal}
-                      onChange={e => {
-                        setMoodVal(parseFloat(e.target.value));
-                        setMoodWords([]);
-                      }}
-                      style={{ width: '100%', accentColor: '#012374', cursor: 'pointer' }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 4 }}>
-                      <span>Very unpleasant</span>
-                      <span>Neutral</span>
-                      <span>Very pleasant</span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 20 }}>
-                    {bucket.words.slice(0, 6).map(w => (
-                      <button
-                        key={w}
-                        onClick={() => toggleMoodWord(w)}
-                        style={{
-                          padding: '9px 16px', borderRadius: 999, fontFamily: 'inherit',
-                          fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-                          background: moodWords.includes(w) ? '#012374' : '#FFFDF9',
-                          color: moodWords.includes(w) ? '#FFFDF9' : '#012374',
-                          border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {w}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 12 }}>
-                      What&apos;s influencing this?
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
-                      {FACTOR_CHIPS.map(f => (
-                        <button
-                          key={f}
-                          onClick={() => toggleFactor(f)}
-                          style={{
-                            padding: '9px 16px', borderRadius: 999, fontFamily: 'inherit',
-                            fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-                            background: factors.includes(f) ? 'rgba(1,35,116,0.12)' : '#FFFDF9',
-                            color: '#012374',
-                            border: factors.includes(f) ? '1px solid rgba(1,35,116,0.3)' : '1px solid rgba(1,35,116,0.15)',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          {f}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Done */}
-              {step === 5 && (
+              {/* Reading Step 3: Done — with mood check-in offer */}
+              {flowType === 'reading' && step === 3 && (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <div style={{
-                    width: 72, height: 72, borderRadius: '50%', background: 'rgba(200,147,43,0.15)',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-                  }}>
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(200,147,43,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                       <path d="M5 13l4 4L19 7" stroke="#C8932B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  <h2
-                    className="font-serif-italic"
-                    style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 12 }}
-                  >
+                  <h2 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 12 }}>
+                    Reading saved.
+                  </h2>
+                  <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.65)', lineHeight: 1.6, maxWidth: 380, margin: '0 auto 24px' }}>
+                    {glucose && <>{glucose} mg/dL {meal ? `· ${meal}` : ''} — logged with care.<br/></>}
+                    Numbers tell part of the story. Want to add how you&apos;re feeling?
+                  </p>
+
+                  {!offerMood ? (
+                    <button
+                      onClick={() => setOfferMood(true)}
+                      style={{ padding: '13px 28px', borderRadius: 999, background: '#012374', color: '#FFFDF9', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 22px -8px rgba(1,35,116,0.5)' }}
+                    >
+                      Also log how I feel →
+                    </button>
+                  ) : (
+                    <div style={{ textAlign: 'left', marginTop: 8 }}>
+                      {/* Mood mini-form */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                        <div style={{ width: 110, height: 110, borderRadius: '50%', background: `radial-gradient(circle at 38% 38%, ${bucket.glow}, ${bucket.color})`, boxShadow: `0 16px 40px -12px ${bucket.color}99`, transition: 'all 0.3s ease' }} />
+                        <div style={{ textAlign: 'center' }}>
+                          <div className="font-serif-italic" style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{bucket.label}</div>
+                          <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)', marginTop: 2 }}>{bucket.es}</div>
+                        </div>
+                      </div>
+                      <input type="range" min={0} max={1} step={0.01} value={moodVal}
+                        onChange={e => { setMoodVal(parseFloat(e.target.value)); setMoodWords([]); }}
+                        style={{ width: '100%', accentColor: '#012374', cursor: 'pointer', marginBottom: 6 }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(22,24,42,0.5)', marginBottom: 16 }}>
+                        <span>Very unpleasant</span><span>Neutral</span><span>Very pleasant</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                        {bucket.words.slice(0, 6).map(w => (
+                          <button key={w} onClick={() => toggleMoodWord(w)} style={{ padding: '8px 14px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: moodWords.includes(w) ? '#012374' : '#FFFDF9', color: moodWords.includes(w) ? '#FFFDF9' : '#012374', border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{w}</button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const moodMap: Record<string, Mood> = { 'Very unpleasant': 'sad', 'Unpleasant': 'anxious', 'Neutral': 'neutral', 'Pleasant': 'calm', 'Very pleasant': 'happy' };
+                          const mood: Mood = moodMap[bucket.label] ?? 'neutral';
+                          onMoodSave?.({ mood, stressLevel: 5, contextTags: moodWords.length ? moodWords : undefined });
+                          setOfferMood(false);
+                        }}
+                        style={{ width: '100%', padding: '13px', borderRadius: 999, background: '#C8932B', color: '#FFFDF9', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 22px -8px rgba(200,147,43,0.6)' }}
+                      >
+                        Save mood check-in
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Check-in flow Done (step 5) */}
+              {flowType === 'checkin' && step === 5 && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(200,147,43,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 13l4 4L19 7" stroke="#C8932B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <h2 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', marginBottom: 12 }}>
                     Saved with care.
                   </h2>
                   <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.65)', lineHeight: 1.6, maxWidth: 380, margin: '0 auto 28px' }}>
-                    Thank you for checking in. Your reading and how you feel are logged — no judgment, just data.
+                    Thank you for checking in. Your mood, how your body feels, and your reading are all logged — no judgment, just care.
                   </p>
-
                   <div style={{ background: '#FFFDF9', borderRadius: 18, padding: '20px 24px', textAlign: 'left', border: '1px solid rgba(1,35,116,0.08)' }}>
-                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 14 }}>Your reading summary</div>
+                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 14 }}>Your check-in summary</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {glucose && (
+                      {moodWords.length > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>Glucose</span>
-                          <span style={{ fontWeight: 600, color: '#012374' }}>{glucose} mg/dL</span>
-                        </div>
-                      )}
-                      {meal && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>Timing</span>
-                          <span style={{ fontWeight: 500 }}>{meal}</span>
+                          <span style={{ opacity: 0.6 }}>State of mind</span>
+                          <span style={{ fontWeight: 500 }}>{bucket.label} · {moodWords.join(', ')}</span>
                         </div>
                       )}
                       {body.length > 0 && (
@@ -789,10 +886,16 @@ export default function WebHomeLayout({
                           <span style={{ fontWeight: 500 }}>{body.join(', ')}</span>
                         </div>
                       )}
-                      {moodWords.length > 0 && (
+                      {meal && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>State of mind</span>
-                          <span style={{ fontWeight: 500 }}>{moodWords.join(', ')}</span>
+                          <span style={{ opacity: 0.6 }}>Timing</span>
+                          <span style={{ fontWeight: 500 }}>{meal}</span>
+                        </div>
+                      )}
+                      {glucose && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
+                          <span style={{ opacity: 0.6 }}>Glucose</span>
+                          <span style={{ fontWeight: 600, color: '#012374' }}>{glucose} mg/dL</span>
                         </div>
                       )}
                     </div>
@@ -803,7 +906,53 @@ export default function WebHomeLayout({
 
             {/* Modal footer */}
             <div style={{ padding: '18px 32px', background: '#FFFDF9', borderTop: '1px solid rgba(1,35,116,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {step < 5 ? (
+              {/* CHECK-IN FLOW footer */}
+              {flowType === 'checkin' && step < 5 && (
+                <>
+                  <button
+                    onClick={() => step === 1 ? setShowAddReading(false) : setStep(s => s - 1)}
+                    style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    {step === 1 ? 'Cancel' : '← Back'}
+                  </button>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {step === 4 && (
+                      <button
+                        onClick={handleSaveReading}
+                        style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        Skip reading
+                      </button>
+                    )}
+                    <button
+                      onClick={() => step === 4 ? handleSaveReading() : setStep(s => s + 1)}
+                      style={{
+                        background: step === 4 ? '#C8932B' : '#012374',
+                        color: '#FFFDF9', border: 'none', padding: '12px 28px', borderRadius: 999,
+                        fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                        boxShadow: step === 4 ? '0 8px 22px -8px rgba(200,147,43,0.6)' : '0 8px 22px -8px rgba(1,35,116,0.5)',
+                      }}
+                    >
+                      {step === 4 ? 'Save reading' : 'Continue →'}
+                    </button>
+                  </div>
+                </>
+              )}
+              {flowType === 'checkin' && step === 5 && (
+                <>
+                  <button
+                    onClick={() => { setFlowType('checkin'); setStep(1); setGlucose(''); setMeal(''); setBody([]); setMoodVal(0.5); setMoodWords([]); setFactors([]); }}
+                    style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    New check-in
+                  </button>
+                  <button onClick={() => setShowAddReading(false)} style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '12px 28px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    Done
+                  </button>
+                </>
+              )}
+              {/* READING FLOW footer */}
+              {flowType === 'reading' && step < 3 && (
                 <>
                   <button
                     onClick={() => step === 1 ? setShowAddReading(false) : setStep(s => s - 1)}
@@ -812,33 +961,22 @@ export default function WebHomeLayout({
                     {step === 1 ? 'Cancel' : '← Back'}
                   </button>
                   <button
-                    onClick={() => step === 4 ? handleSaveReading() : setStep(s => s + 1)}
-                    style={{
-                      background: step === 4 ? '#C8932B' : '#012374',
-                      color: '#FFFDF9', border: 'none', padding: '12px 28px', borderRadius: 999,
-                      fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                      boxShadow: step === 4 ? '0 8px 22px -8px rgba(200,147,43,0.6)' : '0 8px 22px -8px rgba(1,35,116,0.5)',
-                    }}
+                    onClick={() => step === 2 ? handleSaveReading() : setStep(s => s + 1)}
+                    style={{ background: step === 2 ? '#C8932B' : '#012374', color: '#FFFDF9', border: 'none', padding: '12px 28px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: step === 2 ? '0 8px 22px -8px rgba(200,147,43,0.6)' : '0 8px 22px -8px rgba(1,35,116,0.5)' }}
                   >
-                    {step === 4 ? 'Save reading' : 'Continue →'}
+                    {step === 2 ? 'Save reading' : 'Continue →'}
                   </button>
                 </>
-              ) : (
+              )}
+              {flowType === 'reading' && step === 3 && (
                 <>
                   <button
-                    onClick={() => { setStep(1); setGlucose(''); setMeal(''); setBody([]); setMoodWords([]); setFactors([]); }}
+                    onClick={() => { setFlowType('reading'); setStep(1); setGlucose(''); setMeal(''); setMoodVal(0.5); setMoodWords([]); setOfferMood(false); }}
                     style={{ background: 'none', border: 'none', color: 'rgba(22,24,42,0.55)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     Add another
                   </button>
-                  <button
-                    onClick={() => setShowAddReading(false)}
-                    style={{
-                      background: '#012374', color: '#FFFDF9', border: 'none',
-                      padding: '12px 28px', borderRadius: 999, fontFamily: 'inherit',
-                      fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                    }}
-                  >
+                  <button onClick={() => setShowAddReading(false)} style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '12px 28px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                     Done
                   </button>
                 </>
