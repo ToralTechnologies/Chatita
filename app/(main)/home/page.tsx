@@ -94,6 +94,7 @@ export default function HomePage() {
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [waterOz, setWaterOz] = useState(0);
   const [gentleInsight, setGentleInsight] = useState<{ message: string; reason?: string } | null>(null);
+  const [cgmReading, setCgmReading] = useState<{ value: number; measuredAt: string; trend: string | null; provider: string } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -113,6 +114,19 @@ export default function HomePage() {
     fetch('/api/hydration')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.totalOz != null) setWaterOz(Math.round(d.totalOz)); })
+      .catch(() => {});
+  }, [session]);
+
+  // Load CGM latest reading if connected
+  useEffect(() => {
+    if (!session) return;
+    fetch('/api/cgm/status')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.connected && d.latestReading) {
+          setCgmReading({ ...d.latestReading, provider: d.provider });
+        }
+      })
       .catch(() => {});
   }, [session]);
 
@@ -233,6 +247,9 @@ export default function HomePage() {
           maxRange={userData?.targetGlucoseMax || 180}
           onUpdate={handleGlucoseUpdate}
         />
+
+        {/* ── CGM reading pill ── */}
+        {cgmReading && <CgmPill reading={cgmReading} />}
 
         {/* Meal follow-up */}
         <div style={{ marginTop: '10px' }}>
@@ -461,5 +478,71 @@ export default function HomePage() {
       <BottomNav />
     </div>
     </>
+  );
+}
+
+// ── CGM reading pill ─────────────────────────────────────────────────────────
+
+const TREND_ARROW: Record<string, string> = {
+  rising:          '↑',
+  'rising quickly': '↑↑',
+  falling:         '↓',
+  'falling quickly': '↓↓',
+  stable:          '→',
+  flat:            '→',
+  none:            '',
+};
+
+function CgmPill({ reading }: {
+  reading: { value: number; measuredAt: string; trend: string | null; provider: string }
+}) {
+  const minutesAgo = Math.round((Date.now() - new Date(reading.measuredAt).getTime()) / 60000);
+  const isStale = minutesAgo > 20;
+  const arrow = reading.trend ? (TREND_ARROW[reading.trend.toLowerCase()] ?? '') : '';
+  const providerLabel = reading.provider === 'dexcom' ? 'Dexcom' : 'FreeStyle Libre';
+
+  return (
+    <div style={{
+      marginTop: '8px',
+      background: '#FFFDF9',
+      border: '1px solid rgba(1,35,116,0.08)',
+      borderRadius: '14px',
+      padding: '10px 14px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+    }}>
+      {/* CGM icon */}
+      <span style={{
+        width: '32px', height: '32px', borderRadius: '9px',
+        background: isStale ? 'rgba(22,24,42,0.06)' : 'rgba(42,138,138,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h2m10 0h2M12 5v2m0 10v2" stroke={isStale ? 'rgba(22,24,42,0.3)' : '#2A8A8A'} strokeWidth="1.8" strokeLinecap="round"/>
+          <circle cx="12" cy="12" r="4" stroke={isStale ? 'rgba(22,24,42,0.3)' : '#2A8A8A'} strokeWidth="1.6"/>
+        </svg>
+      </span>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '10.5px', color: 'rgba(22,24,42,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+          {providerLabel} CGM
+        </div>
+        <div style={{ marginTop: '1px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <span style={{ fontSize: '20px', fontWeight: 700, color: isStale ? 'rgba(22,24,42,0.4)' : '#012374', fontFamily: 'var(--font-dm-serif), serif' }}>
+            {reading.value}
+          </span>
+          {arrow && (
+            <span style={{ fontSize: '14px', color: '#2A8A8A', fontWeight: 700 }}>{arrow}</span>
+          )}
+          <span style={{ fontSize: '11px', color: 'rgba(22,24,42,0.4)' }}>mg/dL</span>
+        </div>
+      </div>
+
+      <div style={{ fontSize: '11px', color: isStale ? '#B5562E' : 'rgba(22,24,42,0.4)', textAlign: 'right', flexShrink: 0 }}>
+        {minutesAgo < 1 ? 'Just now' : `${minutesAgo} min ago`}
+        {isStale && <div style={{ fontSize: '10px', color: '#B5562E' }}>Needs sync</div>}
+      </div>
+    </div>
   );
 }

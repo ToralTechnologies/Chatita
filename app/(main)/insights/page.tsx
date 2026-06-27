@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import BackButton from '@/components/back-button';
 import ExportButton from '@/components/export-button';
@@ -59,12 +59,18 @@ function getDateRange(period: number) {
 
 // ── Glucose scatter chart (time-of-day view) ─────────────────────────────────
 
-interface GlucoseDot { x: number; y: number; color: string; v: number }
+interface GlucoseDot { x: number; y: number; color: string; v: number; label: string }
 
 function glucoseDotColor(v: number, min: number, max: number) {
   if (v < min) return '#B5562E';
   if (v > max) return '#C8932B';
   return '#1C7A4F';
+}
+
+function glucoseStatusLabel(v: number, min: number, max: number) {
+  if (v < min) return 'Low';
+  if (v > max) return 'High';
+  return 'In range';
 }
 
 function ScatterChart({
@@ -76,14 +82,27 @@ function ScatterChart({
   targetMin?: number;
   targetMax?: number;
 }) {
+  const [tooltip, setTooltip] = useState<{ dot: GlucoseDot } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const yScale = (v: number) => 220 - (Math.max(0, Math.min(300, v)) / 300) * 210;
   const band180Y = yScale(targetMax);
   const band70Y = yScale(targetMin);
   const bandH = band70Y - band180Y;
 
+  // Convert SVG coordinates to percentage of rendered container
+  // viewBox 1000x240 → rendered 100% x 180px, preserveAspectRatio="none"
+  const pctX = (svgX: number) => `${(svgX / 1000) * 100}%`;
+  const pxY  = (svgY: number) => `${(svgY / 240) * 180}px`;
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg viewBox="0 0 1000 240" preserveAspectRatio="none" style={{ width: '100%', height: '180px', display: 'block', overflow: 'visible' }}>
+    <div ref={containerRef} style={{ overflowX: 'auto', position: 'relative' }}>
+      <svg
+        viewBox="0 0 1000 240"
+        preserveAspectRatio="none"
+        style={{ width: '100%', height: '180px', display: 'block', overflow: 'visible' }}
+        onMouseLeave={() => setTooltip(null)}
+      >
         {/* target band */}
         <rect x="0" y={band180Y} width="1000" height={bandH} fill="rgba(28,122,79,0.08)" />
         <line x1="0" y1={band180Y} x2="1000" y2={band180Y} stroke="rgba(28,122,79,0.4)" strokeWidth="1.5" strokeDasharray="7 7" />
@@ -93,9 +112,54 @@ function ScatterChart({
         <text x="6" y={band70Y + 10} fill="rgba(22,24,42,0.4)" fontSize="10">{targetMin}</text>
         {/* dots */}
         {dots.map((d, i) => (
-          <circle key={i} cx={d.x} cy={d.y} r="4" fill={d.color} opacity="0.82" />
+          <g key={i}>
+            <circle cx={d.x} cy={d.y} r="4" fill={d.color} opacity="0.82" />
+            {/* larger invisible hit target for hover/tap */}
+            <circle
+              cx={d.x} cy={d.y} r="12" fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setTooltip({ dot: d })}
+              onClick={() => setTooltip(prev => prev?.dot === d ? null : { dot: d })}
+            />
+          </g>
         ))}
       </svg>
+
+      {/* Tooltip — positioned using % of the SVG container */}
+      {tooltip && (
+        <div
+          style={{
+            position: 'absolute',
+            left: pctX(tooltip.dot.x),
+            top: pxY(tooltip.dot.y),
+            transform: 'translate(-50%, calc(-100% - 10px))',
+            pointerEvents: 'none',
+            zIndex: 20,
+            background: '#16182A',
+            color: '#FFFDF9',
+            borderRadius: '10px',
+            padding: '7px 11px',
+            fontSize: '12px',
+            lineHeight: 1.4,
+            boxShadow: '0 6px 18px -4px rgba(0,0,0,0.5)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ fontSize: '15px', fontWeight: 700, color: tooltip.dot.color }}>{tooltip.dot.v}</span>
+          <span style={{ opacity: 0.75 }}> mg/dL</span>
+          <div style={{ opacity: 0.65, fontSize: '11px', marginTop: '2px' }}>
+            {glucoseStatusLabel(tooltip.dot.v, targetMin, targetMax)} · {tooltip.dot.label}
+          </div>
+          {/* caret */}
+          <div style={{
+            position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)',
+            width: 0, height: 0,
+            borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+            borderTop: '5px solid #16182A',
+          }} />
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(22,24,42,0.45)', marginTop: '4px', padding: '0 4px' }}>
         <span>12 am</span><span>6 am</span><span>12 pm</span><span>6 pm</span><span>11 pm</span>
       </div>
@@ -209,7 +273,8 @@ export default function InsightsPage() {
       const x = Math.round(10 + hourFraction * 980);
       const v = pt.value ?? pt.glucose ?? 0;
       const yVal = 220 - (Math.max(0, Math.min(300, v)) / 300) * 210;
-      return { x, y: Math.round(yVal), color: glucoseDotColor(v, targetMin, targetMax), v };
+      const label = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return { x, y: Math.round(yVal), color: glucoseDotColor(v, targetMin, targetMax), v, label };
     });
   }, [correlation]);
 
