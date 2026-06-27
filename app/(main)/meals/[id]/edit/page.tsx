@@ -98,20 +98,20 @@ export default function EditMealPage() {
   // --- Render states ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background flex items-center justify-center">
-        <p className="text-gray-500">{t.editMeal.loadingMeal}</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7EFE1' }}>
+        <p style={{ color: 'rgba(1,35,116,0.45)', fontSize: '13px' }}>{t.editMeal.loadingMeal}</p>
       </div>
     );
   }
 
   if (error || !meal) {
     return (
-      <div className="min-h-screen bg-gray-background">
+      <div className="min-h-screen" style={{ background: '#F7EFE1' }}>
         <div className="max-w-2xl mx-auto px-6 py-12 text-center">
-          <p className="text-gray-600 mb-4">{error || t.editMeal.mealNotFound}</p>
+          <p style={{ color: 'rgba(22,24,42,0.65)', marginBottom: '16px' }}>{error || t.editMeal.mealNotFound}</p>
           <button
             onClick={() => router.push('/meal-history')}
-            className="bg-primary text-white px-6 py-2 rounded-button hover:bg-primary-dark transition-colors"
+            style={{ background: '#012374', color: '#FFFDF9', padding: '11px 24px', borderRadius: '999px', border: 'none', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
           >
             {t.editMeal.backToHistory}
           </button>
@@ -146,42 +146,45 @@ export default function EditMealPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-background mobile-page-pb">
+    <div className="min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center">
+      <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
+        <div className="max-w-2xl mx-auto px-6 py-4">
           <button
             onClick={() => router.push('/meal-history')}
-            className="text-primary hover:underline mr-4"
+            style={{ fontSize: '13px', color: 'rgba(1,35,116,0.55)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
-            ← {t.editMeal.backToHistory}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {t.editMeal.backToHistory}
           </button>
-          <h1 className="text-2xl font-bold">{t.editMeal.title}</h1>
+          <h1 className="font-serif-italic" style={{ fontSize: '1.5rem', color: '#012374' }}>{t.editMeal.title}</h1>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-6 py-5 space-y-4">
         {/* Date / Time Picker */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <label className="block text-sm font-medium mb-2">{t.editMeal.dateTimeLabel}</label>
+        <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 8px 24px -16px rgba(1,35,116,0.2)', padding: '18px 20px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'rgba(1,35,116,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+            {t.editMeal.dateTimeLabel}
+          </label>
           <input
             type="datetime-local"
             value={eatenAt}
             onChange={(e) => setEatenAt(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            style={{ width: '100%', padding: '10px 13px', borderRadius: '11px', border: '1px solid rgba(1,35,116,0.15)', background: '#F7EFE1', fontSize: '14px', color: '#16182A', outline: 'none' }}
           />
         </div>
 
         {/* Error banner */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-sm text-red-700">{error}</p>
+          <div style={{ background: 'rgba(163,62,62,0.07)', border: '1px solid rgba(163,62,62,0.2)', borderRadius: '12px', padding: '12px 14px' }}>
+            <p style={{ fontSize: '13px', color: '#A33E3E' }}>{error}</p>
           </div>
         )}
 
         {/* MealForm pre-populated */}
-        <div className="bg-white rounded-card shadow-card p-6">
+        <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 8px 24px -16px rgba(1,35,116,0.2)', padding: '18px 20px' }}>
           <MealForm
             initialData={initialData}
             onSubmit={handleSubmit}

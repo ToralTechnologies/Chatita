@@ -1,43 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const QUALITY_OPTIONS = [
-  { value: 'great', label: 'Great', emoji: '😴' },
-  { value: 'good', label: 'Good', emoji: '🙂' },
-  { value: 'fair', label: 'Fair', emoji: '😐' },
-  { value: 'poor', label: 'Poor', emoji: '😞' },
-  { value: 'not_sure', label: 'Not sure', emoji: '🤷' },
+  { value: 'great', label: 'Great' },
+  { value: 'good',  label: 'Good' },
+  { value: 'fair',  label: 'Fair' },
+  { value: 'poor',  label: 'Poor' },
+  { value: 'not_sure', label: 'Not sure' },
 ];
 
-function ScaleRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+const QUALITY_LABEL: Record<string, string> = {
+  great: 'Great', good: 'Good', fair: 'Fair', poor: 'Poor', not_sure: 'Not sure',
+};
+
+interface SleepSummary {
+  durationLabel?: string;
+  quality?: string;
+  wakeEnergy?: number;
+}
+
+function MoonIcon({ color = '#4A5578' }: { color?: string }) {
   return (
-    <div>
-      <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '6px' }}>{label}</label>
-      <div className="flex gap-1.5">
-        {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            style={{
-              width: '28px', height: '28px', borderRadius: '8px', fontSize: '12px',
-              border: value === n ? '2px solid #012374' : '1.5px solid rgba(1,35,116,0.2)',
-              background: value === n ? '#012374' : 'transparent',
-              color: value === n ? '#FFFDF9' : '#012374',
-              cursor: 'pointer', fontWeight: value === n ? 700 : 400,
-            }}
-          >{n}</button>
-        ))}
-      </div>
-    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z" stroke={color} strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
   );
 }
 
+function formatDuration(start: string, end: string): string {
+  try {
+    const s = new Date(start), e = new Date(end);
+    const mins = Math.round((e.getTime() - s.getTime()) / 60000);
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  } catch { return ''; }
+}
+
 export default function SleepCard() {
-  const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [summary, setSummary]   = useState<SleepSummary | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
 
   const [form, setForm] = useState({
     sleepStart: '',
@@ -50,18 +55,40 @@ export default function SleepCard() {
     notes: '',
   });
 
-  const set = (k: keyof typeof form, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: unknown) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    fetch('/api/sleep?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const log = d?.logs?.[0] ?? d?.[0];
+        if (log) {
+          const today = new Date().toDateString();
+          const logDate = new Date(log.loggedAt ?? log.wakeTime ?? log.createdAt).toDateString();
+          if (logDate === today || log.wakeTime) {
+            setSummary({
+              durationLabel: log.sleepStart && log.wakeTime ? formatDuration(log.sleepStart, log.wakeTime) : undefined,
+              quality: log.sleepQuality,
+              wakeEnergy: log.wakeEnergy,
+            });
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [saved]);
 
   const handleSave = async () => {
     if (!form.sleepQuality && !form.sleepStart && !form.wakeEnergy) return;
     setSaving(true);
     try {
+      const today = new Date().toISOString().slice(0, 10);
       await fetch('/api/sleep', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sleepStart: form.sleepStart ? `${new Date().toISOString().slice(0, 10)}T${form.sleepStart}` : undefined,
-          wakeTime: form.wakeTime ? `${new Date().toISOString().slice(0, 10)}T${form.wakeTime}` : undefined,
+          sleepStart: form.sleepStart ? `${today}T${form.sleepStart}` : undefined,
+          wakeTime:   form.wakeTime   ? `${today}T${form.wakeTime}`   : undefined,
           sleepQuality: form.sleepQuality || undefined,
           wakeEnergy: form.wakeEnergy || undefined,
           nighttimeWakeups: form.nighttimeWakeups !== '' ? Number(form.nighttimeWakeups) : undefined,
@@ -71,140 +98,189 @@ export default function SleepCard() {
         }),
       });
       setSaved(true);
-      setOpen(false);
+      setShowForm(false);
       setForm({ sleepStart: '', wakeTime: '', sleepQuality: '', wakeEnergy: 0, nighttimeWakeups: '', stressBeforeBed: 0, caffeineLaterInDay: false, notes: '' });
-      setTimeout(() => setSaved(false), 3000);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
-    }
+      setTimeout(() => setSaved(false), 4000);
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.06)', overflow: 'hidden' }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3"
-        style={{ textAlign: 'left' }}
-      >
-        <div className="flex items-center gap-3">
-          {/* Moon icon */}
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="#012374" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374' }}>Log sleep</div>
-            <div style={{ fontSize: '11.5px', color: 'rgba(22,24,42,0.55)', marginTop: '1px' }}>
-              {saved ? '✓ Saved!' : 'Sleep affects energy, appetite, mood, and glucose'}
-            </div>
+    <div style={{
+      background: '#FFFDF9',
+      borderRadius: '18px',
+      border: '1px solid rgba(74,85,120,0.22)',
+      overflow: 'hidden',
+    }}>
+      {/* ── Header ── */}
+      <div style={{ padding: '16px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(74,85,120,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MoonIcon />
+          </span>
+          <div style={{ flex: 1 }}>
+            <div className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', lineHeight: 1 }}>Sleep</div>
+            <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>Last night</div>
           </div>
+          {saved && <span style={{ fontSize: '11.5px', color: '#4A5578', fontWeight: 600 }}>Saved ✓</span>}
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-          <path d="M6 9l6 6 6-6" stroke="#012374" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
+      </div>
 
-      {open && (
-        <div className="px-4 pb-4 space-y-4" style={{ borderTop: '1px solid rgba(1,35,116,0.06)' }}>
-          <p className="pt-3" style={{ fontSize: '11.5px', color: 'rgba(1,35,116,0.5)', lineHeight: 1.5 }}>
+      {/* ── Summary / empty state ── */}
+      {!loading && !showForm && (
+        <div style={{ padding: '12px 16px 0' }}>
+          {summary ? (
+            <>
+              <div style={{ display: 'flex', gap: '9px', marginBottom: '10px' }}>
+                {summary.durationLabel && (
+                  <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Slept</div>
+                    <div style={{ marginTop: '2px' }}>
+                      <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{summary.durationLabel}</span>
+                    </div>
+                  </div>
+                )}
+                {summary.quality && (
+                  <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Quality</div>
+                    <div style={{ marginTop: '2px' }}>
+                      <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{QUALITY_LABEL[summary.quality] ?? summary.quality}</span>
+                    </div>
+                  </div>
+                )}
+                {summary.wakeEnergy !== undefined && summary.wakeEnergy > 0 && (
+                  <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>AM energy</div>
+                    <div style={{ marginTop: '2px' }}>
+                      <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{summary.wakeEnergy}</span>
+                      <span style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)' }}>/10</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={{ background: '#F7EFE1', borderRadius: '13px', padding: '14px 15px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '13.5px', color: '#012374', lineHeight: 1.5 }}>
+                No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.
+              </div>
+            </div>
+          )}
+
+          {/* Log sleep button */}
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: '#F7EFE1', color: '#4A5578', borderRadius: '12px', padding: '12px',
+              fontSize: '13.5px', fontWeight: 600, border: 'none', cursor: 'pointer', marginBottom: '14px',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="#4A5578" strokeWidth="2.2" strokeLinecap="round"/>
+            </svg>
+            Log sleep
+          </button>
+        </div>
+      )}
+
+      {/* ── Log sleep form ── */}
+      {showForm && (
+        <div style={{ padding: '14px 16px 16px', borderTop: '1px solid rgba(74,85,120,0.12)' }}>
+          <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.55)', lineHeight: 1.5, marginBottom: '12px' }}>
             Sleep can affect hunger, cravings, energy, mood, and glucose. This helps Chatita notice patterns over time.
           </p>
 
           {/* Times */}
-          <div className="flex gap-3">
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Bedtime</label>
-              <input
-                type="time"
-                value={form.sleepStart}
-                onChange={(e) => set('sleepStart', e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}
-              />
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Bedtime</label>
+              <input type="time" value={form.sleepStart} onChange={e => set('sleepStart', e.target.value)}
+                style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Wake time</label>
-              <input
-                type="time"
-                value={form.wakeTime}
-                onChange={(e) => set('wakeTime', e.target.value)}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}
-              />
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Wake time</label>
+              <input type="time" value={form.wakeTime} onChange={e => set('wakeTime', e.target.value)}
+                style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
           </div>
 
-          {/* Quality */}
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '8px' }}>Sleep quality</label>
-            <div className="flex flex-wrap gap-2">
-              {QUALITY_OPTIONS.map((q) => (
-                <button
-                  key={q.value}
-                  type="button"
-                  onClick={() => set('sleepQuality', form.sleepQuality === q.value ? '' : q.value)}
+          {/* Quality chips */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '8px' }}>Sleep quality</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {QUALITY_OPTIONS.map(q => (
+                <button key={q.value} type="button" onClick={() => set('sleepQuality', form.sleepQuality === q.value ? '' : q.value)}
                   style={{
-                    padding: '5px 12px', borderRadius: '999px', fontSize: '12.5px',
-                    border: form.sleepQuality === q.value ? '1.5px solid #012374' : '1.5px solid rgba(1,35,116,0.18)',
-                    background: form.sleepQuality === q.value ? '#012374' : 'transparent',
+                    padding: '6px 13px', borderRadius: '999px', fontSize: '12.5px',
+                    border: form.sleepQuality === q.value ? '1.5px solid #4A5578' : '1.5px solid rgba(1,35,116,0.18)',
+                    background: form.sleepQuality === q.value ? '#4A5578' : 'transparent',
                     color: form.sleepQuality === q.value ? '#FFFDF9' : '#012374',
                     cursor: 'pointer',
-                  }}
-                >{q.emoji} {q.label}</button>
+                  }}>{q.label}</button>
               ))}
             </div>
           </div>
 
-          {/* Wake energy scale */}
-          <ScaleRow label="Wake-up energy (1–10)" value={form.wakeEnergy} onChange={(v) => set('wakeEnergy', v)} />
+          {/* Wake energy */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '7px' }}>
+              Wake-up energy (1–10)
+            </label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                <button key={n} type="button" onClick={() => set('wakeEnergy', n)}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '8px', fontSize: '12px',
+                    border: form.wakeEnergy === n ? '2px solid #4A5578' : '1.5px solid rgba(1,35,116,0.2)',
+                    background: form.wakeEnergy === n ? '#4A5578' : 'transparent',
+                    color: form.wakeEnergy === n ? '#FFFDF9' : '#012374',
+                    cursor: 'pointer', fontWeight: form.wakeEnergy === n ? 700 : 400,
+                  }}>{n}</button>
+              ))}
+            </div>
+          </div>
 
-          {/* Nighttime wakeups + stress */}
-          <div className="flex gap-3">
+          {/* Night wakeups */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Night wakeups</label>
-              <input
-                type="number"
-                min={0}
-                max={20}
-                value={form.nighttimeWakeups}
-                onChange={(e) => set('nighttimeWakeups', e.target.value)}
-                placeholder="0"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}
-              />
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Night wakeups</label>
+              <input type="number" min={0} max={20} value={form.nighttimeWakeups} onChange={e => set('nighttimeWakeups', e.target.value)} placeholder="0"
+                style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <ScaleRow label="Stress before bed" value={form.stressBeforeBed} onChange={(v) => set('stressBeforeBed', v)} />
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '7px' }}>Stress before bed</label>
+              <select value={form.stressBeforeBed} onChange={e => set('stressBeforeBed', Number(e.target.value))}
+                style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}>
+                {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n === 0 ? 'None' : n}</option>)}
+              </select>
             </div>
           </div>
 
           {/* Caffeine */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.caffeineLaterInDay} onChange={(e) => set('caffeineLaterInDay', e.target.checked)} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '10px' }}>
+            <input type="checkbox" checked={form.caffeineLaterInDay} onChange={e => set('caffeineLaterInDay', e.target.checked)} />
             <span style={{ fontSize: '13px', color: '#16182A' }}>Had caffeine later in the day</span>
           </label>
 
           {/* Notes */}
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Notes <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => set('notes', e.target.value)}
-              placeholder="Anything else about your sleep..."
-              rows={2}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none', resize: 'none' }}
-            />
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Notes <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Anything else about your sleep…" rows={2}
+              style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
           </div>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || (!form.sleepQuality && !form.sleepStart && !form.wakeEnergy)}
-            style={{
-              width: '100%', padding: '11px', borderRadius: '12px',
-              background: '#012374', color: '#FFFDF9', fontSize: '14px', fontWeight: 600,
-              border: 'none', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1,
-            }}
-          >{saving ? 'Saving…' : 'Save sleep log'}</button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={() => setShowForm(false)}
+              style={{ flex: 1, padding: '11px', borderRadius: '12px', background: '#F7EFE1', color: '#012374', fontSize: '14px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+              Cancel
+            </button>
+            <button type="button" onClick={handleSave} disabled={saving || (!form.sleepQuality && !form.sleepStart && !form.wakeEnergy)}
+              style={{ flex: 2, padding: '11px', borderRadius: '12px', background: saving ? 'rgba(74,85,120,0.5)' : '#4A5578', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: saving ? 'default' : 'pointer' }}>
+              {saving ? 'Saving…' : 'Save sleep log'}
+            </button>
+          </div>
         </div>
       )}
     </div>

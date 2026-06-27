@@ -426,7 +426,48 @@ export default function WebHomeLayout({
               </button>
             </div>
 
-            {/* This week card */}
+            {/* Movement today */}
+            <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '22px 24px', border: '1px solid rgba(42,138,138,0.22)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(42,138,138,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="14.5" cy="5" r="1.8" stroke="#2A8A8A" strokeWidth="1.7"/><path d="M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4" stroke="#2A8A8A" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Movement today</div>
+                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>Context for your glucose — never a target.</div>
+                </div>
+                <button onClick={() => {}} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#2A8A8A', color: '#FFFDF9', borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                  Add movement
+                </button>
+              </div>
+              <div style={{ marginTop: 14, background: '#F7EFE1', borderRadius: 13, padding: '14px 16px' }}>
+                <div style={{ fontSize: 13.5, color: '#012374', fontWeight: 600 }}>Nothing logged yet — and that&apos;s okay.</div>
+                <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.68)', marginTop: 4, lineHeight: 1.5 }}>Chores, a short walk, stretching, dancing or physical work all count.</div>
+              </div>
+            </div>
+
+            {/* Sleep */}
+            <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '22px 24px', border: '1px solid rgba(74,85,120,0.22)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 14 }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(74,85,120,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z" stroke="#4A5578" strokeWidth="1.6" strokeLinejoin="round"/></svg>
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Sleep</div>
+                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 3 }}>Last night</div>
+                </div>
+              </div>
+              <div style={{ background: '#F7EFE1', borderRadius: 13, padding: '13px 15px', fontSize: 13, color: '#012374', lineHeight: 1.5 }}>
+                No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.
+              </div>
+              <button onClick={() => {}} style={{ width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#F7EFE1', color: '#4A5578', borderRadius: 11, padding: '11px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4A5578" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                Log sleep
+              </button>
+            </div>
+
+            {/* This week */}
             <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '22px 24px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
               <div style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700 }}>This week</div>
               <p
