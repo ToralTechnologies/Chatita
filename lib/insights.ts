@@ -4,7 +4,14 @@ export function calculateWeeklyInsights(
   glucoseEntries: any[],
   meals: any[],
   targetMin: number,
-  targetMax: number
+  targetMax: number,
+  healthSummaries?: Array<{
+    date: Date;
+    steps?: number | null;
+    activeMinutes?: number | null;
+    sleepMinutes?: number | null;
+    provider?: string;
+  }>
 ): WeeklyInsights {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -105,6 +112,91 @@ export function calculateWeeklyInsights(
       description: `You stayed in range ${timeInRange}% of the time. This is outstanding! Keep up the great work.`,
       icon: '🎉',
     });
+  }
+
+  // ── Connected health data patterns ────────────────────────────────────────
+  if (healthSummaries && healthSummaries.length > 0) {
+    const daysWithSteps = healthSummaries.filter(s => s.steps != null && s.steps > 0);
+    const daysWithSleep = healthSummaries.filter(s => s.sleepMinutes != null && s.sleepMinutes > 0);
+
+    if (daysWithSteps.length >= 3) {
+      const avgSteps = Math.round(
+        daysWithSteps.reduce((sum, s) => sum + (s.steps ?? 0), 0) / daysWithSteps.length
+      );
+
+      // Steps + glucose correlation (cautious language)
+      if (recentGlucose.length >= 5) {
+        const glucoseByDate: Record<string, number[]> = {};
+        recentGlucose.forEach((e) => {
+          const d = new Date(e.measuredAt).toDateString();
+          glucoseByDate[d] = [...(glucoseByDate[d] || []), e.value];
+        });
+
+        const activeDays = daysWithSteps.filter(s => (s.steps ?? 0) >= 5000);
+        const activeDayKeys = new Set(activeDays.map(s => new Date(s.date).toDateString()));
+        const activeGlucose: number[] = [];
+        const lessActiveDayGlucose: number[] = [];
+
+        Object.entries(glucoseByDate).forEach(([d, vals]) => {
+          const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+          if (activeDayKeys.has(d)) activeGlucose.push(avg);
+          else lessActiveDayGlucose.push(avg);
+        });
+
+        if (activeGlucose.length >= 2 && lessActiveDayGlucose.length >= 2) {
+          const activeAvg = Math.round(activeGlucose.reduce((a, b) => a + b, 0) / activeGlucose.length);
+          const lessActiveAvg = Math.round(lessActiveDayGlucose.reduce((a, b) => a + b, 0) / lessActiveDayGlucose.length);
+          const diff = lessActiveAvg - activeAvg;
+
+          if (diff >= 10) {
+            patterns.push({
+              type: 'tip',
+              title: 'Movement & glucose — a pattern worth noting',
+              description: `On days with 5,000+ steps your average glucose was around ${activeAvg} mg/dL, compared to ${lessActiveAvg} mg/dL on less active days. This could be a pattern worth tracking — movement may help, but many factors affect glucose.`,
+              icon: '🚶',
+            });
+          }
+        }
+
+        patterns.push({
+          type: 'positive',
+          title: `Avg ${avgSteps.toLocaleString()} steps/day this week`,
+          description: `Connected data shows you averaged ${avgSteps.toLocaleString()} steps on the days your device was worn. Movement is just one piece of the picture — keep doing what feels right for your body.`,
+          icon: '👟',
+        });
+      } else {
+        patterns.push({
+          type: 'positive',
+          title: `Avg ${avgSteps.toLocaleString()} steps/day`,
+          description: `Your wearable logged an average of ${avgSteps.toLocaleString()} steps per day this week. All movement counts — walks, chores, dancing, everything.`,
+          icon: '👟',
+        });
+      }
+    }
+
+    if (daysWithSleep.length >= 3) {
+      const avgSleepMin = Math.round(
+        daysWithSleep.reduce((sum, s) => sum + (s.sleepMinutes ?? 0), 0) / daysWithSleep.length
+      );
+      const avgSleepH = Math.floor(avgSleepMin / 60);
+      const avgSleepM = avgSleepMin % 60;
+
+      if (avgSleepMin < 360) {
+        patterns.push({
+          type: 'tip',
+          title: 'Sleep looks a bit low this week',
+          description: `Connected data suggests an average of ${avgSleepH}h ${avgSleepM}m of sleep. Sleep can affect appetite, cravings, and glucose patterns — but many things affect sleep too. This may be worth discussing with your care team.`,
+          icon: '😴',
+        });
+      } else {
+        patterns.push({
+          type: 'positive',
+          title: `Averaging ${avgSleepH}h ${avgSleepM}m of sleep`,
+          description: `Your sleep data looks consistent this week. Good sleep supports glucose stability, energy, and mood — so this is a positive pattern worth keeping.`,
+          icon: '🌙',
+        });
+      }
+    }
   }
 
   return {

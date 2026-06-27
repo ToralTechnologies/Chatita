@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const [glucoseEntries, meals, userData] = await Promise.all([
+    const [glucoseEntries, meals, userData, healthSummaries] = await Promise.all([
       prisma.glucoseEntry.findMany({
         where: {
           userId: session.user.id,
@@ -54,18 +54,30 @@ export async function GET(request: Request) {
           targetGlucoseMax: true,
         },
       }),
+      prisma.healthDailySummary.findMany({
+        where: { userId: session.user.id, date: { gte: startDate } },
+        orderBy: { date: 'desc' },
+        select: {
+          date: true,
+          steps: true,
+          activeMinutes: true,
+          exerciseMinutes: true,
+          sleepMinutes: true,
+          restingHeartRate: true,
+          provider: true,
+        },
+        take: 60,
+      }),
     ]);
 
     if (!ENABLE_AI || !process.env.ANTHROPIC_API_KEY) {
-      // $0 Fallback insights
       return NextResponse.json({
         mode: '$0',
-        insights: getFallbackInsights(glucoseEntries, meals),
+        insights: getFallbackInsights(glucoseEntries, meals, healthSummaries),
       });
     }
 
-    // Generate AI insights
-    const aiInsights = await generateAIInsights(glucoseEntries, meals, userData);
+    const aiInsights = await generateAIInsights(glucoseEntries, meals, userData, healthSummaries);
 
     return NextResponse.json({
       mode: 'ai',
@@ -81,7 +93,7 @@ export async function GET(request: Request) {
   }
 }
 
-function getFallbackInsights(glucoseEntries: any[], meals: any[]) {
+function getFallbackInsights(glucoseEntries: any[], meals: any[], healthSummaries?: any[]) {
   const insights = [];
 
   if (glucoseEntries.length < 5) {
@@ -122,10 +134,41 @@ function getFallbackInsights(glucoseEntries: any[], meals: any[]) {
     message: 'Pairing carbs with protein and healthy fats can help slow glucose absorption and reduce spikes.',
   });
 
+  // Connected health data fallback insights
+  if (healthSummaries && healthSummaries.length > 0) {
+    const daysWithSteps = healthSummaries.filter((s: any) => s.steps != null && s.steps > 0);
+    if (daysWithSteps.length >= 3) {
+      const avgSteps = Math.round(
+        daysWithSteps.reduce((sum: number, s: any) => sum + (s.steps ?? 0), 0) / daysWithSteps.length
+      );
+      insights.push({
+        type: 'info',
+        title: 'Connected Activity Data',
+        message: `Your wearable shows an average of ${avgSteps.toLocaleString()} steps per day. Movement is one of many factors that may support glucose patterns — all movement counts.`,
+      });
+    }
+
+    const daysWithSleep = healthSummaries.filter((s: any) => s.sleepMinutes != null && s.sleepMinutes > 0);
+    if (daysWithSleep.length >= 3) {
+      const avgSleepMin = Math.round(
+        daysWithSleep.reduce((sum: number, s: any) => sum + (s.sleepMinutes ?? 0), 0) / daysWithSleep.length
+      );
+      const h = Math.floor(avgSleepMin / 60);
+      const m = avgSleepMin % 60;
+      insights.push({
+        type: avgSleepMin < 360 ? 'tip' : 'success',
+        title: avgSleepMin < 360 ? 'Sleep looks lower than usual' : `Averaging ${h}h ${m}m of sleep`,
+        message: avgSleepMin < 360
+          ? `Connected data suggests about ${h}h ${m}m of sleep on average. Sleep may affect appetite, cravings, and glucose patterns — something worth discussing with your care team.`
+          : `Consistent sleep is a pattern worth keeping. Sleep quality and duration can be related to glucose stability, appetite, and energy levels.`,
+      });
+    }
+  }
+
   return insights;
 }
 
-async function generateAIInsights(glucoseEntries: any[], meals: any[], userData: any) {
+async function generateAIInsights(glucoseEntries: any[], meals: any[], userData: any, healthSummaries?: any[]) {
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   });
@@ -177,7 +220,32 @@ async function generateAIInsights(glucoseEntries: any[], meals: any[], userData:
     foods: m.foodEntries?.map((f: any) => f.foodName).join(', ') || m.detectedFoods || 'not specified',
   }));
 
+  // Build connected health summary for AI
+  let healthSummaryText = 'No connected wearable data available.';
+  if (healthSummaries && healthSummaries.length > 0) {
+    const daysWithSteps = healthSummaries.filter((s: any) => s.steps != null && s.steps > 0);
+    const daysWithSleep = healthSummaries.filter((s: any) => s.sleepMinutes != null && s.sleepMinutes > 0);
+    const provider = healthSummaries[0]?.provider === 'google_health' ? 'Google Health / Fitbit' : 'Apple Health';
+    const lines: string[] = [`Source: ${provider} (${healthSummaries.length} days of data)`];
+    if (daysWithSteps.length > 0) {
+      const avg = Math.round(daysWithSteps.reduce((s: number, d: any) => s + (d.steps ?? 0), 0) / daysWithSteps.length);
+      lines.push(`Average steps: ${avg.toLocaleString()}/day (${daysWithSteps.length} days with data)`);
+    }
+    if (daysWithSleep.length > 0) {
+      const avgMin = Math.round(daysWithSleep.reduce((s: number, d: any) => s + (d.sleepMinutes ?? 0), 0) / daysWithSleep.length);
+      lines.push(`Average sleep: ${Math.floor(avgMin / 60)}h ${avgMin % 60}m/night (${daysWithSleep.length} days with data)`);
+    }
+    const activeMinDays = healthSummaries.filter((s: any) => s.activeMinutes != null && s.activeMinutes > 0);
+    if (activeMinDays.length > 0) {
+      const avgActive = Math.round(activeMinDays.reduce((s: number, d: any) => s + (d.activeMinutes ?? 0), 0) / activeMinDays.length);
+      lines.push(`Average active minutes: ${avgActive}/day`);
+    }
+    healthSummaryText = lines.join('\n');
+  }
+
   const prompt = `You are Chatita, a warm and caring diabetes management assistant (like an abuela). Analyze this user's data and provide 3-5 actionable insights. Use inclusive, gender-neutral language — do not use mijo, mija, mi amor, querido, querida, sweetheart, or any gendered terms of endearment.
+
+IMPORTANT: When discussing connected health data (steps, sleep, activity), use cautious language — "may affect," "could be related," "a pattern worth tracking." Do NOT say wearable data proves anything or that steps/sleep caused glucose changes. Wearable data may be incomplete.
 
 User Data (last ${dataSummary.glucoseReadings} days):
 - ${dataSummary.glucoseReadings} glucose readings, average ${dataSummary.averageGlucose} mg/dL
@@ -185,6 +253,9 @@ User Data (last ${dataSummary.glucoseReadings} days):
 - ${dataSummary.postMealReadings} post-meal readings
 - Diabetes type: ${dataSummary.diabetesType}
 - Target range: ${dataSummary.targetRange} mg/dL
+
+Connected Wearable/Health Data:
+${healthSummaryText}
 
 Identified Patterns:
 ${patterns.length > 0 ? patterns.join('\n') : 'No significant patterns yet'}

@@ -24,20 +24,19 @@ export async function GET() {
     // Get last 7 days of data
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const [glucoseEntries, meals] = await Promise.all([
+    const [glucoseEntries, meals, healthSummaries] = await Promise.all([
       prisma.glucoseEntry.findMany({
-        where: {
-          userId: session.user.id,
-          measuredAt: { gte: weekAgo },
-        },
+        where: { userId: session.user.id, measuredAt: { gte: weekAgo } },
         orderBy: { measuredAt: 'desc' },
       }),
       prisma.meal.findMany({
-        where: {
-          userId: session.user.id,
-          eatenAt: { gte: weekAgo },
-        },
+        where: { userId: session.user.id, eatenAt: { gte: weekAgo } },
         orderBy: { eatenAt: 'desc' },
+      }),
+      prisma.healthDailySummary.findMany({
+        where: { userId: session.user.id, date: { gte: weekAgo } },
+        orderBy: { date: 'desc' },
+        select: { date: true, steps: true, activeMinutes: true, sleepMinutes: true, provider: true },
       }),
     ]);
 
@@ -45,7 +44,8 @@ export async function GET() {
       glucoseEntries,
       meals,
       user.targetGlucoseMin,
-      user.targetGlucoseMax
+      user.targetGlucoseMax,
+      healthSummaries
     );
 
     return NextResponse.json({ insights });
