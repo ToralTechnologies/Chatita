@@ -37,9 +37,10 @@ export async function GET(request: Request) {
     return failRedirect('invalid_state');
   }
 
-  const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_HEALTH_CLIENT_SECRET!;
-  const redirectUri = process.env.GOOGLE_HEALTH_REDIRECT_URI!;
+  // Falls back to standard Google OAuth credentials if health-specific ones not set.
+  const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_HEALTH_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const redirectUri = process.env.GOOGLE_HEALTH_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/health/google/callback`;
 
   if (!clientId || !clientSecret || !redirectUri) {
     return failRedirect('not_configured');

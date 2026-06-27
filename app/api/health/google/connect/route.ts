@@ -35,12 +35,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_HEALTH_REDIRECT_URI;
+    // Falls back to the standard Google OAuth credentials (same client works for both
+    // NextAuth sign-in and Fitness API — just needs Fitness API enabled in Google Cloud).
+    const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+    const redirectUri = process.env.GOOGLE_HEALTH_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/health/google/callback`;
 
     if (!clientId || !redirectUri) {
       return NextResponse.json(
-        { error: 'Google Health integration not configured. Set GOOGLE_HEALTH_CLIENT_ID and GOOGLE_HEALTH_REDIRECT_URI in environment variables.' },
+        { error: 'Google credentials not configured. Set GOOGLE_CLIENT_ID (or GOOGLE_HEALTH_CLIENT_ID) in environment variables.' },
         { status: 500 }
       );
     }

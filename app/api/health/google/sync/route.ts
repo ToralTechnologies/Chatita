@@ -24,8 +24,8 @@ async function refreshGoogleToken(
   refreshTokenEnc: string,
   userId: string
 ): Promise<string | null> {
-  const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_HEALTH_CLIENT_SECRET!;
+  const clientId = process.env.GOOGLE_HEALTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
+  const clientSecret = process.env.GOOGLE_HEALTH_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '';
 
   try {
     const refreshToken = decryptToken(refreshTokenEnc);
