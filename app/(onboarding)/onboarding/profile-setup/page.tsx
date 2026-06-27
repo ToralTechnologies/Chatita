@@ -87,7 +87,7 @@ function TagInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: '#001A4D' }}>{label}</label>
       <div className="flex gap-2 mb-2">
         <input
           type="text"
@@ -95,12 +95,12 @@ function TagInput({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
           placeholder={placeholder}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          style={{ flex: 1, padding: '9px 14px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.15)', background: '#F7EFE1', fontSize: '13px', color: '#001A4D', outline: 'none' }}
         />
         <button
           type="button"
           onClick={add}
-          className="px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark"
+          style={{ padding: '9px 16px', borderRadius: '10px', background: '#012374', color: '#FFFDF9', fontSize: '13px', fontWeight: 600 }}
         >
           Add
         </button>
@@ -110,13 +110,14 @@ function TagInput({
           {value.map((tag) => (
             <span
               key={tag}
-              className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs"
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+              style={{ background: 'rgba(1,35,116,0.08)', color: '#012374' }}
             >
               {tag}
               <button
                 type="button"
                 onClick={() => onChange(value.filter((t) => t !== tag))}
-                className="hover:text-accent"
+                style={{ color: '#E3171A' }}
               >
                 ×
               </button>
@@ -127,6 +128,40 @@ function TagInput({
     </div>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  border: '1px solid rgba(1,35,116,0.15)',
+  background: '#F7EFE1',
+  fontSize: '14px',
+  color: '#001A4D',
+  outline: 'none',
+};
+
+const inputLg: React.CSSProperties = {
+  ...inputStyle,
+  padding: '10px 16px',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '13px',
+  fontWeight: 500,
+  marginBottom: '6px',
+  color: '#001A4D',
+};
+
+const muted: React.CSSProperties = { color: 'rgba(1,35,116,0.5)', fontSize: '12px' };
+
+const cardStyle: React.CSSProperties = {
+  background: '#FFFDF9',
+  borderRadius: '22px',
+  border: '1px solid rgba(1,35,116,0.07)',
+  boxShadow: '0 14px 30px -24px rgba(1,35,116,0.2)',
+  padding: '24px',
+};
 
 export default function ProfileSetupPage() {
   const router = useRouter();
@@ -256,40 +291,50 @@ export default function ProfileSetupPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between bg-gray-background p-6">
+    <div className="min-h-screen flex flex-col items-center justify-between p-6" style={{ background: '#F7EFE1' }}>
       <div className="flex-1 w-full max-w-md pt-8">
-        <h1 className="text-3xl font-bold text-center mb-2">Get to Know You</h1>
-        <p className="text-gray-600 text-center mb-8">
+        <h1
+          className="font-serif-italic text-center mb-2"
+          style={{ fontSize: '2rem', color: '#012374' }}
+        >
+          Get to Know You
+        </h1>
+        <p className="text-center mb-8" style={{ color: 'rgba(1,35,116,0.55)' }}>
           Help us personalize your experience
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 text-danger p-3 rounded-lg text-sm">{error}</div>
+            <div
+              className="text-sm p-3 rounded-[12px]"
+              style={{ background: 'rgba(208,2,27,0.08)', color: '#D0021B', border: '1px solid rgba(208,2,27,0.2)' }}
+            >
+              {error}
+            </div>
           )}
 
           {/* Basic profile */}
-          <div className="bg-white rounded-card shadow-card p-6 space-y-4">
+          <div style={cardStyle} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-2">Your Name</label>
+              <label htmlFor="name" style={labelStyle}>Your Name</label>
               <input
                 id="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                style={inputLg}
                 placeholder="What should we call you?"
               />
             </div>
 
             <div>
-              <label htmlFor="diabetesType" className="block text-sm font-medium mb-2">Diabetes Type</label>
+              <label htmlFor="diabetesType" style={labelStyle}>Diabetes Type</label>
               <select
                 id="diabetesType"
                 value={formData.diabetesType}
                 onChange={(e) => setFormData({ ...formData, diabetesType: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                style={inputLg}
               >
                 <option value="">Select type</option>
                 <option value="Type1">Type 1</option>
@@ -301,7 +346,7 @@ export default function ProfileSetupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Target Glucose Range (mg/dL)</label>
+              <label style={labelStyle}>Target Glucose Range (mg/dL)</label>
               <div className="flex gap-4 items-center">
                 <div className="flex-1">
                   <input
@@ -309,157 +354,124 @@ export default function ProfileSetupPage() {
                     value={formData.targetGlucoseMin}
                     onChange={(e) => setFormData({ ...formData, targetGlucoseMin: parseInt(e.target.value) })}
                     min={50} max={200}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    style={inputLg}
                     placeholder="Min"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Low</p>
+                  <p className="text-xs mt-1" style={muted}>Low</p>
                 </div>
-                <span className="text-gray-400">—</span>
+                <span style={{ color: 'rgba(1,35,116,0.3)' }}>—</span>
                 <div className="flex-1">
                   <input
                     type="number"
                     value={formData.targetGlucoseMax}
                     onChange={(e) => setFormData({ ...formData, targetGlucoseMax: parseInt(e.target.value) })}
                     min={50} max={300}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    style={inputLg}
                     placeholder="Max"
                   />
-                  <p className="text-xs text-gray-500 mt-1">High</p>
+                  <p className="text-xs mt-1" style={muted}>High</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs mt-2" style={muted}>
                 Default: 70–180 mg/dL (consult your doctor for your personal target)
               </p>
             </div>
           </div>
 
           {/* Sleep & Body Patterns section */}
-          <div className="bg-white rounded-card shadow-card p-6">
+          <div style={cardStyle}>
             <button
               type="button"
               onClick={() => setShowSleepBody((v) => !v)}
               className="w-full flex items-center justify-between"
             >
               <div className="text-left">
-                <p className="font-medium text-sm">Sleep & Body Patterns</p>
-                <p className="text-xs text-gray-500 mt-0.5">Optional — helps Chatita understand the full picture</p>
+                <p className="font-medium text-sm" style={{ color: '#001A4D' }}>Sleep & Body Patterns</p>
+                <p className="text-xs mt-0.5" style={muted}>Optional — helps Chatita understand the full picture</p>
               </div>
-              <span className="text-primary text-sm">{showSleepBody ? 'Hide ▲' : 'Add ▼'}</span>
+              <span className="text-sm font-medium" style={{ color: '#012374' }}>{showSleepBody ? 'Hide ▲' : 'Add ▼'}</span>
             </button>
 
             {showSleepBody && (
-              <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
-                <p className="text-xs text-gray-500 leading-relaxed">
+              <div className="mt-5 space-y-5 pt-5" style={{ borderTop: '1px solid rgba(1,35,116,0.07)' }}>
+                <p className="text-xs leading-relaxed" style={muted}>
                   Sleep can affect hunger, cravings, energy, mood, stress, and glucose patterns. This helps Chatita understand the full picture.
                 </p>
 
-                {/* Sleep fields */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Sleep goal <span className="text-gray-400">(hours/night)</span></label>
+                    <label style={labelStyle}>Sleep goal <span style={muted}>(hours/night)</span></label>
                     <input
-                      type="number"
-                      min={3}
-                      max={14}
-                      step={0.5}
+                      type="number" min={3} max={14} step={0.5}
                       value={sleepBody.sleepGoalHours}
                       onChange={(e) => setSB('sleepGoalHours', e.target.value)}
                       placeholder="e.g. 7.5"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      style={inputStyle}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Typical bedtime</label>
-                    <input
-                      type="time"
-                      value={sleepBody.typicalBedtime}
-                      onChange={(e) => setSB('typicalBedtime', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <label style={labelStyle}>Typical bedtime</label>
+                    <input type="time" value={sleepBody.typicalBedtime} onChange={(e) => setSB('typicalBedtime', e.target.value)} style={inputStyle} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Typical wake time</label>
-                    <input
-                      type="time"
-                      value={sleepBody.typicalWakeTime}
-                      onChange={(e) => setSB('typicalWakeTime', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <label style={labelStyle}>Typical wake time</label>
+                    <input type="time" value={sleepBody.typicalWakeTime} onChange={(e) => setSB('typicalWakeTime', e.target.value)} style={inputStyle} />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Sleep notes <span className="text-gray-400">(optional)</span></label>
+                  <label style={labelStyle}>Sleep notes <span style={muted}>(optional)</span></label>
                   <textarea
                     value={sleepBody.sleepTrackingNotes}
                     onChange={(e) => setSB('sleepTrackingNotes', e.target.value)}
                     placeholder="e.g. trouble falling asleep, frequent wakeups..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    style={{ ...inputStyle, resize: 'none' }}
                   />
                 </div>
 
-                {/* Cycle tracking question */}
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-medium mb-1">Menstrual cycle tracking, if relevant to you</p>
-                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                <div style={{ borderTop: '1px solid rgba(1,35,116,0.07)', paddingTop: '16px' }}>
+                  <p className="text-sm font-medium mb-1" style={{ color: '#001A4D' }}>Menstrual cycle tracking, if relevant to you</p>
+                  <p className="text-xs mb-3 leading-relaxed" style={muted}>
                     Some people notice changes in appetite, mood, energy, cravings, or glucose patterns around their cycle. This is optional and only used to personalize your insights.
                   </p>
                   <div className="space-y-2">
                     {CYCLE_TRACKING_OPTIONS.map((opt) => (
                       <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                         <input
-                          type="radio"
-                          name="cycleTracking"
-                          value={opt.value}
+                          type="radio" name="cycleTracking" value={opt.value}
                           checked={sleepBody.cycleTrackingChoice === opt.value}
                           onChange={() => setSB('cycleTrackingChoice', opt.value)}
                         />
-                        <span className="text-sm text-gray-700">{opt.label}</span>
+                        <span className="text-sm" style={{ color: '#001A4D' }}>{opt.label}</span>
                       </label>
                     ))}
                   </div>
 
                   {sleepBody.cycleTrackingChoice === 'yes' && (
-                    <div className="mt-4 space-y-3 pl-4 border-l-2 border-primary/20">
-                      <p className="text-xs text-gray-500">All fields optional.</p>
+                    <div className="mt-4 space-y-3 pl-4" style={{ borderLeft: '2px solid rgba(1,35,116,0.18)' }}>
+                      <p className="text-xs" style={muted}>All fields optional.</p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm font-medium mb-1">Typical cycle length <span className="text-gray-400">(days)</span></label>
-                          <input
-                            type="number"
-                            min={15}
-                            max={60}
-                            value={sleepBody.typicalCycleLength}
-                            onChange={(e) => setSB('typicalCycleLength', e.target.value)}
-                            placeholder="e.g. 28"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          />
+                          <label style={labelStyle}>Cycle length <span style={muted}>(days)</span></label>
+                          <input type="number" min={15} max={60} value={sleepBody.typicalCycleLength} onChange={(e) => setSB('typicalCycleLength', e.target.value)} placeholder="e.g. 28" style={inputStyle} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1">Typical period length <span className="text-gray-400">(days)</span></label>
-                          <input
-                            type="number"
-                            min={1}
-                            max={14}
-                            value={sleepBody.typicalPeriodLength}
-                            onChange={(e) => setSB('typicalPeriodLength', e.target.value)}
-                            placeholder="e.g. 5"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          />
+                          <label style={labelStyle}>Period length <span style={muted}>(days)</span></label>
+                          <input type="number" min={1} max={14} value={sleepBody.typicalPeriodLength} onChange={(e) => setSB('typicalPeriodLength', e.target.value)} placeholder="e.g. 5" style={inputStyle} />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Notes about your cycle patterns <span className="text-gray-400">(optional)</span></label>
+                        <label style={labelStyle}>Cycle pattern notes <span style={muted}>(optional)</span></label>
                         <textarea
                           value={sleepBody.cycleTrackingNotes}
                           onChange={(e) => setSB('cycleTrackingNotes', e.target.value)}
                           placeholder="e.g. glucose tends to run higher before period..."
                           rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                          style={{ ...inputStyle, resize: 'none' }}
                         />
                       </div>
                     </div>
@@ -470,32 +482,28 @@ export default function ProfileSetupPage() {
           </div>
 
           {/* Movement & Activity section */}
-          <div className="bg-white rounded-card shadow-card p-6">
+          <div style={cardStyle}>
             <button
               type="button"
               onClick={() => setShowMovement((v) => !v)}
               className="w-full flex items-center justify-between"
             >
               <div className="text-left">
-                <p className="font-medium text-sm">Movement & Activity</p>
-                <p className="text-xs text-gray-500 mt-0.5">Optional — helps Chatita understand your movement context</p>
+                <p className="font-medium text-sm" style={{ color: '#001A4D' }}>Movement & Activity</p>
+                <p className="text-xs mt-0.5" style={muted}>Optional — helps Chatita understand your movement context</p>
               </div>
-              <span className="text-primary text-sm">{showMovement ? 'Hide ▲' : 'Add ▼'}</span>
+              <span className="text-sm font-medium" style={{ color: '#012374' }}>{showMovement ? 'Hide ▲' : 'Add ▼'}</span>
             </button>
 
             {showMovement && (
-              <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  All fields are optional and private. This helps Chatita give context-aware, non-judgmental guidance. You don't need to exercise — movement means anything that gets you moving.
+              <div className="mt-5 space-y-5 pt-5" style={{ borderTop: '1px solid rgba(1,35,116,0.07)' }}>
+                <p className="text-xs leading-relaxed" style={muted}>
+                  All fields are optional and private. This helps Chatita give context-aware, non-judgmental guidance. You don&apos;t need to exercise — movement means anything that gets you moving.
                 </p>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">How would you describe your general activity? <span className="text-gray-400">(optional)</span></label>
-                  <select
-                    value={movement.activityLevel}
-                    onChange={(e) => setMov('activityLevel', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
+                  <label style={labelStyle}>How would you describe your general activity? <span style={muted}>(optional)</span></label>
+                  <select value={movement.activityLevel} onChange={(e) => setMov('activityLevel', e.target.value)} style={inputStyle}>
                     <option value="">— Not sure / skip —</option>
                     {ACTIVITY_LEVEL_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -504,7 +512,7 @@ export default function ProfileSetupPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Types of movement you do <span className="text-gray-400">(select all that apply)</span></label>
+                  <label style={labelStyle}>Types of movement you do <span style={muted}>(select all that apply)</span></label>
                   <div className="flex flex-wrap gap-2">
                     {MOVEMENT_TYPES.map((t) => (
                       <button
@@ -516,9 +524,12 @@ export default function ProfileSetupPage() {
                             ? curr.filter((v) => v !== t.value)
                             : [...curr, t.value]);
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${movement.preferredMovementTypes.includes(t.value)
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary'}`}
+                        className="px-3 py-1.5 rounded-full text-xs transition-colors"
+                        style={{
+                          border: movement.preferredMovementTypes.includes(t.value) ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
+                          background: movement.preferredMovementTypes.includes(t.value) ? '#012374' : '#FFFDF9',
+                          color: movement.preferredMovementTypes.includes(t.value) ? '#FFFDF9' : '#001A4D',
+                        }}
                       >
                         {t.label}
                       </button>
@@ -527,12 +538,8 @@ export default function ProfileSetupPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">What would movement support look like for you? <span className="text-gray-400">(optional)</span></label>
-                  <select
-                    value={movement.movementGoal}
-                    onChange={(e) => setMov('movementGoal', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
+                  <label style={labelStyle}>What would movement support look like for you? <span style={muted}>(optional)</span></label>
+                  <select value={movement.movementGoal} onChange={(e) => setMov('movementGoal', e.target.value)} style={inputStyle}>
                     <option value="">— Skip —</option>
                     {MOVEMENT_GOAL_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -541,23 +548,18 @@ export default function ProfileSetupPage() {
                 </div>
 
                 <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={movement.hasPhysicalJob}
-                    onChange={(e) => setMov('hasPhysicalJob', e.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span className="text-sm text-gray-700">My job or daily routine already involves physical activity (e.g. standing, lifting, moving)</span>
+                  <input type="checkbox" checked={movement.hasPhysicalJob} onChange={(e) => setMov('hasPhysicalJob', e.target.checked)} className="mt-0.5" />
+                  <span className="text-sm" style={{ color: '#001A4D' }}>My job or daily routine already involves physical activity (e.g. standing, lifting, moving)</span>
                 </label>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Any mobility limitations or physical considerations? <span className="text-gray-400">(optional)</span></label>
+                  <label style={labelStyle}>Any mobility limitations or physical considerations? <span style={muted}>(optional)</span></label>
                   <textarea
                     value={movement.mobilityLimitations}
                     onChange={(e) => setMov('mobilityLimitations', e.target.value)}
                     placeholder="e.g. knee pain, back injury, limited stamina..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    style={{ ...inputStyle, resize: 'none' }}
                   />
                 </div>
               </div>
@@ -565,44 +567,38 @@ export default function ProfileSetupPage() {
           </div>
 
           {/* Cultural Food Profile toggle */}
-          <div className="bg-white rounded-card shadow-card p-6">
+          <div style={cardStyle}>
             <button
               type="button"
               onClick={() => setShowCultural((v) => !v)}
               className="w-full flex items-center justify-between"
             >
               <div className="text-left">
-                <p className="font-medium text-sm">Cultural Food Profile</p>
-                <p className="text-xs text-gray-500 mt-0.5">Optional — helps Chatita give relevant food guidance</p>
+                <p className="font-medium text-sm" style={{ color: '#001A4D' }}>Cultural Food Profile</p>
+                <p className="text-xs mt-0.5" style={muted}>Optional — helps Chatita give relevant food guidance</p>
               </div>
-              <span className="text-primary text-sm">{showCultural ? 'Hide ▲' : 'Add ▼'}</span>
+              <span className="text-sm font-medium" style={{ color: '#012374' }}>{showCultural ? 'Hide ▲' : 'Add ▼'}</span>
             </button>
 
             {showCultural && (
-              <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
-                <p className="text-xs text-gray-500 leading-relaxed">
+              <div className="mt-5 space-y-5 pt-5" style={{ borderTop: '1px solid rgba(1,35,116,0.07)' }}>
+                <p className="text-xs leading-relaxed" style={muted}>
                   All fields are optional. This helps Chatita understand your everyday foods so guidance fits your actual life — not generic American food assumptions.
                 </p>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Country or Region</label>
-                  <input
-                    type="text"
-                    value={cultural.countryOrRegion}
-                    onChange={(e) => set('countryOrRegion', e.target.value)}
-                    placeholder="e.g. Mexico, India, Nigeria, Philippines"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                  <label style={labelStyle}>Country or Region</label>
+                  <input type="text" value={cultural.countryOrRegion} onChange={(e) => set('countryOrRegion', e.target.value)} placeholder="e.g. Mexico, India, Nigeria, Philippines" style={inputStyle} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">How would you describe your food background? <span className="text-gray-400">(optional)</span></label>
+                  <label style={labelStyle}>How would you describe your food background? <span style={muted}>(optional)</span></label>
                   <textarea
                     value={cultural.culturalFoodBackground}
                     onChange={(e) => set('culturalFoodBackground', e.target.value)}
                     rows={3}
                     placeholder="e.g. I grew up eating rice and beans daily, lots of tortillas, tamales on weekends..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    style={{ ...inputStyle, resize: 'none' }}
                   />
                 </div>
 
@@ -610,10 +606,10 @@ export default function ProfileSetupPage() {
                 <TagInput label="Common proteins" placeholder="e.g. beans, chicken, dal, fish..." value={cultural.commonProteins} onChange={(v) => set('commonProteins', v)} />
                 <TagInput label="Common vegetables" placeholder="e.g. nopales, spinach, eggplant..." value={cultural.commonVegetables} onChange={(v) => set('commonVegetables', v)} />
                 <TagInput label="Common drinks" placeholder="e.g. agua fresca, horchata, tea..." value={cultural.commonDrinks} onChange={(v) => set('commonDrinks', v)} />
-                <TagInput label="Foods you don't want to give up" placeholder="e.g. tamales, biryani, pozole..." value={cultural.foodsToKeep} onChange={(v) => set('foodsToKeep', v)} />
+                <TagInput label="Foods you don&apos;t want to give up" placeholder="e.g. tamales, biryani, pozole..." value={cultural.foodsToKeep} onChange={(v) => set('foodsToKeep', v)} />
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Dietary needs or restrictions</label>
+                  <label style={{ ...labelStyle, marginBottom: '10px' }}>Dietary needs or restrictions</label>
                   <div className="flex flex-wrap gap-2">
                     {DIETARY_OPTIONS.map((opt) => (
                       <button
@@ -623,11 +619,12 @@ export default function ProfileSetupPage() {
                           const curr = cultural.dietaryRestrictions;
                           set('dietaryRestrictions', curr.includes(opt) ? curr.filter((x) => x !== opt) : [...curr, opt]);
                         }}
-                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                          cultural.dietaryRestrictions.includes(opt)
-                            ? 'bg-primary text-white border-primary'
-                            : 'border-gray-300 text-gray-700 hover:border-primary'
-                        }`}
+                        className="px-3 py-1.5 rounded-full text-sm transition-colors"
+                        style={{
+                          border: cultural.dietaryRestrictions.includes(opt) ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
+                          background: cultural.dietaryRestrictions.includes(opt) ? '#012374' : '#FFFDF9',
+                          color: cultural.dietaryRestrictions.includes(opt) ? '#FFFDF9' : '#001A4D',
+                        }}
                       >
                         {opt}
                       </button>
@@ -636,62 +633,37 @@ export default function ProfileSetupPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Religious or cultural food needs <span className="text-gray-400">(optional)</span></label>
-                  <input
-                    type="text"
-                    value={cultural.religiousFoodNeeds}
-                    onChange={(e) => set('religiousFoodNeeds', e.target.value)}
-                    placeholder="e.g. no pork, fasting periods, specific preparation rules"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                  <label style={labelStyle}>Religious or cultural food needs <span style={muted}>(optional)</span></label>
+                  <input type="text" value={cultural.religiousFoodNeeds} onChange={(e) => set('religiousFoodNeeds', e.target.value)} placeholder="e.g. no pork, fasting periods, specific preparation rules" style={inputStyle} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">How do you usually get food?</label>
+                  <label style={{ ...labelStyle, marginBottom: '10px' }}>How do you usually get food?</label>
                   <div className="space-y-2">
                     {FOOD_ACCESS_OPTIONS.map((opt) => (
                       <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="foodAccess"
-                          value={opt.value}
-                          checked={cultural.foodAccessContext === opt.value}
-                          onChange={() => set('foodAccessContext', opt.value)}
-                          className="accent-primary"
-                        />
-                        <span className="text-sm">{opt.label}</span>
+                        <input type="radio" name="foodAccess" value={opt.value} checked={cultural.foodAccessContext === opt.value} onChange={() => set('foodAccessContext', opt.value)} className="accent-primary" />
+                        <span className="text-sm" style={{ color: '#001A4D' }}>{opt.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">How often do you cook at home?</label>
+                  <label style={{ ...labelStyle, marginBottom: '10px' }}>How often do you cook at home?</label>
                   <div className="space-y-2">
                     {COOKING_OPTIONS.map((opt) => (
                       <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="cookingFreq"
-                          value={opt.value}
-                          checked={cultural.cookingFrequency === opt.value}
-                          onChange={() => set('cookingFrequency', opt.value)}
-                          className="accent-primary"
-                        />
-                        <span className="text-sm">{opt.label}</span>
+                        <input type="radio" name="cookingFreq" value={opt.value} checked={cultural.cookingFrequency === opt.value} onChange={() => set('cookingFrequency', opt.value)} className="accent-primary" />
+                        <span className="text-sm" style={{ color: '#001A4D' }}>{opt.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={cultural.foodPantryUse}
-                    onChange={(e) => set('foodPantryUse', e.target.checked)}
-                    className="accent-primary w-4 h-4"
-                  />
-                  <span className="text-sm">I sometimes use a food pantry or community food resource</span>
+                  <input type="checkbox" checked={cultural.foodPantryUse} onChange={(e) => set('foodPantryUse', e.target.checked)} className="accent-primary w-4 h-4" />
+                  <span className="text-sm" style={{ color: '#001A4D' }}>I sometimes use a food pantry or community food resource</span>
                 </label>
               </div>
             )}
@@ -700,15 +672,22 @@ export default function ProfileSetupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white py-4 rounded-button font-medium text-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 text-base font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              borderRadius: '999px',
+              background: '#012374',
+              color: '#FFFDF9',
+              boxShadow: '0 10px 24px -10px rgba(1,35,116,0.5)',
+            }}
           >
-            {loading ? 'Saving...' : 'Complete Setup'}
+            {loading ? 'Saving…' : 'Complete Setup'}
           </button>
 
           <button
             type="button"
             onClick={() => router.push('/home')}
-            className="w-full text-gray-600 py-3 text-sm hover:text-gray-800 transition-colors"
+            className="w-full py-3 text-sm transition-colors"
+            style={{ color: 'rgba(1,35,116,0.5)' }}
           >
             Skip for now
           </button>
@@ -716,9 +695,9 @@ export default function ProfileSetupPage() {
       </div>
 
       <div className="flex justify-center gap-2 pt-4">
-        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-        <div className="w-2 h-2 rounded-full bg-primary"></div>
+        <div style={{ width: '8px', height: '8px', borderRadius: '999px', background: 'rgba(1,35,116,0.18)' }} />
+        <div style={{ width: '8px', height: '8px', borderRadius: '999px', background: 'rgba(1,35,116,0.18)' }} />
+        <div style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#012374' }} />
       </div>
     </div>
   );

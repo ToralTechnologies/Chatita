@@ -76,7 +76,16 @@ export default function InsightsPage() {
       case 'info':
         return 'bg-primary/10 border-primary/30';
       default:
-        return 'bg-gray-100 border-gray-300';
+        return '';
+    }
+  };
+
+  const getPatternStyle = (severity: string): React.CSSProperties => {
+    switch (severity) {
+      case 'warning': return { background: 'rgba(200,147,43,0.08)', border: '1px solid rgba(200,147,43,0.25)' };
+      case 'success': return { background: 'rgba(74,122,0,0.07)', border: '1px solid rgba(74,122,0,0.2)' };
+      case 'info': return { background: 'rgba(1,35,116,0.05)', border: '1px solid rgba(1,35,116,0.12)' };
+      default: return { background: 'rgba(1,35,116,0.04)', border: '1px solid rgba(1,35,116,0.1)' };
     }
   };
 
@@ -95,16 +104,16 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-background mobile-page-pb">
-        <div className="bg-white border-b border-gray-200">
+      <div className="min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
+        <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
           <div className="max-w-2xl mx-auto px-6 py-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-primary" />
+            <h1 className="font-serif-italic flex items-center gap-2" style={{ fontSize: '1.6rem', color: '#012374' }}>
+              <TrendingUp className="w-6 h-6" style={{ color: '#012374' }} />
               Insights & Analytics
             </h1>
             <div className="flex items-center gap-2 mt-3">
               {[7, 30, 90].map((days) => (
-                <div key={days} className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+                <div key={days} className="h-8 w-20 rounded-full animate-pulse" style={{ background: 'rgba(1,35,116,0.1)' }} />
               ))}
             </div>
           </div>
@@ -121,14 +130,14 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-background mobile-page-pb">
+    <div className="min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
         <div className="max-w-2xl mx-auto px-6 py-4">
           <BackButton href="/home" />
           <div className="flex items-center justify-between mb-3 mt-2">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-primary" />
+            <h1 className="font-serif-italic flex items-center gap-2" style={{ fontSize: '1.6rem', color: '#012374' }}>
+              <TrendingUp className="w-6 h-6" />
               Insights & Analytics
             </h1>
             {correlation && (
@@ -145,11 +154,11 @@ export default function InsightsPage() {
               <button
                 key={days}
                 onClick={() => setPeriod(days)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  period === days
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+                style={{
+                  background: period === days ? '#012374' : 'rgba(1,35,116,0.07)',
+                  color: period === days ? '#FFFDF9' : '#001A4D',
+                }}
               >
                 {days} days
               </button>
@@ -167,7 +176,7 @@ export default function InsightsPage() {
               <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-card border border-primary/20 p-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Estimated A1C</p>
+                    <p className="text-sm mb-1" style={{ color: 'rgba(1,35,116,0.55)' }}>Estimated A1C</p>
                     <div className="text-4xl font-bold text-primary mb-1">
                       {correlation.a1cEstimate.estimated}%
                     </div>
@@ -182,42 +191,29 @@ export default function InsightsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500 mb-1">Confidence: {correlation.a1cEstimate.confidence}</p>
-                    <p className="text-xs text-gray-500">{correlation.a1cEstimate.readingsUsed} readings</p>
+                    <p className="text-xs mb-1" style={{ color: 'rgba(1,35,116,0.5)' }}>Confidence: {correlation.a1cEstimate.confidence}</p>
+                    <p className="text-xs" style={{ color: 'rgba(1,35,116,0.5)' }}>{correlation.a1cEstimate.readingsUsed} readings</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 mt-3">{correlation.a1cEstimate.message}</p>
+                <p className="text-sm mt-3" style={{ color: '#16182A' }}>{correlation.a1cEstimate.message}</p>
               </div>
             )}
 
             {/* Stats Overview */}
-            <div className="bg-white rounded-card shadow-card p-6">
-              <h2 className="font-semibold mb-4">Last {period} Days Summary</h2>
+            <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+              <h2 className="font-serif-italic mb-4" style={{ fontSize: '1.15rem', color: '#001A4D' }}>Last {period} Days Summary</h2>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-primary">
-                    {correlation.stats.averageGlucose}
+                {[
+                  { value: correlation.stats.averageGlucose, label: 'Avg Glucose (mg/dL)', color: '#012374' },
+                  { value: `${correlation.stats.inRangePercent}%`, label: 'Time in Range', color: '#4A7A00' },
+                  { value: `${correlation.stats.averageCarbs}g`, label: 'Avg Carbs/Meal', color: '#012374' },
+                  { value: correlation.mealsTracked, label: 'Meals Tracked', color: '#012374' },
+                ].map(({ value, label, color }) => (
+                  <div key={label} className="text-center p-4 rounded-[14px]" style={{ background: 'rgba(1,35,116,0.04)' }}>
+                    <div className="text-3xl font-bold" style={{ color }}>{value}</div>
+                    <div className="text-sm mt-1" style={{ color: 'rgba(1,35,116,0.55)' }}>{label}</div>
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Avg Glucose (mg/dL)</div>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-success">
-                    {correlation.stats.inRangePercent}%
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Time in Range</div>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-primary">
-                    {correlation.stats.averageCarbs}g
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Avg Carbs/Meal</div>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-primary">
-                    {correlation.mealsTracked}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Meals Tracked</div>
-                </div>
+                ))}
               </div>
 
               {/* Time in Range Bar */}
@@ -243,7 +239,7 @@ export default function InsightsPage() {
                     {correlation.stats.timeInRange.high > 5 && `${correlation.stats.timeInRange.high}%`}
                   </div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <div className="flex justify-between text-xs mt-2" style={{ color: 'rgba(1,35,116,0.5)' }}>
                   <span>Low (&lt;70)</span>
                   <span>Normal (70-180)</span>
                   <span>High (&gt;180)</span>
@@ -256,8 +252,8 @@ export default function InsightsPage() {
               <>
                 {/* Glucose Trend Chart */}
                 {correlation.chartData.trendData && correlation.chartData.trendData.length > 0 && (
-                  <div className="bg-white rounded-card shadow-card p-6">
-                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+                    <h2 className="font-serif-italic mb-4 flex items-center gap-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>
                       <TrendingUp className="w-5 h-5 text-primary" />
                       Glucose Trend
                     </h2>
@@ -267,8 +263,8 @@ export default function InsightsPage() {
 
                 {/* Time in Range Pie Chart */}
                 {correlation.stats.timeInRange && (
-                  <div className="bg-white rounded-card shadow-card p-6">
-                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+                    <h2 className="font-serif-italic mb-4 flex items-center gap-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>
                       <BarChart3 className="w-5 h-5 text-primary" />
                       Time in Range Distribution
                     </h2>
@@ -278,8 +274,8 @@ export default function InsightsPage() {
 
                 {/* Meal Type Comparison */}
                 {correlation.chartData.mealComparison && correlation.chartData.mealComparison.length > 0 && (
-                  <div className="bg-white rounded-card shadow-card p-6">
-                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+                    <h2 className="font-serif-italic mb-4 flex items-center gap-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>
                       <Activity className="w-5 h-5 text-primary" />
                       Average Glucose by Meal Type
                     </h2>
@@ -289,8 +285,8 @@ export default function InsightsPage() {
 
                 {/* Daily Pattern */}
                 {correlation.chartData.dailyPattern && correlation.chartData.dailyPattern.length > 0 && (
-                  <div className="bg-white rounded-card shadow-card p-6">
-                    <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+                    <h2 className="font-serif-italic mb-4 flex items-center gap-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>
                       <Calendar className="w-5 h-5 text-primary" />
                       Daily Glucose Pattern
                     </h2>
@@ -303,26 +299,28 @@ export default function InsightsPage() {
             {/* Detected Patterns */}
             {correlation.patterns && correlation.patterns.length > 0 && (
               <>
-                <h2 className="font-semibold text-lg">Detected Patterns</h2>
+                <h2 className="font-serif-italic" style={{ fontSize: '1.15rem', color: '#001A4D' }}>Detected Patterns</h2>
                 <div className="space-y-3">
                   {correlation.patterns.map((pattern: any, index: number) => (
                     <div
                       key={index}
-                      className={`rounded-card border p-4 ${getPatternColor(pattern.severity)}`}
+                      className="rounded-card p-4"
+                      style={getPatternStyle(pattern.severity)}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 mt-0.5">
                           {getPatternIcon(pattern.type)}
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold mb-1">{pattern.title}</h3>
-                          <p className="text-sm text-gray-700">{pattern.description}</p>
+                          <h3 className="font-semibold mb-1" style={{ color: '#001A4D' }}>{pattern.title}</h3>
+                          <p className="text-sm" style={{ color: '#16182A' }}>{pattern.description}</p>
                           {pattern.foods && pattern.foods.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {pattern.foods.map((food: string, i: number) => (
                                 <span
                                   key={i}
-                                  className="text-xs px-2 py-1 bg-white rounded-full border border-gray-200"
+                                  className="text-xs px-2 py-1 rounded-full"
+                                  style={{ background: '#FFFDF9', border: '1px solid rgba(1,35,116,0.1)', color: '#001A4D' }}
                                 >
                                   {food}
                                 </span>
@@ -342,22 +340,23 @@ export default function InsightsPage() {
         {/* AI Insights */}
         {aiInsights && aiInsights.length > 0 && (
           <>
-            <h2 className="font-semibold text-lg">Personalized Insights from Chatita</h2>
+            <h2 className="font-serif-italic" style={{ fontSize: '1.15rem', color: '#001A4D' }}>Personalized Insights from Chatita</h2>
             <div className="space-y-3">
               {aiInsights.map((insight: any, index: number) => (
                 <div
                   key={index}
-                  className={`rounded-card border p-4 ${getPatternColor(insight.type)}`}
+                  className="rounded-card p-4"
+                  style={getPatternStyle(insight.type)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
                       {getInsightIcon(insight.type)}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">{insight.title}</h3>
-                      <p className="text-sm text-gray-700">{insight.message}</p>
+                      <h3 className="font-semibold mb-1" style={{ color: '#001A4D' }}>{insight.title}</h3>
+                      <p className="text-sm" style={{ color: '#16182A' }}>{insight.message}</p>
                       {insight.action && (
-                        <button className="mt-2 text-xs font-medium text-primary hover:underline">
+                        <button className="mt-2 text-xs font-medium hover:underline" style={{ color: '#012374' }}>
                           {insight.action} →
                         </button>
                       )}
@@ -371,22 +370,24 @@ export default function InsightsPage() {
 
         {/* No Data State */}
         {correlation && correlation.glucoseEntries === 0 && correlation.mealsTracked === 0 && (
-          <div className="bg-white rounded-card shadow-card p-8 text-center">
-            <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Start Tracking to See Insights</h3>
-            <p className="text-gray-600 text-sm mb-4">
+          <div className="rounded-card shadow-card p-8 text-center" style={{ background: '#FFFDF9' }}>
+            <Activity className="w-16 h-16 mx-auto mb-4" style={{ color: 'rgba(1,35,116,0.2)' }} />
+            <h3 className="font-serif-italic mb-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>Start Tracking to See Insights</h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(1,35,116,0.55)' }}>
               Log your meals and glucose readings to unlock personalized patterns and recommendations.
             </p>
             <div className="flex gap-3 justify-center">
               <a
                 href="/add-meal"
-                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+                className="px-4 py-2 text-sm font-semibold transition-colors"
+                style={{ borderRadius: '999px', background: '#012374', color: '#FFFDF9' }}
               >
                 Add Meal
               </a>
               <a
                 href="/home"
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-semibold transition-colors"
+                style={{ borderRadius: '999px', border: '1px solid rgba(1,35,116,0.2)', color: '#001A4D', background: '#FFFDF9' }}
               >
                 Add Glucose
               </a>
@@ -395,8 +396,8 @@ export default function InsightsPage() {
         )}
 
         {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-warning/30 rounded-lg p-4">
-          <p className="text-sm text-gray-700">
+        <div className="rounded-[14px] p-4" style={{ background: 'rgba(200,147,43,0.08)', border: '1px solid rgba(200,147,43,0.25)' }}>
+          <p className="text-sm" style={{ color: '#7A5200' }}>
             💡 <strong>Note:</strong> These insights are for informational purposes only and should not replace medical advice. Always consult your healthcare provider for diabetes management decisions.
           </p>
         </div>

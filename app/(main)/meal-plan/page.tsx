@@ -80,17 +80,36 @@ export default function MealPlanPage() {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 16px',
+    borderRadius: '10px',
+    border: '1px solid rgba(1,35,116,0.15)',
+    background: '#F7EFE1',
+    fontSize: '14px',
+    color: '#001A4D',
+    outline: 'none',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 500,
+    marginBottom: '8px',
+    color: '#001A4D',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-background mobile-page-pb">
+    <div className="min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
         <div className="max-w-2xl mx-auto px-6 py-4">
           <BackButton href="/home" />
-          <h1 className="text-2xl font-bold flex items-center gap-2 mt-2">
-            <ChefHat className="w-6 h-6 text-primary" />
+          <h1 className="font-serif-italic flex items-center gap-2 mt-2" style={{ fontSize: '1.6rem', color: '#012374' }}>
+            <ChefHat className="w-6 h-6" />
             Meal Plan Generator
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm mt-1" style={{ color: 'rgba(1,35,116,0.55)' }}>
             Generate personalized meal plans based on your history
           </p>
         </div>
@@ -99,19 +118,13 @@ export default function MealPlanPage() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
         {/* Configuration Form */}
-        <div className="bg-white rounded-card shadow-card p-6">
-          <h2 className="font-semibold mb-4">Plan Configuration</h2>
+        <div className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
+          <h2 className="font-serif-italic mb-4" style={{ fontSize: '1.1rem', color: '#001A4D' }}>Plan Configuration</h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Days
-              </label>
-              <select
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
+              <label style={labelStyle}>Number of Days</label>
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={inputStyle}>
                 <option value={3}>3 days</option>
                 <option value={7}>7 days (1 week)</option>
                 <option value={14}>14 days (2 weeks)</option>
@@ -119,32 +132,24 @@ export default function MealPlanPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Calories per Day
-              </label>
+              <label style={labelStyle}>Target Calories per Day</label>
               <input
                 type="number"
                 value={targetCalories}
                 onChange={(e) => setTargetCalories(Number(e.target.value))}
-                min={1200}
-                max={4000}
-                step={100}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                min={1200} max={4000} step={100}
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Carbs per Meal (g)
-              </label>
+              <label style={labelStyle}>Max Carbs per Meal (g)</label>
               <input
                 type="number"
                 value={maxCarbs}
                 onChange={(e) => setMaxCarbs(Number(e.target.value))}
-                min={10}
-                max={200}
-                step={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                min={10} max={200} step={5}
+                style={inputStyle}
               />
             </div>
           </div>
@@ -152,12 +157,18 @@ export default function MealPlanPage() {
           <button
             onClick={generateMealPlan}
             disabled={loading}
-            className="w-full mt-6 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full mt-6 py-3 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              borderRadius: '999px',
+              background: '#012374',
+              color: '#FFFDF9',
+              boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
+            }}
           >
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Generating...
+                Generating…
               </>
             ) : (
               <>
@@ -174,32 +185,27 @@ export default function MealPlanPage() {
             <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-medium text-danger">Error</p>
-              <p className="text-sm text-gray-700 mt-1">{error}</p>
+              <p className="text-sm mt-1" style={{ color: '#16182A' }}>{error}</p>
             </div>
           </div>
         )}
 
         {/* Summary */}
         {summary && (
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-card border border-primary/20 p-6">
-            <h2 className="font-semibold text-lg mb-4">Plan Summary</h2>
+          <div className="rounded-card border p-6" style={{ background: 'rgba(1,35,116,0.05)', border: '1px solid rgba(1,35,116,0.12)' }}>
+            <h2 className="font-serif-italic mb-4" style={{ fontSize: '1.1rem', color: '#001A4D' }}>Plan Summary</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{summary.days}</div>
-                <div className="text-sm text-gray-600 mt-1">Days</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{summary.avgCaloriesPerDay}</div>
-                <div className="text-sm text-gray-600 mt-1">Avg Cal/Day</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{summary.avgCarbsPerDay}g</div>
-                <div className="text-sm text-gray-600 mt-1">Avg Carbs/Day</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{summary.basedOnMeals}</div>
-                <div className="text-sm text-gray-600 mt-1">Meals Used</div>
-              </div>
+              {[
+                { value: summary.days, label: 'Days' },
+                { value: summary.avgCaloriesPerDay, label: 'Avg Cal/Day' },
+                { value: `${summary.avgCarbsPerDay}g`, label: 'Avg Carbs/Day' },
+                { value: summary.basedOnMeals, label: 'Meals Used' },
+              ].map(({ value, label }) => (
+                <div key={label} className="text-center">
+                  <div className="text-3xl font-bold" style={{ color: '#012374' }}>{value}</div>
+                  <div className="text-sm mt-1" style={{ color: 'rgba(1,35,116,0.55)' }}>{label}</div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -207,18 +213,18 @@ export default function MealPlanPage() {
         {/* Meal Plan */}
         {mealPlan && mealPlan.length > 0 && (
           <div className="space-y-4">
-            <h2 className="font-semibold text-lg">Your {days}-Day Meal Plan</h2>
+            <h2 className="font-serif-italic" style={{ fontSize: '1.15rem', color: '#001A4D' }}>Your {days}-Day Meal Plan</h2>
 
             {mealPlan.map((day) => (
-              <div key={day.day} className="bg-white rounded-card shadow-card p-6">
+              <div key={day.day} className="rounded-card shadow-card p-6" style={{ background: '#FFFDF9' }}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">
-                      Day {day.day} - {day.date}
+                    <Calendar className="w-5 h-5" style={{ color: '#012374' }} />
+                    <h3 className="font-semibold" style={{ color: '#001A4D' }}>
+                      Day {day.day} — {day.date}
                     </h3>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm" style={{ color: 'rgba(1,35,116,0.55)' }}>
                     {day.totalCalories} cal | {day.totalCarbs}g carbs
                   </div>
                 </div>
@@ -227,25 +233,24 @@ export default function MealPlanPage() {
                   {day.meals.map((meal, idx) => (
                     <div
                       key={idx}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-primary/30 transition-colors"
+                      className="p-4 transition-colors rounded-[14px]"
+                      style={{ border: '1px solid rgba(1,35,116,0.08)', background: 'rgba(1,35,116,0.02)' }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <div className="text-xs font-medium text-gray-500 uppercase">
+                          <div className="text-xs font-semibold uppercase" style={{ color: 'rgba(1,35,116,0.45)', letterSpacing: '0.06em' }}>
                             {meal.category}
                           </div>
-                          <div className="font-medium text-gray-900 mt-1">{meal.name}</div>
+                          <div className="font-medium mt-1" style={{ color: '#001A4D' }}>{meal.name}</div>
                         </div>
                         <span
-                          className={`text-xs px-2 py-1 rounded-full border ${getImpactColor(
-                            meal.expectedGlucoseImpact
-                          )}`}
+                          className={`text-xs px-2 py-1 rounded-full border ${getImpactColor(meal.expectedGlucoseImpact)}`}
                         >
                           {meal.expectedGlucoseImpact} impact
                         </span>
                       </div>
 
-                      <div className="flex gap-4 text-sm text-gray-600 mt-2">
+                      <div className="flex gap-4 text-sm mt-2" style={{ color: 'rgba(1,35,116,0.55)' }}>
                         {meal.calories && <span>{meal.calories} cal</span>}
                         {meal.carbs && <span>{meal.carbs}g carbs</span>}
                         {meal.protein && <span>{meal.protein}g protein</span>}
@@ -260,10 +265,10 @@ export default function MealPlanPage() {
 
         {/* Empty State */}
         {!mealPlan && !loading && !error && (
-          <div className="bg-white rounded-card shadow-card p-8 text-center">
-            <ChefHat className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">No Meal Plan Yet</h3>
-            <p className="text-gray-600 text-sm">
+          <div className="rounded-card shadow-card p-8 text-center" style={{ background: '#FFFDF9' }}>
+            <ChefHat className="w-16 h-16 mx-auto mb-4" style={{ color: 'rgba(1,35,116,0.2)' }} />
+            <h3 className="font-serif-italic mb-2" style={{ fontSize: '1.1rem', color: '#001A4D' }}>No Meal Plan Yet</h3>
+            <p className="text-sm" style={{ color: 'rgba(1,35,116,0.55)' }}>
               Configure your preferences above and click Generate to create a personalized meal
               plan based on your meal history.
             </p>
