@@ -64,24 +64,23 @@ export default function MovementCard({ lastMealId }: Props) {
   });
 
   useEffect(() => {
-    fetch('/api/activity?limit=5')
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    fetch(`/api/activity?date=${today}&limit=20`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.logs?.length) {
-          const today = new Date().toDateString();
-          const todayLogs = d.logs.filter((l: any) => new Date(l.loggedAt).toDateString() === today);
-          if (todayLogs.length) {
-            const steps = todayLogs.reduce((s: number, l: any) => s + (l.steps || 0), 0);
-            const activeMin = todayLogs.reduce((s: number, l: any) => s + (l.activityMinutes || 0), 0);
-            const last = todayLogs[0];
-            setSummary({
-              steps: steps || undefined,
-              activeMinutes: activeMin || undefined,
-              lastActivityLabel: ACTIVITY_TYPES.find(a => a.value === last.activityType)?.label ?? last.activityType,
-              lastActivityTime: new Date(last.loggedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-              lastActivityNotes: last.notes,
-            });
-          }
+          const logs = d.logs;
+          const steps = logs.reduce((s: number, l: any) => s + (l.steps || 0), 0);
+          const activeMin = logs.reduce((s: number, l: any) => s + (l.activityMinutes || 0), 0);
+          const last = logs[0];
+          const lastTime = last.date ? new Date(last.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : undefined;
+          setSummary({
+            steps: steps || undefined,
+            activeMinutes: activeMin || undefined,
+            lastActivityLabel: ACTIVITY_TYPES.find(a => a.value === last.activityType)?.label ?? last.activityType,
+            lastActivityTime: lastTime,
+            lastActivityNotes: last.notes,
+          });
         }
       })
       .catch(() => {})

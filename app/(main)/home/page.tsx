@@ -93,6 +93,7 @@ export default function HomePage() {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [waterOz, setWaterOz] = useState(0);
+  const [gentleInsight, setGentleInsight] = useState<{ message: string; reason?: string } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -104,6 +105,27 @@ export default function HomePage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => data && setUserData(data.user))
       .catch(console.error);
+  }, [session]);
+
+  // Load today's water total from API
+  useEffect(() => {
+    if (!session) return;
+    fetch('/api/hydration')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.totalOz != null) setWaterOz(Math.round(d.totalOz)); })
+      .catch(() => {});
+  }, [session]);
+
+  // Load a gentle insight from API
+  useEffect(() => {
+    if (!session) return;
+    fetch('/api/insights')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const first = d?.insights?.[0];
+        if (first?.message) setGentleInsight({ message: first.message, reason: first.reason });
+      })
+      .catch(() => {});
   }, [session]);
 
   const handleGlucoseUpdate = async (value: number, context?: string, relatedMealId?: string, notes?: string) => {
@@ -126,6 +148,17 @@ export default function HomePage() {
         body: JSON.stringify(data),
       });
     } catch (err) { console.error(err); }
+  };
+
+  const logWater = async (oz: number) => {
+    setWaterOz(w => Math.min(128, w + oz)); // optimistic
+    try {
+      await fetch('/api/hydration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drinkType: 'water', amountOz: oz }),
+      });
+    } catch { /* keep optimistic update */ }
   };
 
   const handleContextSave = async (context: UserContext) => {
@@ -277,7 +310,7 @@ export default function HomePage() {
             </div>
             <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
               {[8, 12, 16].map(oz => (
-                <button key={oz} type="button" onClick={() => setWaterOz(w => Math.min(128, w + oz))}
+                <button key={oz} type="button" onClick={() => logWater(oz)}
                   style={{ flex: 1, padding: '5px 0', borderRadius: '8px', fontSize: '11px', fontWeight: 600, background: 'rgba(42,111,168,0.1)', color: '#2A6FA8', border: 'none', cursor: 'pointer' }}>
                   +{oz}oz
                 </button>
@@ -292,15 +325,29 @@ export default function HomePage() {
         </div>
 
         {/* ── Gentle insight ── */}
-        <div style={{ marginTop: '11px', background: 'rgba(28,122,79,0.08)', border: '1px solid rgba(28,122,79,0.2)', borderRadius: '18px', padding: '17px' }}>
-          <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>A gentle pattern</div>
-          <div className="font-serif-italic" style={{ fontSize: '16px', color: '#16182A', lineHeight: 1.3, marginTop: '6px' }}>
-            Your glucose may look steadier on days with a short walk after lunch.
+        {gentleInsight ? (
+          <div style={{ marginTop: '11px', background: 'rgba(28,122,79,0.08)', border: '1px solid rgba(28,122,79,0.2)', borderRadius: '18px', padding: '17px' }}>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>A gentle pattern</div>
+            <div className="font-serif-italic" style={{ fontSize: '16px', color: '#16182A', lineHeight: 1.3, marginTop: '6px' }}>
+              {gentleInsight.message}
+            </div>
+            {gentleInsight.reason && (
+              <div style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.65)', marginTop: '5px', lineHeight: 1.45 }}>
+                {gentleInsight.reason} — Discuss with your care team.
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.65)', marginTop: '5px', lineHeight: 1.45 }}>
-            Just something to notice — no pressure to repeat it. Discuss with your care team.
+        ) : (
+          <div style={{ marginTop: '11px', background: 'rgba(28,122,79,0.08)', border: '1px solid rgba(28,122,79,0.2)', borderRadius: '18px', padding: '17px' }}>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>A gentle pattern</div>
+            <div className="font-serif-italic" style={{ fontSize: '16px', color: '#16182A', lineHeight: 1.3, marginTop: '6px' }}>
+              Keep logging — your patterns will show up here after a few days.
+            </div>
+            <div style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.65)', marginTop: '5px', lineHeight: 1.45 }}>
+              No judgment, just gentle context. Discuss anything notable with your care team.
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Quick actions ── */}
         <div style={{ marginTop: '18px' }}>

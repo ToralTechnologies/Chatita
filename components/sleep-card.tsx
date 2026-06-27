@@ -58,20 +58,19 @@ export default function SleepCard() {
   const set = (k: keyof typeof form, v: unknown) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    fetch('/api/sleep?limit=1')
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    fetch(`/api/sleep?date=${today}&limit=1`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        const log = d?.logs?.[0] ?? d?.[0];
+        const log = d?.logs?.[0];
         if (log) {
-          const today = new Date().toDateString();
-          const logDate = new Date(log.loggedAt ?? log.wakeTime ?? log.createdAt).toDateString();
-          if (logDate === today || log.wakeTime) {
-            setSummary({
-              durationLabel: log.sleepStart && log.wakeTime ? formatDuration(log.sleepStart, log.wakeTime) : undefined,
-              quality: log.sleepQuality,
-              wakeEnergy: log.wakeEnergy,
-            });
-          }
+          setSummary({
+            durationLabel: log.sleepStart && log.wakeTime ? formatDuration(log.sleepStart, log.wakeTime)
+              : log.totalSleepMinutes ? `${Math.floor(log.totalSleepMinutes / 60)}h ${log.totalSleepMinutes % 60}m`
+              : undefined,
+            quality: log.sleepQuality,
+            wakeEnergy: log.wakeEnergy,
+          });
         }
       })
       .catch(() => {})

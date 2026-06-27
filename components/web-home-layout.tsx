@@ -143,6 +143,19 @@ export default function WebHomeLayout({
   // reading flow: after done, offer mood add-on
   const [offerMood, setOfferMood] = useState(false);
 
+  // Extended mood state (checkin step 1)
+  const [moodStress, setMoodStress] = useState<string | null>(null);
+  const [moodExpanded, setMoodExpanded] = useState(false);
+  const [moodEnergyLevel, setMoodEnergyLevel] = useState<number | null>(null);
+  const [moodHungerLevel, setMoodHungerLevel] = useState<number | null>(null);
+  const [moodFullness, setMoodFullness] = useState<number | null>(null);
+  const [moodCravings, setMoodCravings] = useState<string[]>([]);
+  const [moodBodySymptoms, setMoodBodySymptoms] = useState<string[]>([]);
+  const [moodContextTags, setMoodContextTags] = useState<string[]>([]);
+  const [moodUserWords, setMoodUserWords] = useState('');
+  const [moodFoodMood, setMoodFoodMood] = useState('');
+  const [moodSupportWanted, setMoodSupportWanted] = useState('');
+
   const targetMin = userData?.targetGlucoseMin || (userContext as any)?.targetMin || 70;
   const targetMax = userData?.targetGlucoseMax || (userContext as any)?.targetMax || 180;
 
@@ -194,6 +207,20 @@ export default function WebHomeLayout({
 
   const bucket = BUCKETS[getBucket(moodVal)];
 
+  const resetMoodExtended = () => {
+    setMoodStress(null);
+    setMoodExpanded(false);
+    setMoodEnergyLevel(null);
+    setMoodHungerLevel(null);
+    setMoodFullness(null);
+    setMoodCravings([]);
+    setMoodBodySymptoms([]);
+    setMoodContextTags([]);
+    setMoodUserWords('');
+    setMoodFoodMood('');
+    setMoodSupportWanted('');
+  };
+
   const openCheckin = () => {
     setFlowType('checkin');
     setStep(1);
@@ -204,6 +231,7 @@ export default function WebHomeLayout({
     setMoodWords([]);
     setFactors([]);
     setOfferMood(false);
+    resetMoodExtended();
     setShowAddReading(true);
   };
 
@@ -217,6 +245,7 @@ export default function WebHomeLayout({
     setMoodWords([]);
     setFactors([]);
     setOfferMood(false);
+    resetMoodExtended();
     setShowAddReading(true);
   };
 
@@ -225,10 +254,52 @@ export default function WebHomeLayout({
     if (!isNaN(v) && v > 0) {
       onGlucoseUpdate?.(v, contextFromMeal(meal), undefined, body.join(', '));
     }
+
     if (flowType === 'checkin') {
-      setStep(5); // checkin flow: 4 steps → done
+      // Map bucket index → Mood enum
+      const BUCKET_MOOD = ['sad', 'anxious', 'neutral', 'calm', 'happy'] as const;
+      const bucketIdx = getBucket(moodVal);
+      const mood = BUCKET_MOOD[bucketIdx];
+      const stressMap: Record<string, number> = { Easy: 2, Mild: 4, Some: 6, Heavy: 8, 'A lot': 10 };
+      const stressLevel = moodStress ? stressMap[moodStress] : 5;
+      const combinedTags = [...factors, ...moodContextTags];
+
+      const moodData: MoodCheckInData = {
+        mood,
+        stressLevel,
+        energyLevel: moodEnergyLevel ?? undefined,
+        hungerLevel: moodHungerLevel ?? undefined,
+        fullnessLevel: moodFullness ?? undefined,
+        cravings: moodCravings.length ? moodCravings : undefined,
+        symptoms: moodBodySymptoms.length ? moodBodySymptoms : undefined,
+        contextTags: combinedTags.length ? combinedTags : undefined,
+        userWords: moodUserWords || undefined,
+        foodMoodConnection: moodFoodMood || undefined,
+        supportWanted: moodSupportWanted || undefined,
+      };
+
+      fetch('/api/mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mood,
+          stressLevel,
+          energyLevel: moodData.energyLevel,
+          hungerLevel: moodData.hungerLevel,
+          fullnessLevel: moodData.fullnessLevel,
+          cravings: moodData.cravings,
+          symptoms: moodData.symptoms,
+          contextTags: moodData.contextTags,
+          userWords: moodData.userWords,
+          foodMoodConnection: moodData.foodMoodConnection,
+          supportWanted: moodData.supportWanted,
+        }),
+      }).catch(() => {});
+
+      onMoodSave?.(moodData);
+      setStep(5);
     } else {
-      setStep(3); // reading flow: 2 steps → done (step 3)
+      setStep(3);
     }
   };
 
@@ -667,6 +738,135 @@ export default function WebHomeLayout({
                       ))}
                     </div>
                   </div>
+
+                  {/* Stress */}
+                  <div style={{ marginTop: 22, background: '#FFFDF9', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(1,35,116,0.07)' }}>
+                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Stress today is</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {['Easy', 'Mild', 'Some', 'Heavy', 'A lot'].map(level => (
+                        <button key={level} onClick={() => setMoodStress(moodStress === level ? null : level)} style={{
+                          flex: 1, padding: '9px 0', borderRadius: 10, fontFamily: 'inherit',
+                          fontSize: 13, fontWeight: moodStress === level ? 600 : 400, cursor: 'pointer',
+                          background: moodStress === level ? '#012374' : 'transparent',
+                          color: moodStress === level ? '#FFFDF9' : '#012374',
+                          border: moodStress === level ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)',
+                          transition: 'all 0.15s',
+                        }}>{level}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Add more detail toggle */}
+                  <button
+                    onClick={() => setMoodExpanded(!moodExpanded)}
+                    style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#012374', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                  >
+                    <span style={{ fontSize: 17, lineHeight: 1 }}>{moodExpanded ? '−' : '+'}</span>
+                    {moodExpanded ? 'Less detail' : 'Add more detail'}
+                    {(moodCravings.length + moodBodySymptoms.length + moodContextTags.length + (moodEnergyLevel ? 1 : 0) + (moodUserWords ? 1 : 0)) > 0 && (
+                      <span style={{ fontSize: 11, background: '#012374', color: '#FFFDF9', borderRadius: 99, padding: '1px 7px' }}>
+                        {moodCravings.length + moodBodySymptoms.length + moodContextTags.length + (moodEnergyLevel ? 1 : 0) + (moodUserWords ? 1 : 0)}
+                      </span>
+                    )}
+                  </button>
+
+                  {moodExpanded && (
+                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                      {/* Scales */}
+                      <div style={{ background: '#FFFDF9', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(1,35,116,0.07)' }}>
+                        {[
+                          { label: 'Energy level', val: moodEnergyLevel, set: setMoodEnergyLevel },
+                          { label: 'Hunger level', val: moodHungerLevel, set: setMoodHungerLevel },
+                          { label: 'Fullness', val: moodFullness, set: setMoodFullness },
+                        ].map(({ label, val, set }) => (
+                          <div key={label} style={{ marginBottom: 14 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>{label}</p>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                <button key={n} onClick={() => set(val === n ? null : n)} style={{
+                                  flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12,
+                                  fontWeight: val === n ? 700 : 400,
+                                  background: val === n ? '#012374' : 'transparent',
+                                  color: val === n ? '#FFFDF9' : '#012374',
+                                  border: val === n ? '1px solid #012374' : '1px solid rgba(1,35,116,0.15)',
+                                  cursor: 'pointer', fontFamily: 'inherit',
+                                }}>{n}</button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Cravings */}
+                      <div>
+                        <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Any cravings?</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {['None', 'Sweet', 'Salty', 'Crunchy', 'Carbs', 'Late-night', 'Not sure'].map(c => (
+                            <button key={c} onClick={() => setMoodCravings(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} style={{
+                              padding: '8px 15px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13,
+                              fontWeight: moodCravings.includes(c) ? 600 : 400, cursor: 'pointer',
+                              background: moodCravings.includes(c) ? '#012374' : '#FFFDF9',
+                              color: moodCravings.includes(c) ? '#FFFDF9' : '#012374',
+                              border: moodCravings.includes(c) ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                            }}>{c}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Body symptoms */}
+                      <div>
+                        <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>Body symptoms?</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {['Headache', 'Thirsty', 'Dry mouth', 'Nausea', 'Reflux', 'Constipation', 'Shaky', 'Tired', 'Dizzy', 'Bloated'].map(s => (
+                            <button key={s} onClick={() => setMoodBodySymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])} style={{
+                              padding: '8px 15px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13,
+                              fontWeight: moodBodySymptoms.includes(s) ? 600 : 400, cursor: 'pointer',
+                              background: moodBodySymptoms.includes(s) ? '#E3171A' : '#FFFDF9',
+                              color: moodBodySymptoms.includes(s) ? '#FFFDF9' : '#012374',
+                              border: moodBodySymptoms.includes(s) ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                            }}>{s}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Context tags */}
+                      <div>
+                        <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 10 }}>What else is going on?</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {['Poor sleep', 'High stress', 'On period', 'Sick day', 'Skipped meal', 'Ate less than usual', 'Ate more than usual', 'Medication change', 'After exercise', 'No movement today'].map(t => (
+                            <button key={t} onClick={() => setMoodContextTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])} style={{
+                              padding: '8px 15px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13,
+                              fontWeight: moodContextTags.includes(t) ? 600 : 400, cursor: 'pointer',
+                              background: moodContextTags.includes(t) ? '#012374' : '#FFFDF9',
+                              color: moodContextTags.includes(t) ? '#FFFDF9' : '#012374',
+                              border: moodContextTags.includes(t) ? 'none' : '1px solid rgba(1,35,116,0.2)',
+                            }}>{t}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Free text */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {[
+                          { label: "What's going on in your own words?", value: moodUserWords, onChange: setMoodUserWords, placeholder: 'e.g. I feel overwhelmed and ate late because I had a long day.' },
+                          { label: 'What affected your glucose, food, or mood today?', value: moodFoodMood, onChange: setMoodFoodMood, placeholder: "e.g. I didn't drink much water and skipped breakfast." },
+                          { label: 'What kind of support would feel helpful right now?', value: moodSupportWanted, onChange: setMoodSupportWanted, placeholder: 'e.g. Give me a quick snack idea. / I just want to log it.' },
+                        ].map(({ label, value, onChange, placeholder }) => (
+                          <div key={label}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: '#012374', marginBottom: 6 }}>{label}</p>
+                            <textarea
+                              value={value}
+                              onChange={e => onChange(e.target.value)}
+                              placeholder={placeholder}
+                              rows={2}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(1,35,116,0.16)', background: '#F7EFE1', fontSize: 13.5, color: '#16182A', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
