@@ -266,6 +266,7 @@ export default function AddMealPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        photoBase64: state.imagePreview || undefined,
         detectedFoods: state.foods,
         aiSummary: state.aiResult?.aiSummary,
         aiConfidence: state.aiResult?.confidence,
@@ -294,6 +295,7 @@ export default function AddMealPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          photoBase64: state.imagePreview || undefined,
           detectedFoods: finalFoods,
           aiSummary: data.aiSummary,
           aiConfidence: data.confidence,
