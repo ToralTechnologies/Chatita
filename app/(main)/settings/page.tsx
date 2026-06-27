@@ -575,8 +575,9 @@ function SettingsContent() {
               <div style={card}><LanguageSwitcher /></div>
             </div>
 
-            {/* Right column: CGM + reports/account */}
+            {/* Right column: connected health + CGM + reports/account */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <ConnectedHealthCard />
               <div style={{ ...card, padding: '22px' }}>
                 <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 18 }}>Connect a CGM</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
