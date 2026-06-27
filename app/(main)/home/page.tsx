@@ -16,6 +16,7 @@ import WebHomeLayout from '@/components/web-home-layout';
 import MovementCard from '@/components/movement-card';
 import SleepCard from '@/components/sleep-card';
 import CycleCard from '@/components/cycle-card';
+import HealthTodayCard from '@/components/health-today-card';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
 import { MessageCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
@@ -369,8 +370,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── Movement card ── */}
+        {/* ── Connected health today — shown when imported data is available ── */}
         <div style={{ marginTop: '16px' }}>
+          <HealthTodayCard />
+        </div>
+
+        {/* ── Movement card ── */}
+        <div style={{ marginTop: '10px' }}>
           <MovementCard />
         </div>
 

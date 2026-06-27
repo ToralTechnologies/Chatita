@@ -12,6 +12,7 @@ import ThemeToggle from '@/components/theme-toggle';
 import BackButton from '@/components/back-button';
 import CulturalFoodProfileCard from '@/components/cultural-food-profile-card';
 import SleepBodyProfileCard from '@/components/sleep-body-profile-card';
+import ConnectedHealthCard from '@/components/connected-health-card';
 import { useTranslation } from '@/lib/i18n/context';
 import { Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
@@ -253,6 +254,16 @@ function SettingsContent() {
     const dexcomError = searchParams?.get('dexcom_error');
     if (dexcomSuccess) { setShowDexcomSuccess(true); setTimeout(() => setShowDexcomSuccess(false), 5000); }
     if (dexcomError) { setShowDexcomError(true); setTimeout(() => setShowDexcomError(false), 5000); }
+
+    const healthSuccess = searchParams?.get('health_success');
+    const healthError = searchParams?.get('health_error');
+    if (healthSuccess) {
+      // Short toast — ConnectedHealthCard will re-fetch status on mount
+      console.info('[settings] Google Health connected:', healthSuccess);
+    }
+    if (healthError) {
+      console.warn('[settings] Google Health error:', healthError);
+    }
   }, [searchParams]);
 
   const fetchUserSettings = async () => {
@@ -528,6 +539,7 @@ function SettingsContent() {
           <HealthProfileCard />
           <CulturalFoodProfileCard />
           <SleepBodyProfileCard />
+          <ConnectedHealthCard />
           {dexcomCard}
           {libreCard}
           {reportsCard}

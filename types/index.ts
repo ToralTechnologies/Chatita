@@ -337,4 +337,66 @@ export interface ChatHealthContext {
     stressBeforeBed?: number | null;
     nighttimeWakeups?: number | null;
   };
+
+  // Connected health data (from HealthDailySummary — today's imported data)
+  connectedHealthToday?: {
+    provider: string;            // 'google_health' | 'apple_health_export'
+    steps?: number | null;
+    activeMinutes?: number | null;
+    exerciseMinutes?: number | null;
+    sleepMinutes?: number | null;
+    restingHeartRate?: number | null;
+    averageHeartRate?: number | null;
+    activeCalories?: number | null;
+  } | null;
+}
+
+// Health provider types for connected data
+export type HealthProvider =
+  | 'google_health'
+  | 'apple_health_export'
+  | 'apple_healthkit_companion_future'
+  | 'manual'
+  | 'legacy_fitbit_deprecated';
+
+export type HealthConnectionStatus = 'connected' | 'disconnected' | 'error' | 'pending';
+
+export interface HealthConnectionInfo {
+  id: string;
+  provider: HealthProvider;
+  status: HealthConnectionStatus;
+  lastSyncedAt?: string | null;
+  errorMessage?: string | null;
+  consentedAt?: string | null;
+}
+
+export interface HealthDailySummaryEntry {
+  id: string;
+  userId: string;
+  date: string;
+  provider: HealthProvider;
+  steps?: number | null;
+  activeMinutes?: number | null;
+  exerciseMinutes?: number | null;
+  distanceMeters?: number | null;
+  activeCalories?: number | null;
+  totalCalories?: number | null;
+  sleepMinutes?: number | null;
+  sleepQuality?: string | null;
+  restingHeartRate?: number | null;
+  averageHeartRate?: number | null;
+  workoutCount?: number | null;
+  importedAt: string;
+}
+
+export interface HealthImportEntry {
+  id: string;
+  provider: HealthProvider;
+  importType: string;
+  filename?: string | null;
+  status: string;
+  recordsProcessed?: number | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
 }

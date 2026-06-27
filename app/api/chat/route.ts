@@ -21,7 +21,12 @@ async function buildHealthContext(
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   // Fetch in parallel: full user profile, recent glucose, recent meals, today's all meals, recent sleep
-  const [user, recentGlucoseEntry, recentMealEntries, todayMeals, recentSleep] = await Promise.all([
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  const [user, recentGlucoseEntry, recentMealEntries, todayMeals, recentSleep, connectedHealthToday] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -85,6 +90,11 @@ async function buildHealthContext(
       orderBy: { date: 'desc' },
       select: { totalSleepMinutes: true, sleepQuality: true, wakeEnergy: true, stressBeforeBed: true, nighttimeWakeups: true },
     }),
+    prisma.healthDailySummary.findFirst({
+      where: { userId, date: { gte: todayStart, lt: todayEnd } },
+      orderBy: { importedAt: 'desc' },
+      select: { provider: true, steps: true, activeMinutes: true, exerciseMinutes: true, sleepMinutes: true, restingHeartRate: true, averageHeartRate: true, activeCalories: true },
+    }),
   ]);
 
   const ctx: ChatHealthContext = {
@@ -128,12 +138,26 @@ async function buildHealthContext(
 
     // Inject recent sleep into health context
     if (recentSleep) {
-      (ctx as any).recentSleep = {
+      ctx.recentSleep = {
         totalSleepMinutes: recentSleep.totalSleepMinutes,
         sleepQuality: recentSleep.sleepQuality,
         wakeEnergy: recentSleep.wakeEnergy,
         stressBeforeBed: recentSleep.stressBeforeBed,
         nighttimeWakeups: recentSleep.nighttimeWakeups,
+      };
+    }
+
+    // Inject today's connected health data (from wearable/import)
+    if (connectedHealthToday) {
+      ctx.connectedHealthToday = {
+        provider: connectedHealthToday.provider,
+        steps: connectedHealthToday.steps,
+        activeMinutes: connectedHealthToday.activeMinutes,
+        exerciseMinutes: connectedHealthToday.exerciseMinutes,
+        sleepMinutes: connectedHealthToday.sleepMinutes,
+        restingHeartRate: connectedHealthToday.restingHeartRate,
+        averageHeartRate: connectedHealthToday.averageHeartRate,
+        activeCalories: connectedHealthToday.activeCalories,
       };
     }
   }

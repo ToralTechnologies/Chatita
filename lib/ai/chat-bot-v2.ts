@@ -82,6 +82,26 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     sections.push(`Today's nutrition:\n${lines.join('\n')}`);
   }
 
+  // --- Connected health data (wearable / import) ---
+  if (healthCtx?.connectedHealthToday) {
+    const c = healthCtx.connectedHealthToday;
+    const providerLabel = c.provider === 'google_health' ? 'Google Health' : 'Apple Health';
+    const cLines: string[] = [];
+    if (c.steps != null) cLines.push(`  - Steps: ${c.steps.toLocaleString()}`);
+    if (c.activeMinutes != null) cLines.push(`  - Active minutes: ${c.activeMinutes}`);
+    if (c.exerciseMinutes != null) cLines.push(`  - Exercise minutes: ${c.exerciseMinutes}`);
+    if (c.activeCalories != null) cLines.push(`  - Active calories: ${Math.round(c.activeCalories)}`);
+    if (c.sleepMinutes != null) {
+      const sh = Math.floor(c.sleepMinutes / 60);
+      const sm = c.sleepMinutes % 60;
+      cLines.push(`  - Sleep: ${sh}h ${sm}min`);
+    }
+    if (c.restingHeartRate != null) cLines.push(`  - Resting heart rate: ${c.restingHeartRate} bpm`);
+    if (cLines.length > 0) {
+      sections.push(`Connected health data today (from ${providerLabel} — use cautious language, wearable data may be incomplete):\n${cLines.join('\n')}`);
+    }
+  }
+
   // --- Recent sleep ---
   if (healthCtx?.recentSleep) {
     const sl = healthCtx.recentSleep;
@@ -312,6 +332,27 @@ Cycle tracking guidance (only when user has opted in):
 
 GLP-1 + sleep/cycle:
 If user is on GLP-1 (Ozempic, Mounjaro, Wegovy, Zepbound) and logs poor sleep or cycle symptoms: "If you're feeling fatigued, nauseated, or low-energy, rest and hydration come first. Movement and other goals can wait until your body feels ready."
+
+== CONNECTED HEALTH DATA GUIDANCE ==
+When steps, active minutes, workouts, sleep, or heart rate come from a connected source (Google Health, Apple Health, or a wearable), treat that data as helpful context — not as ground truth.
+
+Use these principles:
+1. Connected data may be incomplete or imperfect — "Wearables do a good job of estimating, but the exact numbers aren't as important as the overall pattern."
+2. Never overstate causality with device data — use "may," "could be related," "a pattern worth tracking"
+3. Do NOT expose technical provider names to the user unless relevant. Say "your activity data" or "connected data" — not "Google Fitness API" or "Apple HealthKit."
+4. If data shows low steps but the user reports high fatigue or GLP-1 side effects: "Rest and hydration may be more helpful than movement right now."
+5. If data shows good activity: "It looks like you moved quite a bit today — that can support glucose levels and mood."
+6. NEVER shame for low steps. Missing step goals is not a failure. "Your body's needs vary day to day."
+7. If data source is unknown, do not speculate about which device provided it.
+8. Do not make medical claims based on wearable data — always recommend the care team for clinical interpretation.
+
+Example insights (use cautious language):
+- "You walked more on days when your post-meal glucose looked steadier. That's a pattern worth tracking."
+- "You slept less last night and logged lower energy today. Sleep can affect appetite, cravings, mood, and glucose patterns."
+- "Your steps were lower today, but you logged fatigue and nausea. Rest and hydration may be more helpful than pushing movement."
+
+GLP-1 + connected data:
+If the user is on a GLP-1 medication and connected data shows low activity or short sleep: "If nausea, fatigue, or appetite changes are playing a role, rest and hydration come first. Movement goals can wait."
 
 == MOVEMENT & ACTIVITY GUIDANCE ==
 Movement is personal and varies enormously — do not assume the user can or wants to exercise. Your role is to:

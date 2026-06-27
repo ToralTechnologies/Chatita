@@ -105,6 +105,12 @@ model User {
   activityLogs        ActivityLog[]
   sleepLogs           SleepLog[]
   cycleLogs           CycleLog[]
+  // Connected health data
+  healthConnections     HealthConnection[]
+  healthDailySummaries  HealthDailySummary[]
+  healthMetricSamples   HealthMetricSample[]
+  healthImports         HealthImport[]
+  healthSyncLogs        HealthSyncLog[]
 }
 
 // NextAuth models for OAuth and session management
@@ -773,4 +779,126 @@ model CycleLog {
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
+}
+
+// ── Connected Health Data ──────────────────────────────────────────────────────
+// Provider values: google_health | apple_health_export | apple_healthkit_companion_future | manual
+
+// OAuth connection record — tokens stored AES-256-GCM encrypted
+model HealthConnection {
+  id             String    @id @default(cuid())
+  userId         String
+  provider       String    // google_health | apple_health_export | ...
+  status         String    @default("disconnected") // connected | disconnected | error | pending
+
+  providerUserId String?
+  scopes         String?   @db.Text  // JSON array of granted scopes
+  accessTokenEnc  String?  @db.Text  // AES-256-GCM encrypted: iv:authTag:ciphertext
+  refreshTokenEnc String?  @db.Text  // AES-256-GCM encrypted
+  tokenExpiresAt DateTime?
+
+  lastSyncedAt   DateTime?
+  syncCursor     String?   @db.Text
+  errorMessage   String?   @db.Text
+
+  consentVersion String?
+  consentedAt    DateTime?
+  disconnectedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId, provider])
+}
+
+// Normalized daily health summary (steps, sleep, HR, calories, etc.)
+model HealthDailySummary {
+  id       String   @id @default(cuid())
+  userId   String
+  date     DateTime
+  provider String   // google_health | apple_health_export | manual
+
+  steps            Int?
+  activeMinutes    Int?
+  exerciseMinutes  Int?
+  distanceMeters   Float?
+  activeCalories   Float?
+  totalCalories    Float?
+
+  sleepMinutes     Int?
+  sleepQuality     String?
+  restingHeartRate Int?
+  averageHeartRate Int?
+
+  workoutCount     Int?
+
+  sourceRawId  String?
+  importedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, provider])
+  @@index([userId, date])
+}
+
+// Detailed metric samples (heart rate points, workout segments, etc.)
+model HealthMetricSample {
+  id         String    @id @default(cuid())
+  userId     String
+  provider   String
+  metricType String    // steps | heart_rate | active_calories | sleep | workout | weight | blood_glucose
+  value      Float?
+  unit       String?
+  startTime  DateTime?
+  endTime    DateTime?
+  sourceRawId String?
+  metadata   Json?
+
+  importedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricType, startTime])
+  @@index([userId, provider])
+}
+
+// Apple Health export upload / Google sync job record
+model HealthImport {
+  id               String    @id @default(cuid())
+  userId           String
+  provider         String
+  importType       String    // full_sync | incremental | manual_export
+  filename         String?
+  status           String    @default("pending") // pending | processing | completed | failed
+  recordsProcessed Int?
+  errorMessage     String?   @db.Text
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider, createdAt])
+}
+
+// Sync attempt audit log
+model HealthSyncLog {
+  id            String    @id @default(cuid())
+  userId        String
+  provider      String
+  status        String    // started | completed | failed | partial
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  recordsSynced Int?
+  errorMessage  String?   @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider, startedAt])
 }
