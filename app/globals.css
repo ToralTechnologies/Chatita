@@ -53,12 +53,27 @@
   --text-muted: rgba(1,35,116,0.5);
 }
 
+html, body {
+  /* Safety net: a single overflowing element should never cause the whole
+     page to scroll sideways on mobile. overflow-x: clip (not hidden) avoids
+     turning body into a scroll container, so position: sticky headers and
+     normal vertical scrolling keep working. */
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-page);
   color: var(--text-primary);
+}
+
+/* Long unbroken strings (URLs, emails, pasted text) should wrap rather than
+   force horizontal scroll. */
+h1, h2, h3, p, span, a, button, label, div {
+  overflow-wrap: break-word;
 }
 
 /* ── Safe area utilities (viewport-fit: cover) ── */
