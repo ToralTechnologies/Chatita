@@ -125,11 +125,14 @@ export async function syncGoogleHealth(userId: string): Promise<GoogleSyncResult
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        // All three share the fitness.activity.read scope we request at connect.
+        // NOTE: com.google.distance.delta is intentionally excluded — it needs
+        // the sensitive fitness.location.read scope, and a forbidden type in the
+        // batch 403s the ENTIRE aggregate (taking steps/calories down with it).
         aggregateBy: [
           { dataTypeName: 'com.google.step_count.delta' },
           { dataTypeName: 'com.google.active_minutes' },
           { dataTypeName: 'com.google.calories.expended' },
-          { dataTypeName: 'com.google.distance.delta' },
         ],
         bucketByTime: { durationMillis: 86400000 },
         startTimeMillis: startMs,
@@ -151,7 +154,6 @@ export async function syncGoogleHealth(userId: string): Promise<GoogleSyncResult
         let steps: number | undefined;
         let activeMinutes: number | undefined;
         let activeCalories: number | undefined;
-        let distanceMeters: number | undefined;
 
         for (const dataset of bucket.dataset) {
           const src = dataset.dataSourceId || '';
@@ -161,22 +163,26 @@ export async function syncGoogleHealth(userId: string): Promise<GoogleSyncResult
             if (src.includes('step_count')) steps = (steps ?? 0) + (val.intVal ?? 0);
             else if (src.includes('active_minutes')) activeMinutes = (activeMinutes ?? 0) + (val.intVal ?? 0);
             else if (src.includes('calories')) activeCalories = (activeCalories ?? 0) + (val.fpVal ?? 0);
-            else if (src.includes('distance')) distanceMeters = (distanceMeters ?? 0) + (val.fpVal ?? 0);
           }
         }
 
         if (steps != null || activeMinutes != null) {
           await prisma.healthDailySummary.upsert({
             where: { userId_date_provider: { userId, date, provider: PROVIDER } },
-            update: { steps, activeMinutes, activeCalories, distanceMeters, importedAt: new Date() },
-            create: { userId, date, provider: PROVIDER, steps, activeMinutes, activeCalories, distanceMeters },
+            update: { steps, activeMinutes, activeCalories, importedAt: new Date() },
+            create: { userId, date, provider: PROVIDER, steps, activeMinutes, activeCalories },
           });
           recordsSynced++;
         }
       }
     } else {
-      console.warn('[google-sync] Fitness API steps error:', await stepsRes.text());
-      errorMessage = `Fitness API error: ${stepsRes.status}`;
+      const body = await stepsRes.text();
+      console.warn('[google-sync] Fitness API steps error:', body);
+      // A 403 here means the granted OAuth scopes don't cover the requested data
+      // (e.g. activity access wasn't approved) — guide the user to reconnect.
+      errorMessage = stepsRes.status === 403
+        ? 'Google did not grant access to your activity data. Please disconnect and reconnect, allowing all requested permissions.'
+        : `Fitness API error: ${stepsRes.status}`;
     }
 
     // Sleep sessions (activityType 72).
