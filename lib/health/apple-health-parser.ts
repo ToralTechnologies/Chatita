@@ -38,6 +38,7 @@ export interface ParsedRecord {
   unit: string;
   startTime: Date;
   endTime: Date;
+  startDateRaw: string; // original startDate string, for timezone-correct day keying
 }
 
 /** Compact per-day summary — this is the small payload sent browser → server. */
@@ -72,6 +73,27 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Parse Apple Health's date format, e.g. "2026-06-01 11:50:00 -0500".
+ * This is NOT valid ISO 8601 (space separator, no colon in the offset), so
+ * Safari/JavaScriptCore returns Invalid Date for it — which silently dropped
+ * every record. Normalize to ISO 8601 first so it parses in all engines.
+ */
+function parseAppleDate(s: string): Date {
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\s*([+-]\d{2}):?(\d{2}))?/.exec(s);
+  if (m) {
+    const tz = m[3] != null ? `${m[3]}:${m[4]}` : '';
+    return new Date(`${m[1]}T${m[2]}${tz}`);
+  }
+  return new Date(s);
+}
+
+/** Local calendar day (yyyy-mm-dd) from an Apple date string, read literally. */
+function appleDayKey(raw: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
+
 /** Parse a single <Record ...> attribute string into a ParsedRecord (or null). */
 function parseRecordAttrs(attrs: string, selectedTypes: Set<string>): ParsedRecord | null {
   const typeMatch = /\btype="([^"]+)"/.exec(attrs);
@@ -96,19 +118,26 @@ function parseRecordAttrs(attrs: string, selectedTypes: Set<string>): ParsedReco
     metricType,
     value: isNaN(parsedVal) ? 0 : parsedVal,
     unit: unitMatch?.[1] ?? '',
-    startTime: new Date(startMatch[1]),
-    endTime: new Date(endMatch[1]),
+    startTime: parseAppleDate(startMatch[1]),
+    endTime: parseAppleDate(endMatch[1]),
+    startDateRaw: startMatch[1],
   };
 }
 
 /** Fold one record into the per-day accumulator map. */
 function addRecordToDays(days: Map<string, DayAccumulator>, r: ParsedRecord): void {
-  if (isNaN(r.startTime.getTime())) return;
-  const d = new Date(r.startTime);
-  d.setHours(0, 0, 0, 0);
-  const key = dayKey(d);
+  // Group by the local calendar day taken literally from the startDate string
+  // (e.g. "2026-06-01 ..."), which is the day the user experienced — and avoids
+  // depending on Date parsing succeeding for the key.
+  let key = appleDayKey(r.startDateRaw);
+  if (!key) {
+    if (isNaN(r.startTime.getTime())) return;
+    const d = new Date(r.startTime);
+    d.setHours(0, 0, 0, 0);
+    key = dayKey(d);
+  }
 
-  if (!days.has(key)) days.set(key, { date: d });
+  if (!days.has(key)) days.set(key, { date: new Date(`${key}T00:00:00`) });
   const day = days.get(key)!;
 
   switch (r.metricType) {
@@ -225,6 +254,7 @@ export class AppleHealthAggregator {
       `chars=${this.totalChars}`,
       `recordTags=${this.recordTagsSeen}`,
       `matched=${this.recordCount}`,
+      `days=${this.days.size}`,
       `types=[${topTypes || 'none'}]`,
       `sample="${this.sample.replace(/\s+/g, ' ').slice(0, 120)}"`,
     ].join(' · ');
