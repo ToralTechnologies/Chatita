@@ -283,13 +283,18 @@ Provide insights in JSON format:
 {
   "insights": [
     {
-      "type": "warning|success|tip|info",
+      "type": "warning|success|tip|info|mood|hydration|protein|sleep|glp1|movement|cycle",
       "title": "Short title (max 40 chars)",
       "message": "Warm, encouraging message from Chatita (1-2 sentences, supportive grandmotherly tone)",
-      "action": "Optional action button text"
+      "action": "Optional gentle 'try this' suggestion",
+      "viz": "OPTIONAL. Include only when the numbers support it. One of:
+        { \"kind\": \"bars\", \"label\": \"short axis label\", \"bars\": [0.0-1.0 per day, up to 7], \"highlight\": [indices to emphasize], \"days\": [\"Mo\",\"Tu\",...] }
+        OR { \"kind\": \"split\", \"splits\": [{ \"label\": \"...\", \"val\": \"7\", \"unit\": \"/10\", \"tone\": \"good|warn|bad|neutral\" }, { ...second... }] }
+        Use bars for a per-day trend (e.g. time-in-range, hydration, sleep) and split for two contrasting numbers (e.g. energy rested vs tired). Base values on the real data above; omit viz entirely if you'd be guessing."
     }
   ]
 }
+Only include "viz" when it reflects real patterns in the data provided — never fabricate values.
 
 Focus on:
 1. Foods causing spikes (if any)

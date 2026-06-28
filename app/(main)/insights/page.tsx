@@ -29,6 +29,14 @@ const TYPE_THEME: Record<string, { color: string; bg: string; iconD: string; kic
   'lowcarb-success': { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kicker: 'Protein + fiber' },
   'warning':         { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M12 3l9 16H3L12 3zM12 10v4M12 16.5v.5', kicker: 'A gentle pattern to watch' },
   'tip':             { color: '#012374', bg: 'rgba(1,35,116,0.08)',   iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 8v4M12 16v.5', kicker: 'Chatita suggests' },
+  // Richer connected-data domains (Insights v2)
+  'mood':            { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM8.5 14c1 1.3 5 1.3 6 0M9 9.5v.5M15 9.5v.5', kicker: 'Mood + energy' },
+  'hydration':       { color: '#2A6FA8', bg: 'rgba(42,111,168,0.13)',  iconD: 'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z', kicker: 'Hydration check' },
+  'protein':         { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kicker: 'Protein + fiber' },
+  'glp1':            { color: '#9A6F18', bg: 'rgba(200,147,43,0.16)',  iconD: 'M3 12h18M7 8l-2 4 2 4M17 8l2 4-2 4', kicker: 'GLP-1 check-in' },
+  'sleep':           { color: '#4A5578', bg: 'rgba(74,85,120,0.13)',   iconD: 'M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z', kicker: 'Sleep + energy' },
+  'movement':        { color: '#2A8A8A', bg: 'rgba(42,138,138,0.14)',  iconD: 'M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4', kicker: 'Meals + movement' },
+  'cycle':           { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 4a8 8 0 1 0 8 8M12 4v8l5 3', kicker: 'Cycle patterns' },
 };
 
 function domainTheme(type?: string, severity?: string) {
@@ -181,10 +189,52 @@ function TirBar({ low = 0, normal = 0, high = 0 }: { low?: number; normal?: numb
   );
 }
 
+// ── In-card visualizations (Insights v2) ──────────────────────────────────────
+
+interface InsightBar { value: number; highlighted?: boolean; day?: string }
+interface InsightSplit { label: string; val: string | number; unit?: string; tone?: 'good' | 'warn' | 'bad' | 'neutral' }
+
+const TONE_COLOR: Record<string, string> = {
+  good: '#1C7A4F', warn: '#9A6F18', bad: '#B5562E', neutral: '#012374',
+};
+
+// 7-ish day mini bar chart embedded in a card; `value` is 0–1, highlighted bars
+// take the card's accent color, the rest a muted navy.
+function MiniBars({ bars, color, showDays = false }: { bars: InsightBar[]; color: string; showDays?: boolean }) {
+  return (
+    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'flex-end', gap: '6px', height: showDays ? '52px' : '44px' }}>
+      {bars.map((b, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', height: '100%', justifyContent: 'flex-end' }}>
+          <div style={{ width: '100%', maxWidth: '18px', height: `${Math.round(8 + Math.max(0, Math.min(1, b.value)) * 34)}px`, borderRadius: '4px', background: b.highlighted ? color : 'rgba(1,35,116,0.18)' }} />
+          {showDays && b.day && <span style={{ fontSize: '9px', color: 'rgba(22,24,42,0.4)' }}>{b.day}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Two side-by-side comparison stats embedded in a card.
+function SplitStats({ splits }: { splits: InsightSplit[] }) {
+  return (
+    <div style={{ marginTop: '14px', display: 'flex', gap: '10px' }}>
+      {splits.map((p, i) => (
+        <div key={i} style={{ flex: 1, background: '#F7EFE1', borderRadius: '11px', padding: '12px 13px' }}>
+          <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)' }}>{p.label}</div>
+          <div style={{ marginTop: '3px' }}>
+            <span className="font-serif-italic" style={{ fontSize: '23px', color: TONE_COLOR[p.tone ?? 'neutral'] }}>{p.val}</span>
+            {p.unit && <span style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)' }}> {p.unit}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Insight card ─────────────────────────────────────────────────────────────
 
-function InsightCard({ title, message, type, severity, action, foods }: {
+function InsightCard({ title, message, type, severity, action, foods, bars, splits }: {
   title: string; message: string; type?: string; severity?: string; action?: string; foods?: string[];
+  bars?: InsightBar[]; splits?: InsightSplit[];
 }) {
   const theme = domainTheme(type, severity);
   return (
@@ -206,6 +256,8 @@ function InsightCard({ title, message, type, severity, action, foods }: {
           ))}
         </div>
       )}
+      {bars && bars.length > 0 && <MiniBars bars={bars} color={theme.color} showDays={bars.some(b => b.day)} />}
+      {splits && splits.length > 0 && <SplitStats splits={splits} />}
       {action && (
         <div style={{ marginTop: '13px', paddingTop: '11px', borderTop: '1px solid rgba(1,35,116,0.07)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
@@ -335,6 +387,21 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           </div>
           <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '26px' : '24px', lineHeight: 1.25, maxWidth: '600px' }}>{featuredCard.title}</h2>
           <p style={{ fontSize: '14.5px', color: 'rgba(255,253,249,0.82)', marginTop: '10px', lineHeight: 1.55, maxWidth: '580px' }}>{featuredCard.message}</p>
+          {featuredCard.bars && featuredCard.bars.length > 0 && (
+            <div style={{ marginTop: '18px', maxWidth: '420px' }}>
+              <div style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,253,249,0.6)', fontWeight: 700, marginBottom: '12px' }}>
+                {featuredCard.barsLabel ?? 'Time in range by day'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '92px' }}>
+                {featuredCard.bars.map((b: InsightBar, i: number) => (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', height: '100%', justifyContent: 'flex-end' }}>
+                    <div style={{ width: '100%', maxWidth: '24px', height: `${Math.round(12 + Math.max(0, Math.min(1, b.value)) * 64)}px`, borderRadius: '6px', background: b.highlighted ? '#7FD0D0' : 'rgba(255,253,249,0.28)' }} />
+                    {b.day && <span style={{ fontSize: '11px', color: 'rgba(255,253,249,0.6)' }}>{b.day}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {featuredCard.action && (
             <div style={{ marginTop: '16px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '2px' }}>
@@ -443,16 +510,72 @@ export default function InsightsPage() {
     });
   }, [correlation]);
 
+  // Real daily time-in-range bars (last 7 days) for the featured card.
+  const dailyTirBars = useMemo((): InsightBar[] => {
+    const raw = correlation?.chartData?.trendData;
+    if (!raw?.length) return [];
+    const targetMin = correlation?.targetGlucoseMin ?? 70;
+    const targetMax = correlation?.targetGlucoseMax ?? 180;
+    const byDay = new Map<string, { inRange: number; total: number; date: Date }>();
+    raw.forEach((pt: any) => {
+      const date = new Date(pt.time ?? pt.measuredAt ?? pt.date);
+      if (isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const v = pt.value ?? pt.glucose ?? 0;
+      const d = byDay.get(key) ?? { inRange: 0, total: 0, date };
+      d.total += 1;
+      if (v >= targetMin && v <= targetMax) d.inRange += 1;
+      byDay.set(key, d);
+    });
+    const days = Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime()).slice(-7);
+    const wd = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    return days.map(d => {
+      const frac = d.total > 0 ? d.inRange / d.total : 0;
+      return { value: frac, highlighted: frac >= 0.8, day: wd[d.date.getDay()] };
+    });
+  }, [correlation]);
+
+  // Normalize an AI insight's optional viz into the card's bars/splits shape.
+  const normalizeViz = (ins: any): { bars?: InsightBar[]; splits?: InsightSplit[]; barsLabel?: string } => {
+    const viz = ins?.viz;
+    if (!viz || typeof viz !== 'object') return {};
+    if (viz.kind === 'bars' && Array.isArray(viz.bars)) {
+      const hi: number[] = Array.isArray(viz.highlight) ? viz.highlight : [];
+      const days: string[] = Array.isArray(viz.days) ? viz.days : [];
+      return {
+        barsLabel: typeof viz.label === 'string' ? viz.label : undefined,
+        bars: viz.bars.slice(0, 14).map((v: any, i: number) => ({
+          value: Math.max(0, Math.min(1, Number(v) || 0)),
+          highlighted: hi.includes(i),
+          day: days[i],
+        })),
+      };
+    }
+    if (viz.kind === 'split' && Array.isArray(viz.splits)) {
+      return {
+        splits: viz.splits.slice(0, 2).map((s: any) => ({
+          label: String(s.label ?? ''), val: s.val ?? '—', unit: s.unit, tone: s.tone,
+        })),
+      };
+    }
+    return {};
+  };
+
   const allCards = useMemo(() => {
     const cards: any[] = [];
     (correlation?.patterns ?? []).forEach((p: any) => {
       cards.push({ title: p.title, message: p.description, type: p.type, severity: p.severity, foods: p.foods });
     });
     aiInsights.forEach(ins => {
-      cards.push({ title: ins.title, message: ins.message, type: ins.type, action: ins.action });
+      cards.push({ title: ins.title, message: ins.message, type: ins.type, action: ins.action, ...normalizeViz(ins) });
     });
+    // Give the featured card (first) a real daily time-in-range chart if it has
+    // no viz of its own.
+    if (cards.length > 0 && !cards[0].bars && !cards[0].splits && dailyTirBars.length >= 3) {
+      cards[0] = { ...cards[0], bars: dailyTirBars, barsLabel: 'Time in range by day' };
+    }
     return cards;
-  }, [correlation, aiInsights]);
+  }, [correlation, aiInsights, dailyTirBars]);
 
   const sharedProps = { correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading };
 
