@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import WebNav from '@/components/web-nav';
+import HealthTodayCard from '@/components/health-today-card';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
@@ -573,6 +574,11 @@ export default function WebHomeLayout({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Connected health overview (Apple/Google) — shows latest day + import summary */}
+        <div style={{ marginTop: 24 }}>
+          <HealthTodayCard />
         </div>
 
         {/* Quick shortcuts */}
