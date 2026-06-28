@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, RefreshCw, Upload, CheckCircle, XCircle, Clock } from 'lucide-react';
+import {
+  extractAppleHealthXml,
+  parseAppleHealthXml,
+  aggregateToDailySummaries,
+} from '@/lib/health/apple-health-parser';
 
 const card = {
   background: '#FFFDF9',
@@ -129,28 +134,64 @@ export default function ConnectedHealthCard() {
       setImportError('Please choose a file first.');
       return;
     }
+    if (selectedTypes.size === 0) {
+      setImportError('Please choose at least one data type to import.');
+      return;
+    }
 
     setImporting(true);
     setImportMsg('');
     setImportError('');
 
     try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('selectedTypes', JSON.stringify([...selectedTypes]));
+      // Extract + parse the export entirely in the browser. Apple Health exports
+      // are far larger than Vercel's ~4.5MB request-body limit, so we send only
+      // the compact per-day summaries to the server.
+      setImportMsg('Reading your export… this can take a moment for large files.');
+      const xml = await extractAppleHealthXml(file);
 
-      const res = await fetch('/api/health/apple/import', { method: 'POST', body: form });
+      if (!xml.includes('<HealthData') && !xml.includes('<Record')) {
+        setImportMsg('');
+        setImportError('That file does not look like an Apple Health export. Make sure you exported "All Health Data" and uploaded the zip or export.xml.');
+        return;
+      }
+
+      setImportMsg('Organizing your data…');
+      const records = parseAppleHealthXml(xml, selectedTypes);
+      const summaries = aggregateToDailySummaries(records);
+
+      if (summaries.length === 0) {
+        setImportMsg('');
+        setImportError('No matching data was found for the types you selected. Try selecting more data types.');
+        return;
+      }
+
+      setImportMsg(`Saving ${summaries.length} day(s) of data…`);
+      const res = await fetch('/api/health/apple/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summaries,
+          recordsProcessed: records.length,
+          filename: file.name,
+        }),
+      });
       const data = await res.json();
 
       if (res.ok) {
-        setImportMsg(`Done! Processed ${data.recordsProcessed?.toLocaleString() ?? 0} records across ${data.daysImported ?? 0} days.`);
+        setImportMsg(`Done! Processed ${data.recordsProcessed?.toLocaleString() ?? records.length} records across ${data.daysImported ?? summaries.length} days.`);
         setShowAppleImport(false);
         await fetchStatus();
       } else {
-        setImportError(data.error ?? 'Import failed');
+        setImportMsg('');
+        setImportError(data.error ?? 'Import failed. Please try again.');
       }
-    } catch {
-      setImportError('Import failed. Please try again.');
+    } catch (err) {
+      setImportMsg('');
+      const msg = err instanceof Error ? err.message : 'Import failed. Please try again.';
+      setImportError(msg.includes('export.xml') || msg.includes('Unsupported')
+        ? msg
+        : 'We could not read that file. Please upload the Apple Health zip or the export.xml inside it.');
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -288,10 +329,10 @@ export default function ConnectedHealthCard() {
         {/* Instructions */}
         <div style={{ background: 'rgba(1,35,116,0.04)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
           <p style={{ fontSize: 13, color: 'rgba(22,24,42,0.75)', lineHeight: 1.6, margin: 0 }}>
-            <strong>How to export:</strong> On your iPhone, open <strong>Health</strong> → tap your profile picture → <strong>Export All Health Data</strong> → share the <code>export.xml</code> file here.
+            <strong>How to export:</strong> On your iPhone, open <strong>Health</strong> → tap your profile picture → <strong>Export All Health Data</strong> → save or AirDrop the file, then upload it here.
           </p>
           <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 8, marginBottom: 0 }}>
-            Note: Extract <code>export.xml</code> from the zip before uploading. Only selected data types are imported — the raw file is not stored.
+            You can upload the <code>.zip</code> directly — it&apos;s read in your browser, so even large exports work. Only selected data types are imported, and the raw file is never stored.
           </p>
         </div>
 
@@ -354,7 +395,7 @@ export default function ConnectedHealthCard() {
                 style={{ fontSize: 13, color: '#16182A' }}
               />
               <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.4)', marginTop: 6 }}>
-                Maximum file size: {process.env.NEXT_PUBLIC_HEALTH_IMPORT_MAX_MB || 50} MB
+                Accepts the Apple Health <code>.zip</code> or <code>export.xml</code>. Large exports are processed in your browser.
               </p>
             </div>
 

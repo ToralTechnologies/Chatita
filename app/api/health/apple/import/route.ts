@@ -2,167 +2,125 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  parseAppleHealthXml,
+  aggregateToDailySummaries,
+  APPLE_DEFAULT_TYPES,
+  type DailySummaryPayload,
+} from '@/lib/health/apple-health-parser';
 
-const MAX_SIZE_MB = Number(process.env.HEALTH_IMPORT_MAX_FILE_SIZE_MB || '50');
+// Direct server-side parsing is only viable for small files because Vercel
+// serverless caps the request body at ~4.5MB. Large Apple Health exports are
+// parsed in the browser and POSTed here as compact per-day summaries (JSON).
+const MAX_SIZE_MB = Number(process.env.HEALTH_IMPORT_MAX_FILE_SIZE_MB || '4');
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+const PROVIDER = 'apple_health_export';
 
-// Apple Health export record types we parse
-const SUPPORTED_TYPES: Record<string, string> = {
-  HKQuantityTypeIdentifierStepCount: 'steps',
-  HKQuantityTypeIdentifierDistanceWalkingRunning: 'distance_m',
-  HKQuantityTypeIdentifierActiveEnergyBurned: 'active_calories',
-  HKQuantityTypeIdentifierAppleExerciseTime: 'exercise_minutes',
-  HKQuantityTypeIdentifierHeartRate: 'heart_rate',
-  HKQuantityTypeIdentifierRestingHeartRate: 'resting_heart_rate',
-  HKQuantityTypeIdentifierBodyMass: 'weight_kg',
-  HKQuantityTypeIdentifierBloodGlucose: 'blood_glucose',
-  HKCategoryTypeIdentifierSleepAnalysis: 'sleep',
-};
+/** Persist a batch of per-day summaries, returning how many days were written. */
+async function upsertDailySummaries(
+  userId: string,
+  summaries: DailySummaryPayload[]
+): Promise<number> {
+  let daysUpserted = 0;
 
-interface ParsedRecord {
-  metricType: string;
-  value: number;
-  unit: string;
-  startTime: Date;
-  endTime: Date;
-}
+  for (const s of summaries) {
+    const date = new Date(`${s.date}T00:00:00`);
+    if (isNaN(date.getTime())) continue;
 
-/**
- * Parses Apple Health export.xml using a streaming regex approach.
- * Only parses <Record> elements with supported HK types.
- * Apple Health XML uses attributes on a single <Record .../> element —
- * we extract them with a targeted regex rather than a full XML DOM parse
- * to handle very large files without loading them entirely into memory.
- */
-function parseAppleHealthXml(
-  xml: string,
-  selectedTypes: Set<string>
-): ParsedRecord[] {
-  const results: ParsedRecord[] = [];
-  // Match <Record .../> or <Record ...></Record> elements
-  const recordPattern = /<Record\s([^>]+?)\/?>|<Record\s([^>]+?)>/g;
-  let match: RegExpExecArray | null;
+    const data = {
+      steps: s.steps != null ? Math.round(s.steps) : undefined,
+      distanceMeters: s.distanceMeters,
+      activeCalories: s.activeCalories,
+      exerciseMinutes: s.exerciseMinutes != null ? Math.round(s.exerciseMinutes) : undefined,
+      sleepMinutes: s.sleepMinutes != null ? Math.round(s.sleepMinutes) : undefined,
+      averageHeartRate: s.averageHeartRate != null ? Math.round(s.averageHeartRate) : undefined,
+      restingHeartRate: s.restingHeartRate != null ? Math.round(s.restingHeartRate) : undefined,
+    };
 
-  while ((match = recordPattern.exec(xml)) !== null) {
-    const attrs = match[1] || match[2];
-    if (!attrs) continue;
-
-    const typeMatch = /\btype="([^"]+)"/.exec(attrs);
-    if (!typeMatch) continue;
-    const hkType = typeMatch[1];
-
-    const metricType = SUPPORTED_TYPES[hkType];
-    if (!metricType || !selectedTypes.has(metricType)) continue;
-
-    const valMatch = /\bvalue="([^"]+)"/.exec(attrs);
-    const unitMatch = /\bunit="([^"]+)"/.exec(attrs);
-    const startMatch = /\bstartDate="([^"]+)"/.exec(attrs);
-    const endMatch = /\bendDate="([^"]+)"/.exec(attrs);
-
-    if (!valMatch || !startMatch || !endMatch) continue;
-
-    const value = parseFloat(valMatch[1]);
-    if (isNaN(value)) continue;
-
-    results.push({
-      metricType,
-      value,
-      unit: unitMatch?.[1] ?? '',
-      startTime: new Date(startMatch[1]),
-      endTime: new Date(endMatch[1]),
+    await prisma.healthDailySummary.upsert({
+      where: { userId_date_provider: { userId, date, provider: PROVIDER } },
+      update: { ...data, importedAt: new Date() },
+      create: { userId, date, provider: PROVIDER, ...data },
     });
+    daysUpserted++;
   }
 
-  return results;
-}
-
-/** Aggregate raw samples into per-day summaries. */
-function aggregateToDailySummaries(records: ParsedRecord[]): Map<string, {
-  date: Date;
-  steps?: number;
-  distanceMeters?: number;
-  activeCalories?: number;
-  exerciseMinutes?: number;
-  sleepMinutes?: number;
-  avgHR?: number;
-  hrSamples?: number;
-  restingHeartRate?: number;
-}> {
-  const days = new Map<string, ReturnType<typeof aggregateToDailySummaries> extends Map<string, infer V> ? V : never>();
-
-  for (const r of records) {
-    const d = new Date(r.startTime);
-    d.setHours(0, 0, 0, 0);
-    const key = d.toISOString().split('T')[0];
-
-    if (!days.has(key)) days.set(key, { date: d });
-    const day = days.get(key)!;
-
-    switch (r.metricType) {
-      case 'steps':
-        day.steps = (day.steps ?? 0) + r.value;
-        break;
-      case 'distance_m': {
-        // Apple Health stores walking/running distance in km — convert to meters
-        const meters = r.unit === 'km' ? r.value * 1000 : r.unit === 'mi' ? r.value * 1609.344 : r.value;
-        day.distanceMeters = (day.distanceMeters ?? 0) + meters;
-        break;
-      }
-      case 'active_calories':
-        day.activeCalories = (day.activeCalories ?? 0) + r.value;
-        break;
-      case 'exercise_minutes':
-        day.exerciseMinutes = (day.exerciseMinutes ?? 0) + r.value;
-        break;
-      case 'sleep': {
-        const durationMin = Math.round(
-          (r.endTime.getTime() - r.startTime.getTime()) / 60000
-        );
-        if (durationMin > 0) day.sleepMinutes = (day.sleepMinutes ?? 0) + durationMin;
-        break;
-      }
-      case 'heart_rate':
-        day.avgHR = ((day.avgHR ?? 0) * (day.hrSamples ?? 0) + r.value) / ((day.hrSamples ?? 0) + 1);
-        day.hrSamples = (day.hrSamples ?? 0) + 1;
-        break;
-      case 'resting_heart_rate':
-        day.restingHeartRate = r.value; // last sample wins (typically 1/day)
-        break;
-    }
-  }
-
-  return days;
+  return daysUpserted;
 }
 
 /**
  * POST /api/health/apple/import
  *
- * Accepts an Apple Health export file (.xml or .zip containing export.xml).
- * Parses selected health data types and normalizes into HealthDailySummary records.
+ * Two intake modes:
+ *  1. JSON `{ summaries: DailySummaryPayload[] }` — the browser already parsed
+ *     export.xml (preferred for real exports; avoids the 4.5MB body limit).
+ *  2. multipart/form-data with a small `.xml` file — parsed here directly.
  *
- * Flow:
- * 1. Validate file type, size
- * 2. Parse export.xml (or extract from .zip if zip support added)
- * 3. Normalize into per-day summaries
- * 4. Upsert into HealthDailySummary
- * 5. Record import job
- *
- * The raw file is NOT stored — only parsed summaries are persisted.
+ * The raw export file is never stored — only normalized per-day summaries.
  */
 export async function POST(request: Request) {
+  let importJobId: string | null = null;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
     const userId = session.user.id;
-    let formData: FormData;
+    const contentType = request.headers.get('content-type') || '';
 
+    // ── Mode 1: pre-parsed summaries (browser-side extraction) ──────────────
+    if (contentType.includes('application/json')) {
+      let body: { summaries?: DailySummaryPayload[]; recordsProcessed?: number; filename?: string };
+      try {
+        body = await request.json();
+      } catch {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      }
+
+      const summaries = Array.isArray(body.summaries) ? body.summaries : [];
+      if (summaries.length === 0) {
+        return NextResponse.json(
+          { error: 'No matching health data found for the selected types. Try selecting more data types or a file with more history.' },
+          { status: 400 }
+        );
+      }
+
+      const importJob = await prisma.healthImport.create({
+        data: {
+          userId,
+          provider: PROVIDER,
+          importType: 'manual_export',
+          filename: body.filename ?? 'export.xml',
+          status: 'processing',
+        },
+      });
+      importJobId = importJob.id;
+
+      const daysUpserted = await upsertDailySummaries(userId, summaries);
+
+      await prisma.healthImport.update({
+        where: { id: importJob.id },
+        data: {
+          status: 'completed',
+          recordsProcessed: body.recordsProcessed ?? daysUpserted,
+          completedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        recordsProcessed: body.recordsProcessed ?? daysUpserted,
+        daysImported: daysUpserted,
+      });
+    }
+
+    // ── Mode 2: small direct file upload (server-side parse) ────────────────
+    let formData: FormData;
     try {
       formData = await request.formData();
     } catch {
-      return NextResponse.json({ error: 'Invalid multipart form data' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
     const file = formData.get('file') as File | null;
@@ -170,136 +128,70 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
     const filename = file.name.toLowerCase();
-    const isXml = filename.endsWith('.xml');
-    const isZip = filename.endsWith('.zip');
-    if (!isXml && !isZip) {
+    if (!filename.endsWith('.xml')) {
+      // Zips and large files must be parsed client-side and sent as summaries.
       return NextResponse.json(
-        { error: 'Only .xml and .zip files are supported' },
+        {
+          error:
+            'Please upload through the in-app importer so large files and zips can be processed in your browser.',
+        },
         { status: 400 }
       );
     }
 
-    // Validate file size
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json(
-        { error: `File too large. Maximum size is ${MAX_SIZE_MB} MB.` },
+        {
+          error: `This file is larger than ${MAX_SIZE_MB} MB. The in-app importer handles large exports automatically — please use the Upload button rather than posting the file directly.`,
+        },
         { status: 413 }
       );
     }
 
-    // Parse which data types the user wants to import
-    const selectedRaw = formData.get('selectedTypes') as string | null;
     let selectedTypes: Set<string>;
     try {
-      const parsed: string[] = selectedRaw ? JSON.parse(selectedRaw) : [];
-      // Default to safe set if nothing specified
-      selectedTypes =
-        parsed.length > 0
-          ? new Set(parsed)
-          : new Set(['steps', 'distance_m', 'active_calories', 'exercise_minutes', 'sleep']);
+      const raw = formData.get('selectedTypes') as string | null;
+      const parsed: string[] = raw ? JSON.parse(raw) : [];
+      selectedTypes = parsed.length > 0 ? new Set(parsed) : new Set(APPLE_DEFAULT_TYPES);
     } catch {
-      selectedTypes = new Set(['steps', 'distance_m', 'active_calories', 'exercise_minutes', 'sleep']);
+      selectedTypes = new Set(APPLE_DEFAULT_TYPES);
     }
 
-    // Create import job record
     const importJob = await prisma.healthImport.create({
-      data: {
-        userId,
-        provider: 'apple_health_export',
-        importType: 'manual_export',
-        filename: file.name,
-        status: 'processing',
-      },
+      data: { userId, provider: PROVIDER, importType: 'manual_export', filename: file.name, status: 'processing' },
     });
+    importJobId = importJob.id;
 
-    let xmlContent: string;
-
-    if (isZip) {
-      // ZIP extraction: Apple Health exports a .zip with export.xml inside.
-      // TODO: Add zip extraction using the 'fflate' or 'jszip' package.
-      // For now, ask users to extract the .xml manually.
-      await prisma.healthImport.update({
-        where: { id: importJob.id },
-        data: { status: 'failed', errorMessage: 'ZIP extraction not yet supported. Please extract export.xml from the zip and upload that file directly.' },
-      });
-      return NextResponse.json(
-        { error: 'ZIP upload not yet supported. Please extract export.xml from the Apple Health zip and upload that file.' },
-        { status: 400 }
-      );
-    } else {
-      xmlContent = await file.text();
-    }
-
+    const xmlContent = await file.text();
     if (!xmlContent.includes('<HealthData') && !xmlContent.includes('<Record')) {
       await prisma.healthImport.update({
         where: { id: importJob.id },
         data: { status: 'failed', errorMessage: 'File does not appear to be a valid Apple Health export' },
       });
-      return NextResponse.json({ error: 'File does not appear to be a valid Apple Health export (missing <HealthData> element)' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'File does not appear to be a valid Apple Health export (missing <HealthData> element).' },
+        { status: 400 }
+      );
     }
 
-    // Parse records
     const records = parseAppleHealthXml(xmlContent, selectedTypes);
-
-    if (records.length === 0) {
-      await prisma.healthImport.update({
-        where: { id: importJob.id },
-        data: { status: 'completed', recordsProcessed: 0, completedAt: new Date() },
-      });
-      return NextResponse.json({ success: true, recordsProcessed: 0, daysImported: 0, message: 'No matching health records found for the selected data types.' });
-    }
-
-    // Aggregate into daily summaries
-    const dailySummaries = aggregateToDailySummaries(records);
-    let daysUpserted = 0;
-
-    for (const [, summary] of dailySummaries) {
-      await prisma.healthDailySummary.upsert({
-        where: { userId_date_provider: { userId, date: summary.date, provider: 'apple_health_export' } },
-        update: {
-          steps: summary.steps != null ? Math.round(summary.steps) : undefined,
-          distanceMeters: summary.distanceMeters,
-          activeCalories: summary.activeCalories,
-          exerciseMinutes: summary.exerciseMinutes != null ? Math.round(summary.exerciseMinutes) : undefined,
-          sleepMinutes: summary.sleepMinutes != null ? Math.round(summary.sleepMinutes) : undefined,
-          averageHeartRate: summary.avgHR != null ? Math.round(summary.avgHR) : undefined,
-          restingHeartRate: summary.restingHeartRate != null ? Math.round(summary.restingHeartRate) : undefined,
-          importedAt: new Date(),
-        },
-        create: {
-          userId,
-          date: summary.date,
-          provider: 'apple_health_export',
-          steps: summary.steps != null ? Math.round(summary.steps) : undefined,
-          distanceMeters: summary.distanceMeters,
-          activeCalories: summary.activeCalories,
-          exerciseMinutes: summary.exerciseMinutes != null ? Math.round(summary.exerciseMinutes) : undefined,
-          sleepMinutes: summary.sleepMinutes != null ? Math.round(summary.sleepMinutes) : undefined,
-          averageHeartRate: summary.avgHR != null ? Math.round(summary.avgHR) : undefined,
-          restingHeartRate: summary.restingHeartRate != null ? Math.round(summary.restingHeartRate) : undefined,
-        },
-      });
-      daysUpserted++;
-    }
+    const summaries = aggregateToDailySummaries(records);
+    const daysUpserted = await upsertDailySummaries(userId, summaries);
 
     await prisma.healthImport.update({
       where: { id: importJob.id },
-      data: {
-        status: 'completed',
-        recordsProcessed: records.length,
-        completedAt: new Date(),
-      },
+      data: { status: 'completed', recordsProcessed: records.length, completedAt: new Date() },
     });
 
-    return NextResponse.json({
-      success: true,
-      recordsProcessed: records.length,
-      daysImported: daysUpserted,
-    });
+    return NextResponse.json({ success: true, recordsProcessed: records.length, daysImported: daysUpserted });
   } catch (error) {
     console.error('[health/apple/import] error:', error);
-    return NextResponse.json({ error: 'Import failed' }, { status: 500 });
+    if (importJobId) {
+      await prisma.healthImport
+        .update({ where: { id: importJobId }, data: { status: 'failed', errorMessage: 'Import failed while saving data.' } })
+        .catch(() => {});
+    }
+    return NextResponse.json({ error: 'Import failed. Please try again.' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { encryptToken } from '@/lib/health/token-encrypt';
+import { syncGoogleHealth } from '@/lib/health/google-sync';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
@@ -129,6 +130,15 @@ export async function GET(request: Request) {
   } catch (err) {
     console.error('[health/google/callback] DB save error:', err);
     return failRedirect('db_error');
+  }
+
+  // Kick off an initial sync so the user sees data immediately after connecting,
+  // instead of an empty "Connected" state until the next manual/cron sync.
+  // Non-fatal: a sync failure here still leaves the connection in place.
+  try {
+    await syncGoogleHealth(userId);
+  } catch (err) {
+    console.warn('[health/google/callback] initial sync failed (non-fatal):', err);
   }
 
   return NextResponse.redirect(`${APP_URL}/settings?health_success=google_health`);

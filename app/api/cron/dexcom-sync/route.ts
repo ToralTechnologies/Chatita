@@ -251,10 +251,9 @@ async function refreshDexcomToken(integration: {
   return tokenData.access_token;
 }
 
-// Allow GET for manual testing
-export async function GET() {
-  return NextResponse.json({
-    message: 'Use POST to trigger Dexcom sync',
-    endpoint: '/api/cron/dexcom-sync',
-  });
+// Vercel Cron invokes scheduled jobs with GET, so GET must run the same worker
+// (the secret check inside POST still applies). Without this, the scheduled
+// Dexcom sync never actually ran.
+export async function GET(request: Request) {
+  return POST(request);
 }
