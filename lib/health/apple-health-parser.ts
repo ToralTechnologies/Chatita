@@ -174,14 +174,28 @@ export class AppleHealthAggregator {
   recordCount = 0;
   private readonly recordRe = /<Record\s([^>]*?)\/?>/g;
 
+  // ── Diagnostics (to debug real exports without the file in hand) ──
+  totalChars = 0;
+  recordTagsSeen = 0; // <Record> tags found, before type filtering
+  seenTypes: Record<string, number> = {}; // raw type="..." value -> count (capped)
+  sample = ''; // first ~400 chars of decoded text
+
   constructor(private readonly selectedTypes: Set<string>) {}
 
   pushText(text: string): void {
+    this.totalChars += text.length;
+    if (this.sample.length < 400) this.sample = (this.sample + text).slice(0, 400);
+
     this.buffer += text;
     this.recordRe.lastIndex = 0;
     let lastEnd = 0;
     let m: RegExpExecArray | null;
     while ((m = this.recordRe.exec(this.buffer)) !== null) {
+      this.recordTagsSeen++;
+      const t = /\btype="([^"]+)"/.exec(m[1]);
+      if (t && Object.keys(this.seenTypes).length < 60) {
+        this.seenTypes[t[1]] = (this.seenTypes[t[1]] || 0) + 1;
+      }
       const rec = parseRecordAttrs(m[1], this.selectedTypes);
       if (rec) {
         addRecordToDays(this.days, rec);
@@ -199,6 +213,21 @@ export class AppleHealthAggregator {
     if (this.buffer.length > 65536 && this.buffer.lastIndexOf('<Record') === -1) {
       this.buffer = this.buffer.slice(-16);
     }
+  }
+
+  diagnostics(): string {
+    const topTypes = Object.entries(this.seenTypes)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([k, v]) => `${k.replace('HKQuantityTypeIdentifier', '').replace('HKCategoryTypeIdentifier', '')}=${v}`)
+      .join(', ');
+    return [
+      `chars=${this.totalChars}`,
+      `recordTags=${this.recordTagsSeen}`,
+      `matched=${this.recordCount}`,
+      `types=[${topTypes || 'none'}]`,
+      `sample="${this.sample.replace(/\s+/g, ' ').slice(0, 120)}"`,
+    ].join(' · ');
   }
 
   finalize(): DailySummaryPayload[] {
@@ -366,11 +395,17 @@ async function inflateEntryToAggregator(
  * and only `export.xml` is decompressed (other entries like ECG/workout routes
  * are skipped, never inflated). Safe for multi-GB exports.
  */
+export interface StreamResult {
+  summaries: DailySummaryPayload[];
+  recordCount: number;
+  diag: string; // human-readable diagnostics, shown to the user if 0 records
+}
+
 export async function streamAppleHealthFile(
   file: File,
   selectedTypes: Set<string>,
   onProgress?: (p: StreamProgress) => void
-): Promise<{ summaries: DailySummaryPayload[]; recordCount: number }> {
+): Promise<StreamResult> {
   const name = file.name.toLowerCase();
   let agg = new AppleHealthAggregator(selectedTypes);
   const total = file.size;
@@ -395,7 +430,7 @@ export async function streamAppleHealthFile(
     }
     agg.pushText(decoder.decode());
     onProgress?.({ bytesRead, totalBytes: total });
-    return { summaries: agg.finalize(), recordCount: agg.recordCount };
+    return { summaries: agg.finalize(), recordCount: agg.recordCount, diag: `xml · ${agg.diagnostics()}` };
   }
 
   if (!name.endsWith('.zip')) {
@@ -404,22 +439,31 @@ export async function streamAppleHealthFile(
 
   // ── .zip: random-access via the central directory (robust for Zip64 + huge
   //    archives). Reads ONLY export.xml's bytes. ────────────────────────────
+  let cdInfo = 'cd: not attempted';
   try {
     const loc = await locateZipEntry(file, isExport);
     if (loc) {
+      cdInfo = `cd: found export.xml method=${loc.method} compSize=${loc.compSize} off=${loc.localOffset}`;
       await inflateEntryToAggregator(file, loc, agg, (read) =>
         onProgress?.({ bytesRead: read, totalBytes: loc.compSize })
       );
       onProgress?.({ bytesRead: loc.compSize, totalBytes: loc.compSize });
-      return { summaries: agg.finalize(), recordCount: agg.recordCount };
+      if (agg.recordCount > 0) {
+        return { summaries: agg.finalize(), recordCount: agg.recordCount, diag: `${cdInfo} · ${agg.diagnostics()}` };
+      }
+      // export.xml was read but produced 0 records — try the streaming path too,
+      // in case the central-directory offsets were off. Keep a fresh aggregator.
+      cdInfo += ' · 0 records, trying streaming';
+      console.warn('[apple-health] central-directory read found export.xml but 0 records:', agg.diagnostics());
+    } else {
+      cdInfo = 'cd: export.xml not in central directory';
     }
-    // No export.xml in the directory — fall through to streaming as a last try.
   } catch (err) {
-    // Central-directory read failed (unusual zip layout) — fall back to
-    // front-streaming below with a fresh aggregator.
+    cdInfo = `cd: error ${err instanceof Error ? err.message : String(err)}`;
     console.warn('[apple-health] central-directory read failed; falling back to streaming:', err);
-    agg = new AppleHealthAggregator(selectedTypes);
   }
+  const cdDiag = agg.diagnostics();
+  agg = new AppleHealthAggregator(selectedTypes);
 
   // ── Fallback: stream-unzip from the front, decompressing only export.xml ───
   const { Unzip, UnzipInflate } = await import('fflate');
@@ -459,10 +503,13 @@ export async function streamAppleHealthFile(
   if (streamError) throw streamError;
   onProgress?.({ bytesRead, totalBytes: total });
 
-  if (!sawAnyXml) {
-    throw new Error('export.xml not found inside the zip');
+  const diag = `${cdInfo} | cdDiag(${cdDiag}) | stream: sawXml=${sawAnyXml} bytesRead=${bytesRead} · ${agg.diagnostics()}`;
+
+  if (!sawAnyXml && agg.recordCount === 0) {
+    // Neither path saw export.xml at all.
+    return { summaries: [], recordCount: 0, diag: `export.xml not found. ${diag}` };
   }
-  return { summaries: agg.finalize(), recordCount: agg.recordCount };
+  return { summaries: agg.finalize(), recordCount: agg.recordCount, diag };
 }
 
 // ── Whole-string path (small server-side uploads) ────────────────────────────

@@ -152,7 +152,7 @@ export default function ConnectedHealthCard() {
         : '';
       setImportMsg(`Reading your export…${sizeNote}`);
 
-      const { summaries, recordCount } = await streamAppleHealthFile(
+      const { summaries, recordCount, diag } = await streamAppleHealthFile(
         file,
         selectedTypes,
         ({ bytesRead, totalBytes }) => {
@@ -163,7 +163,11 @@ export default function ConnectedHealthCard() {
 
       if (summaries.length === 0) {
         setImportMsg('');
-        setImportError('No matching data was found for the types you selected. Try selecting more data types, or check that you exported "All Health Data".');
+        // Surface diagnostics so we can pinpoint why nothing parsed.
+        console.warn('[apple-health import] 0 days parsed —', diag);
+        setImportError(
+          `No matching data was found. If this seems wrong, copy these details: ${diag}`
+        );
         return;
       }
 
