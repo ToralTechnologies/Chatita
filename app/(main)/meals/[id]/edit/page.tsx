@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 import MealForm, { MealFormData } from '@/components/meal-form';
 import { useTranslation } from '@/lib/i18n/context';
 import { MealType } from '@/types';
@@ -251,15 +252,9 @@ export default function EditMealPage() {
       {/* ── Header ── */}
       <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <button
-            onClick={() => router.push('/meal-history')}
-            style={{ fontSize: '13px', color: 'rgba(1,35,116,0.55)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {t.editMeal.backToHistory}
-          </button>
+          <div style={{ marginBottom: '8px' }}>
+            <BackButton href="/meal-history" label={t.editMeal.backToHistory} />
+          </div>
           <h1 className="font-serif-italic" style={{ fontSize: '1.5rem', color: '#012374' }}>{t.editMeal.title}</h1>
         </div>
       </div>

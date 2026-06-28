@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
 interface MoodEntry {
   id: string;
@@ -257,18 +258,11 @@ export default function MoodLogPage() {
     <>
       {/* ─── Mobile ─── */}
       <div className="lg:hidden mobile-page-pb" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ padding: '20px 20px 0', paddingTop: 'max(20px, env(safe-area-inset-top, 0px))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              onClick={() => router.back()}
-              style={{ width: 38, height: 38, borderRadius: 12, background: '#FFFDF9', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-            <div>
-              <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>State of mind</div>
-              <h1 className="font-serif-italic" style={{ fontSize: 23, color: '#012374', lineHeight: 1 }}>Your mood log</h1>
-            </div>
+        <div style={{ padding: '18px 20px 0', paddingTop: 'max(18px, env(safe-area-inset-top, 0px))' }}>
+          <BackButton href="/home" />
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>State of mind</div>
+            <h1 className="font-serif-italic" style={{ fontSize: 23, color: '#012374', lineHeight: 1 }}>Your mood log</h1>
           </div>
         </div>
 

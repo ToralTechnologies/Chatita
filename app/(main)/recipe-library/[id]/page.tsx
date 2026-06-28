@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ChevronLeft, Clock, Users, ChefHat, UtensilsCrossed, Lightbulb, Plus } from 'lucide-react';
+import { Clock, Users, ChefHat, UtensilsCrossed, Lightbulb, Plus } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 
 interface Recipe {
   id: string;
@@ -150,13 +151,7 @@ export default function RecipeDetailPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-primary hover:underline mb-2"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Back
-          </button>
+          <BackButton href="/recipe-library" />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
 // ── Types & constants ────────────────────────────────────────────────────────
 
@@ -355,31 +356,13 @@ export default function SavedRecipesPage() {
       <div className="lg:hidden mobile-page-pb" style={{ background: '#F7EFE1', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
         {/* Header */}
         <div style={{ padding: '14px 20px 0', paddingTop: 'max(14px, env(safe-area-inset-top, 0px))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={() => router.back()}
-              style={{
-                width: '38px', height: '38px',
-                borderRadius: '12px',
-                background: '#FFFDF9',
-                border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px -4px rgba(1,35,116,.4)',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 5l-7 7 7 7" stroke="#012374" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <div>
-              <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-                Recipes
-              </div>
-              <div className="font-serif-italic" style={{ fontSize: '23px', color: '#012374', lineHeight: 1 }}>
-                Saved for you
-              </div>
+          <BackButton href="/recipes" />
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
+              Recipes
+            </div>
+            <div className="font-serif-italic" style={{ fontSize: '23px', color: '#012374', lineHeight: 1 }}>
+              Saved for you
             </div>
           </div>
         </div>
