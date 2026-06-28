@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,8 +164,9 @@ export default function RestaurantFinderPage() {
 
   const MobileLayout = (
     <div className="lg:hidden mobile-page-pb" style={{ minHeight: '100vh', background: '#F7EFE1' }}>
-      <div style={{ padding: '24px 20px 16px' }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
+      <div style={{ padding: '18px 20px 16px' }}>
+        <BackButton href="/home" />
+        <div style={{ marginTop: 10, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Restaurants · Eating out</div>
         <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', lineHeight: 1.1, marginTop: 6 }}>Find a kind place to eat.</h1>
         <p style={{ fontSize: 14, color: '#16182A', opacity: 0.72, marginTop: 6, lineHeight: 1.5 }}>
           Chatita reads the menu with you and points to dishes that sit easy.

@@ -467,11 +467,11 @@ export default function ConnectedHealthCard() {
         <div style={{ fontSize: 13, fontWeight: 700, color: '#16182A', marginBottom: 10 }}>Manual logging</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {[
-            { label: 'Movement', href: '/' },
-            { label: 'Sleep', href: '/' },
-            { label: 'Glucose', href: '/glucose' },
-            { label: 'Meals', href: '/' },
-            { label: 'Mood', href: '/' },
+            { label: 'Movement', href: '/home' },
+            { label: 'Sleep', href: '/home' },
+            { label: 'Glucose', href: '/home' },
+            { label: 'Meals', href: '/add-meal' },
+            { label: 'Mood', href: '/mood-log' },
           ].map(item => (
             <a
               key={item.label}

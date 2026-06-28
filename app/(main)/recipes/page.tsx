@@ -3,6 +3,7 @@
 import { useState, useRef, RefObject } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
+import BackButton from '@/components/back-button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -571,8 +572,9 @@ export default function RecipesPage() {
     <>
       {/* ─── Mobile (lg:hidden) ─── */}
       <div className="lg:hidden mobile-page-pb" style={{ minHeight: '100vh', background: '#F7EFE1', fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ padding: '24px 20px 16px' }}>
-          <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
+        <div style={{ padding: '18px 20px 16px' }}>
+          <BackButton href="/home" />
+          <div style={{ marginTop: 10, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Recipes</div>
           <h1 className="font-serif-italic" style={{ fontSize: 30, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.1, marginTop: 6 }}>
             Cook with what you have.
           </h1>

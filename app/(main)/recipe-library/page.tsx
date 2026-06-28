@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Heart, Clock, ChefHat, Bookmark, BookmarkCheck } from 'lucide-react';
 import BottomNav from '@/components/bottom-nav';
+import BackButton from '@/components/back-button';
 
 interface Recipe {
   id: string;
@@ -123,6 +124,7 @@ export default function RecipeLibraryPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">
+          <div className="mb-2"><BackButton href="/recipes" /></div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ChefHat className="w-6 h-6 text-primary" />
             Recipe Library
