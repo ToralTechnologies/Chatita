@@ -642,7 +642,7 @@ export default function MealForm({ onSubmit, loading, initialData, editMode }: M
           <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.55)', lineHeight: 1.5 }}>
             {LOW_GLUCOSE_RULE.disclaimer}
           </p>
-          <p style={{ fontSize: 11.5, color: '#E3171A', fontWeight: 600, marginTop: 6 }}>
+          <p style={{ fontSize: 11.5, color: '#D0021B', fontWeight: 600, marginTop: 6 }}>
             If symptoms are severe or you feel unsafe — seek emergency help.
           </p>
         </div>

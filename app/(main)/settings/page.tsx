@@ -510,8 +510,8 @@ function SettingsContent() {
         </div>
       )}
       {showDexcomError && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(227,23,26,0.08)', border: '1px solid rgba(227,23,26,0.22)', borderRadius: 14, padding: '13px 16px' }}>
-          <XCircle className="w-5 h-5" style={{ color: '#E3171A', flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(208,2,27,0.08)', border: '1px solid rgba(208,2,27,0.22)', borderRadius: 14, padding: '13px 16px' }}>
+          <XCircle className="w-5 h-5" style={{ color: '#D0021B', flexShrink: 0 }} />
           <p style={{ fontSize: 13.5, color: '#8B0A0C', fontWeight: 500 }}>Failed to connect Dexcom. Please try again or check your credentials.</p>
         </div>
       )}

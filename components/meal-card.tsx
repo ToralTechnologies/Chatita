@@ -100,7 +100,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  style={{ padding: '5px 12px', borderRadius: 10, background: '#E3171A', color: '#FFFDF9', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                  style={{ padding: '5px 12px', borderRadius: 10, background: '#D0021B', color: '#FFFDF9', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                 >
                   Delete
                 </button>
@@ -122,7 +122,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
                 </button>
                 <button
                   onClick={() => setConfirmingDelete(true)}
-                  style={{ width: 32, height: 32, borderRadius: 10, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(227,23,26,0.5)' }}
+                  style={{ width: 32, height: 32, borderRadius: 10, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(208,2,27,0.55)' }}
                   aria-label="Delete meal"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
