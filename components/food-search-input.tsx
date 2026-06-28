@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, Loader2, Barcode, Camera, Upload } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/context';
+import { toast } from '@/components/toast';
 
 interface FoodItem {
   id?: string;
@@ -135,7 +136,7 @@ export default function FoodSearchInput({
 
   const lookupBarcode = async (code: string) => {
     if (code.trim().length < 8) {
-      alert('Please enter a valid barcode (at least 8 digits)');
+      toast('Please enter a valid barcode (at least 8 digits)', 'error');
       return;
     }
 
@@ -168,11 +169,11 @@ export default function FoodSearchInput({
         }
       } else {
         const data = await res.json();
-        alert(data.error || 'Product not found. Try searching by name instead.');
+        toast(data.error || 'Product not found. Try searching by name instead.', 'error');
       }
     } catch (error) {
       console.error('Barcode lookup error:', error);
-      alert('Failed to look up barcode. Try searching by name instead.');
+      toast('Failed to look up barcode. Try searching by name instead.', 'error');
     } finally {
       setScanningBarcode(false);
     }
@@ -194,7 +195,7 @@ export default function FoodSearchInput({
 
       reader.onload = async (event) => {
         if (!event.target?.result) {
-          alert('Failed to read image file');
+          toast('Failed to read image file', 'error');
           setScanningBarcode(false);
           return;
         }
@@ -212,11 +213,11 @@ export default function FoodSearchInput({
               // Automatically lookup the barcode
               await lookupBarcode(barcode);
             } else {
-              alert('No barcode detected in image. Please try again or enter the barcode manually.');
+              toast('No barcode detected in image. Please try again or enter the barcode manually.', 'error');
             }
           } catch (error) {
             console.error('Barcode scanning error:', error);
-            alert('Could not read barcode from image. Please try again with a clearer photo or enter the barcode manually.');
+            toast('Could not read barcode from image. Please try again with a clearer photo or enter the barcode manually.', 'error');
             setShowBarcodeInput(true);
           } finally {
             setScanningBarcode(false);
@@ -224,20 +225,20 @@ export default function FoodSearchInput({
         };
 
         img.onerror = () => {
-          alert('Failed to load image');
+          toast('Failed to load image', 'error');
           setScanningBarcode(false);
         };
       };
 
       reader.onerror = () => {
-        alert('Failed to read image file');
+        toast('Failed to read image file', 'error');
         setScanningBarcode(false);
       };
 
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('Barcode upload error:', error);
-      alert('Failed to process image. Please try again or enter the barcode manually.');
+      toast('Failed to process image. Please try again or enter the barcode manually.', 'error');
       setScanningBarcode(false);
       setShowBarcodeInput(true);
     }

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
+import { toast } from '@/components/toast';
 import LanguageSwitcher from '@/components/language-switcher';
 import HealthProfileCard from '@/components/health-profile-card';
 import ThemeToggle from '@/components/theme-toggle';
@@ -290,10 +291,10 @@ function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weeklyReportEnabled: newValue }),
       });
-      if (!response.ok) { setWeeklyReportEnabled(!newValue); alert('Failed to update settings'); }
+      if (!response.ok) { setWeeklyReportEnabled(!newValue); toast('Failed to update settings', 'error'); }
     } catch {
       setWeeklyReportEnabled(!newValue);
-      alert('Failed to update settings');
+      toast('Failed to update settings', 'error');
     }
   };
 
@@ -301,9 +302,9 @@ function SettingsContent() {
     setSendingReport(true);
     try {
       const response = await fetch('/api/reports/weekly', { method: 'POST' });
-      if (response.ok) { alert('Weekly report sent successfully! Check your email.'); fetchUserSettings(); }
-      else { const data = await response.json(); alert(data.error || 'Failed to send report'); }
-    } catch { alert('Failed to send report'); }
+      if (response.ok) { toast('Weekly report sent! Check your email.', 'success'); fetchUserSettings(); }
+      else { const data = await response.json(); toast(data.error || 'Failed to send report', 'error'); }
+    } catch { toast('Failed to send report', 'error'); }
     finally { setSendingReport(false); }
   };
 
@@ -321,18 +322,18 @@ function SettingsContent() {
     if (!confirm('Are you sure you want to disconnect your Dexcom account? Your existing glucose data will remain, but new data will not sync automatically.')) return;
     try {
       const response = await fetch('/api/dexcom/disconnect', { method: 'POST' });
-      if (response.ok) { setDexcomConnected(false); setDexcomStatus(null); alert('Dexcom disconnected successfully'); }
-      else { alert('Failed to disconnect Dexcom'); }
-    } catch { alert('Failed to disconnect Dexcom'); }
+      if (response.ok) { setDexcomConnected(false); setDexcomStatus(null); toast('Dexcom disconnected', 'success'); }
+      else { toast('Failed to disconnect Dexcom', 'error'); }
+    } catch { toast('Failed to disconnect Dexcom', 'error'); }
   };
 
   const syncDexcomNow = async () => {
     setDexcomSyncing(true);
     try {
       const response = await fetch('/api/dexcom/sync', { method: 'POST' });
-      if (response.ok) { const data = await response.json(); alert(`Synced successfully! Imported ${data.imported} new glucose readings.`); fetchDexcomStatus(); }
-      else { const data = await response.json(); alert(data.error || 'Failed to sync'); }
-    } catch { alert('Failed to sync glucose data'); }
+      if (response.ok) { const data = await response.json(); toast(`Synced! Imported ${data.imported} new glucose readings.`, 'success'); fetchDexcomStatus(); }
+      else { const data = await response.json(); toast(data.error || 'Failed to sync', 'error'); }
+    } catch { toast('Failed to sync glucose data', 'error'); }
     finally { setDexcomSyncing(false); }
   };
 
@@ -345,7 +346,7 @@ function SettingsContent() {
   };
 
   const connectLibre = async () => {
-    if (!libreEmail || !librePassword) { alert('Please enter your LibreLinkUp email and password'); return; }
+    if (!libreEmail || !librePassword) { toast('Please enter your LibreLinkUp email and password', 'error'); return; }
     setLibreConnecting(true);
     try {
       const response = await fetch('/api/libre/connect', {
@@ -353,9 +354,9 @@ function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: libreEmail, password: librePassword, region: libreRegion }),
       });
-      if (response.ok) { alert('LibreLinkUp connected successfully!'); setShowLibreConnect(false); setLibreEmail(''); setLibrePassword(''); fetchLibreStatus(); }
-      else { const data = await response.json(); alert(data.error || 'Failed to connect'); }
-    } catch { alert('Failed to connect LibreLinkUp'); }
+      if (response.ok) { toast('LibreLinkUp connected!', 'success'); setShowLibreConnect(false); setLibreEmail(''); setLibrePassword(''); fetchLibreStatus(); }
+      else { const data = await response.json(); toast(data.error || 'Failed to connect', 'error'); }
+    } catch { toast('Failed to connect LibreLinkUp', 'error'); }
     finally { setLibreConnecting(false); }
   };
 
@@ -363,18 +364,18 @@ function SettingsContent() {
     if (!confirm('Are you sure you want to disconnect LibreLinkUp? Your existing glucose data will remain, but new data will not sync automatically.')) return;
     try {
       const response = await fetch('/api/libre/disconnect', { method: 'POST' });
-      if (response.ok) { setLibreConnected(false); setLibreStatus(null); alert('LibreLinkUp disconnected successfully'); }
-      else { alert('Failed to disconnect LibreLinkUp'); }
-    } catch { alert('Failed to disconnect LibreLinkUp'); }
+      if (response.ok) { setLibreConnected(false); setLibreStatus(null); toast('LibreLinkUp disconnected', 'success'); }
+      else { toast('Failed to disconnect LibreLinkUp', 'error'); }
+    } catch { toast('Failed to disconnect LibreLinkUp', 'error'); }
   };
 
   const syncLibreNow = async () => {
     setLibreSyncing(true);
     try {
       const response = await fetch('/api/libre/sync', { method: 'POST' });
-      if (response.ok) { const data = await response.json(); alert(`Synced successfully! Imported ${data.imported} new glucose readings.`); fetchLibreStatus(); }
-      else { const data = await response.json(); alert(data.error || 'Failed to sync'); }
-    } catch { alert('Failed to sync glucose data'); }
+      if (response.ok) { const data = await response.json(); toast(`Synced! Imported ${data.imported} new glucose readings.`, 'success'); fetchLibreStatus(); }
+      else { const data = await response.json(); toast(data.error || 'Failed to sync', 'error'); }
+    } catch { toast('Failed to sync glucose data', 'error'); }
     finally { setLibreSyncing(false); }
   };
 

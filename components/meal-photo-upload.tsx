@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
 import { compressImage } from '@/lib/compress-image';
 import { ExifData } from '@/lib/exif';
+import { toast } from '@/components/toast';
 
 interface MealPhotoUploadProps {
   /** Called after the photo is compressed. Includes any EXIF metadata extracted before compression. */
@@ -24,7 +25,7 @@ export default function MealPhotoUpload({ onPhotoCapture, initialPhoto }: MealPh
       onPhotoCapture(base64, exif);
     } catch (err) {
       console.error('Image compression failed:', err);
-      alert('Failed to process photo. Please try again.');
+      toast('Failed to process photo. Please try again.', 'error');
     }
   };
 

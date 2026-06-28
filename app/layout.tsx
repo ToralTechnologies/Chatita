@@ -4,6 +4,7 @@ import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/context";
 import QueryProvider from "@/lib/query-provider";
 import { ThemeProvider } from "@/lib/theme-context";
+import { ToastHost } from "@/components/toast";
 
 const dmSerifDisplay = DM_Serif_Display({
   weight: "400",
@@ -47,6 +48,7 @@ export default function RootLayout({
         <QueryProvider>
           <ThemeProvider>
             <I18nProvider>{children}</I18nProvider>
+            <ToastHost />
           </ThemeProvider>
         </QueryProvider>
       </body>
