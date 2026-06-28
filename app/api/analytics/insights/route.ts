@@ -6,6 +6,14 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const ENABLE_AI = process.env.ENABLE_AI_CHAT === 'true';
 
+// In-memory cache of generated AI insights. Generating insights requires a
+// Claude call (~1-3s), and the insights page previously blocked on it for every
+// load/refresh. AI insights only change as new data is logged, so a short TTL
+// makes repeat loads instant without a schema/DB change. (Per-instance; a
+// shared store like Redis/DB is the production follow-up.)
+const INSIGHTS_TTL_MS = 30 * 60 * 1000;
+const insightsCache = new Map<string, { expires: number; payload: any }>();
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,6 +23,15 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
+    const refresh = searchParams.get('refresh') === '1';
+
+    const cacheKey = `${session.user.id}:${days}`;
+    if (!refresh) {
+      const cached = insightsCache.get(cacheKey);
+      if (cached && cached.expires > Date.now()) {
+        return NextResponse.json({ ...cached.payload, cached: true });
+      }
+    }
 
     // Fetch data for analysis
     const startDate = new Date();
@@ -79,10 +96,9 @@ export async function GET(request: Request) {
 
     const aiInsights = await generateAIInsights(glucoseEntries, meals, userData, healthSummaries);
 
-    return NextResponse.json({
-      mode: 'ai',
-      insights: aiInsights,
-    });
+    const payload = { mode: 'ai', insights: aiInsights };
+    insightsCache.set(cacheKey, { expires: Date.now() + INSIGHTS_TTL_MS, payload });
+    return NextResponse.json(payload);
   } catch (error) {
     console.error('Analytics insights error:', error);
     return NextResponse.json({

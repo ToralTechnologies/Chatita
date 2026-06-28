@@ -220,13 +220,14 @@ function InsightCard({ title, message, type, severity, action, foods }: {
 
 // ── Shared content renderer ───────────────────────────────────────────────────
 
-function InsightsContent({ correlation, aiInsights, scatterDots, allCards, period, setPeriod, isWeb = false }: {
+function InsightsContent({ correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading = false, isWeb = false }: {
   correlation: any;
   aiInsights: any[];
   scatterDots: GlucoseDot[];
   allCards: any[];
   period: number;
   setPeriod: (p: number) => void;
+  aiLoading?: boolean;
   isWeb?: boolean;
 }) {
   const stats = correlation?.stats;
@@ -354,6 +355,15 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         </div>
       )}
 
+      {/* ── AI insights still loading (charts already shown) ── */}
+      {aiLoading && aiInsights.length === 0 && (
+        <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '18px 22px' }}>
+          <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid rgba(1,35,116,0.18)', borderTopColor: '#012374', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ fontSize: '13.5px', color: 'rgba(22,24,42,0.6)' }}>Chatita is looking for gentle patterns in your week…</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
       {/* ── Extra charts ── */}
       {(correlation?.chartData?.mealComparison?.length > 0 || correlation?.chartData?.dailyPattern?.length > 0) && (
         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -392,20 +402,29 @@ export default function InsightsPage() {
   const [correlation, setCorrelation] = useState<any>(null);
   const [aiInsights, setAiInsights]   = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
+  const [aiLoading, setAiLoading]     = useState(true);
   const [period, setPeriod]           = useState(30);
 
   useEffect(() => { fetchAnalytics(); }, [period]);
 
-  const fetchAnalytics = async () => {
+  // The charts/stats (correlation) come from fast DB queries and drive the page
+  // render. AI insights require a Claude call, so they load independently and
+  // stream in — the page is no longer blocked on that latency.
+  const fetchAnalytics = () => {
     setLoading(true);
-    try {
-      const [corrRes, insRes] = await Promise.all([
-        fetch(`/api/analytics/correlation?days=${period}`),
-        fetch(`/api/analytics/insights?days=${period}`),
-      ]);
-      if (corrRes.ok)  setCorrelation(await corrRes.json());
-      if (insRes.ok) { const d = await insRes.json(); setAiInsights(d.insights || []); }
-    } catch { /* keep previous state */ } finally { setLoading(false); }
+    setAiLoading(true);
+
+    fetch(`/api/analytics/correlation?days=${period}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setCorrelation(data); })
+      .catch(() => { /* keep previous state */ })
+      .finally(() => setLoading(false));
+
+    fetch(`/api/analytics/insights?days=${period}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { setAiInsights(data?.insights || []); })
+      .catch(() => { /* AI insights are best-effort */ })
+      .finally(() => setAiLoading(false));
   };
 
   const scatterDots = useMemo((): GlucoseDot[] => {
@@ -435,7 +454,7 @@ export default function InsightsPage() {
     return cards;
   }, [correlation, aiInsights]);
 
-  const sharedProps = { correlation, aiInsights, scatterDots, allCards, period, setPeriod };
+  const sharedProps = { correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading };
 
   // ── Loading skeleton ──
 
