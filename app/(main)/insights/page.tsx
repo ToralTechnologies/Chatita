@@ -68,7 +68,7 @@ function getDateRange(period: number) {
 
 // ── Glucose scatter chart ─────────────────────────────────────────────────────
 
-interface GlucoseDot { x: number; y: number; color: string; v: number; label: string }
+interface GlucoseDot { x: number; y: number; color: string; v: number; label: string; t: number }
 
 function glucoseDotColor(v: number, min: number, max: number) {
   if (v < min) return '#B5562E';
@@ -82,13 +82,23 @@ function glucoseStatusLabel(v: number, min: number, max: number) {
   return 'In range';
 }
 
-function ScatterChart({ dots, targetMin = 70, targetMax = 180 }: {
+function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay', axisLabels }: {
   dots: GlucoseDot[];
   targetMin?: number;
   targetMax?: number;
+  mode?: 'timeline' | 'timeOfDay';
+  axisLabels?: string[];
 }) {
   const [tooltip, setTooltip] = useState<{ dot: GlucoseDot } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // In timeline mode, connect readings chronologically into a continuous trace.
+  const linePoints = useMemo(() => {
+    if (mode !== 'timeline') return '';
+    return [...dots].sort((a, b) => a.x - b.x).map(d => `${d.x},${d.y}`).join(' ');
+  }, [dots, mode]);
+
+  const labels = axisLabels ?? ['12 am', '6 am', '12 pm', '6 pm', '11 pm'];
 
   const yScale = (v: number) => 220 - (Math.max(0, Math.min(300, v)) / 300) * 210;
   const band180Y = yScale(targetMax);
@@ -112,6 +122,9 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180 }: {
         <line x1="0" y1={band70Y}  x2="1000" y2={band70Y}  stroke="rgba(28,122,79,0.4)" strokeWidth="1.5" strokeDasharray="7 7" />
         <text x="6" y={band180Y - 3} fill="rgba(22,24,42,0.4)" fontSize="10">{targetMax}</text>
         <text x="6" y={band70Y + 10} fill="rgba(22,24,42,0.4)" fontSize="10">{targetMin}</text>
+        {mode === 'timeline' && linePoints && (
+          <polyline points={linePoints} fill="none" stroke="rgba(1,35,116,0.35)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        )}
         {(() => {
           // Dense CGM data (≈288 readings/day) overlaid by time-of-day across
           // many days becomes thousands of points. Shrink + fade the dots so the
@@ -167,7 +180,7 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180 }: {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(22,24,42,0.45)', marginTop: '4px', padding: '0 4px' }}>
-        <span>12 am</span><span>6 am</span><span>12 pm</span><span>6 pm</span><span>11 pm</span>
+        {labels.map((l, i) => <span key={i}>{l}</span>)}
       </div>
     </div>
   );
@@ -282,7 +295,7 @@ function InsightCard({ title, message, type, severity, action, foods, bars, spli
 
 // ── Shared content renderer ───────────────────────────────────────────────────
 
-function InsightsContent({ correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading = false, isWeb = false }: {
+function InsightsContent({ correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading = false, chartMode = 'timeline', setChartMode, axisLabels, isWeb = false }: {
   correlation: any;
   aiInsights: any[];
   scatterDots: GlucoseDot[];
@@ -290,6 +303,9 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
   period: number;
   setPeriod: (p: number) => void;
   aiLoading?: boolean;
+  chartMode?: 'timeline' | 'timeOfDay';
+  setChartMode?: (m: 'timeline' | 'timeOfDay') => void;
+  axisLabels?: string[];
   isWeb?: boolean;
 }) {
   const stats = correlation?.stats;
@@ -322,8 +338,12 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
       <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', padding: '24px 26px', boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div>
-            <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '24px' : '22px', color: '#012374' }}>Daily glucose pattern</h2>
-            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '3px' }}>Every reading from this period, overlaid by time of day — so each day stacks onto one 24-hour view. Hover any point for its exact value and time.</p>
+            <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '24px' : '22px', color: '#012374' }}>{chartMode === 'timeline' ? 'Your glucose, over time' : 'Daily glucose pattern'}</h2>
+            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '3px' }}>
+              {chartMode === 'timeline'
+                ? 'Each reading at its actual date and time — a continuous trace. Hover any point for its exact value and time.'
+                : 'Every reading overlaid by time of day, so each day stacks onto one 24-hour view. Hover any point for its value and time.'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
             {[7, 30, 90].map(d => (
@@ -338,13 +358,27 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           </div>
         </div>
 
+        {/* View toggle: chronological timeline vs time-of-day overlay */}
+        {setChartMode && (
+          <div style={{ marginTop: '14px', display: 'inline-flex', gap: '4px', background: '#F7EFE1', borderRadius: '999px', padding: '4px' }}>
+            {([['timeline', 'Timeline'], ['timeOfDay', 'Time of day']] as const).map(([m, label]) => (
+              <button key={m} onClick={() => setChartMode(m)} style={{
+                padding: '6px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
+                cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                background: chartMode === m ? '#012374' : 'transparent',
+                color: chartMode === m ? '#FFFDF9' : 'rgba(1,35,116,0.7)',
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
+
         {/* Stat boxes */}
         <div style={{ marginTop: '18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
           {[
             { label: 'Avg glucose', val: stats?.averageGlucose ? `${Math.round(stats.averageGlucose)}` : '—', unit: 'mg/dL', color: '#012374' },
             { label: 'Time in range', val: stats?.inRangePercent != null ? `${stats.inRangePercent}%` : '—', unit: '70–180', color: '#1C7A4F' },
             { label: 'Est. A1C', val: correlation?.a1cEstimate?.estimated ? `${correlation.a1cEstimate.estimated}%` : '—', unit: 'from readings', color: '#012374' },
-            { label: 'Readings', val: stats?.readingsCount ?? correlation?.mealsTracked ?? '—', unit: 'individual', color: '#2A8A8A' },
+            { label: 'Readings', val: stats?.readingsCount != null ? stats.readingsCount.toLocaleString() : '—', unit: 'glucose readings', color: '#2A8A8A' },
           ].map(({ label, val, unit, color }) => (
             <div key={label} style={{ background: '#F7EFE1', borderRadius: '14px', padding: '14px 16px' }}>
               <div style={{ fontSize: '12px', color: 'rgba(22,24,42,0.58)' }}>{label}</div>
@@ -363,6 +397,8 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
               dots={scatterDots}
               targetMin={correlation?.targetGlucoseMin ?? 70}
               targetMax={correlation?.targetGlucoseMax ?? 180}
+              mode={chartMode}
+              axisLabels={axisLabels}
             />
           ) : correlation?.chartData?.trendData ? (
             <GlucoseTrendChart data={correlation.chartData.trendData} />
@@ -481,6 +517,7 @@ export default function InsightsPage() {
   const [loading, setLoading]         = useState(true);
   const [aiLoading, setAiLoading]     = useState(true);
   const [period, setPeriod]           = useState(30);
+  const [chartMode, setChartMode]     = useState<'timeline' | 'timeOfDay'>('timeline');
 
   useEffect(() => { fetchAnalytics(); }, [period]);
 
@@ -509,16 +546,42 @@ export default function InsightsPage() {
     if (!raw?.length) return [];
     const targetMin = correlation?.targetGlucoseMin ?? 70;
     const targetMax = correlation?.targetGlucoseMax ?? 180;
-    return raw.map((pt: any) => {
-      const date = new Date(pt.time ?? pt.measuredAt ?? pt.date);
-      const hourFraction = (date.getHours() + date.getMinutes() / 60) / 24;
-      const x = Math.round(10 + hourFraction * 980);
-      const v = pt.value ?? pt.glucose ?? 0;
-      const yVal = 220 - (Math.max(0, Math.min(300, v)) / 300) * 210;
-      const label = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-      return { x, y: Math.round(yVal), color: glucoseDotColor(v, targetMin, targetMax), v, label };
+
+    const points = raw
+      .map((pt: any) => ({ date: new Date(pt.time ?? pt.measuredAt ?? pt.date), v: pt.value ?? pt.glucose ?? 0 }))
+      .filter((p: any) => !isNaN(p.date.getTime()));
+
+    // Timeline: spread chronologically so each reading sits at its own x (a real
+    // CGM trace, one point per moment). Time-of-day: overlay every day on a 24h axis.
+    let minT = Infinity, maxT = -Infinity;
+    if (chartMode === 'timeline') {
+      for (const p of points) { const t = p.date.getTime(); if (t < minT) minT = t; if (t > maxT) maxT = t; }
+    }
+    const span = maxT - minT || 1;
+
+    return points.map((p: any) => {
+      const t = p.date.getTime();
+      const x = chartMode === 'timeline'
+        ? Math.round(10 + ((t - minT) / span) * 980)
+        : Math.round(10 + ((p.date.getHours() + p.date.getMinutes() / 60) / 24) * 980);
+      const yVal = 220 - (Math.max(0, Math.min(300, p.v)) / 300) * 210;
+      const label = chartMode === 'timeline'
+        ? p.date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : p.date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return { x, y: Math.round(yVal), color: glucoseDotColor(p.v, targetMin, targetMax), v: p.v, label, t };
     });
-  }, [correlation]);
+  }, [correlation, chartMode]);
+
+  // X-axis labels depend on the mode: 5 dates across the range (timeline) or
+  // fixed times of day (overlay).
+  const axisLabels = useMemo((): string[] => {
+    if (chartMode !== 'timeline') return ['12 am', '6 am', '12 pm', '6 pm', '11 pm'];
+    if (scatterDots.length === 0) return [];
+    const ts = scatterDots.map(d => d.t);
+    const minT = Math.min(...ts), maxT = Math.max(...ts);
+    const fmt = (t: number) => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return [0, 0.25, 0.5, 0.75, 1].map(f => fmt(minT + (maxT - minT) * f));
+  }, [scatterDots, chartMode]);
 
   // Real daily time-in-range bars (last 7 days) for the featured card.
   const dailyTirBars = useMemo((): InsightBar[] => {
@@ -587,7 +650,7 @@ export default function InsightsPage() {
     return cards;
   }, [correlation, aiInsights, dailyTirBars]);
 
-  const sharedProps = { correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading };
+  const sharedProps = { correlation, aiInsights, scatterDots, allCards, period, setPeriod, aiLoading, chartMode, setChartMode, axisLabels };
 
   // ── Loading skeleton ──
 

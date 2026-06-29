@@ -81,6 +81,7 @@ function calculateStats(glucoseEntries: any[], meals: any[]) {
       maxGlucose: 0,
       inRangePercent: 0,
       averageCarbs: 0,
+      readingsCount: 0,
       timeInRange: { low: 0, normal: 0, high: 0 },
     };
   }
@@ -106,6 +107,7 @@ function calculateStats(glucoseEntries: any[], meals: any[]) {
     maxGlucose: Math.max(...values),
     inRangePercent: Math.round((normal / values.length) * 100),
     averageCarbs: Math.round(avgCarbs),
+    readingsCount: glucoseEntries.length,
     timeInRange: {
       low: Math.round((low / values.length) * 100),
       normal: Math.round((normal / values.length) * 100),
