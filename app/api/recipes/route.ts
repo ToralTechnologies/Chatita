@@ -148,7 +148,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { ingredients, photoBase64, cuisine, craving } = await request.json();
+    const { ingredients, photoBase64, photos: photosRaw, cuisine, craving } = await request.json();
+    // Accept multiple photos; fall back to the single photoBase64 for back-compat.
+    const photos: string[] = Array.isArray(photosRaw) && photosRaw.length > 0
+      ? photosRaw.filter((p: unknown): p is string => typeof p === 'string').slice(0, 5)
+      : (photoBase64 ? [photoBase64] : []);
+    const hasPhotos = photos.length > 0;
 
     if (!ENABLE_AI || !process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({
@@ -197,12 +202,12 @@ export async function POST(request: Request) {
 
     const contentBlocks: Anthropic.MessageParam['content'] = [];
 
-    if (photoBase64) {
+    for (const photo of photos) {
       // Detect media type from data URL prefix
       let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg';
-      if (photoBase64.startsWith('data:image/png')) mediaType = 'image/png';
-      else if (photoBase64.startsWith('data:image/webp')) mediaType = 'image/webp';
-      const base64Data = photoBase64.includes(',') ? photoBase64.split(',')[1] : photoBase64;
+      if (photo.startsWith('data:image/png')) mediaType = 'image/png';
+      else if (photo.startsWith('data:image/webp')) mediaType = 'image/webp';
+      const base64Data = photo.includes(',') ? photo.split(',')[1] : photo;
       contentBlocks.push({
         type: 'image',
         source: { type: 'base64', media_type: mediaType, data: base64Data },
@@ -217,7 +222,7 @@ export async function POST(request: Request) {
       type: 'text',
       text: `You are a warm, culturally-sensitive diabetes nutrition companion. Generate exactly 3 diabetes-friendly recipes that fit this user's actual food culture and life.
 
-${photoBase64 ? 'The photo above shows the user\'s fridge or pantry. First identify all visible ingredients, then use those (plus any listed below) to create recipes.' : ''}
+${hasPhotos ? `The ${photos.length > 1 ? `${photos.length} photos` : 'photo'} above show the user's fridge or pantry. First identify ALL visible ingredients across ${photos.length > 1 ? 'every photo' : 'the photo'}, then use those (plus any listed below) to create recipes.` : ''}
 ${ingredientsList}
 ${cuisineNote}
 ${cravingNote}
@@ -251,7 +256,7 @@ Respond ONLY with valid JSON (no markdown):
   ]
 }
 
-detectedIngredients: list ingredients visible in the photo (empty array if no photo).
+detectedIngredients: list all ingredients visible across the photo(s) (empty array if no photos).
 bloodSugarImpact: "low" | "moderate" | "high".
 cuisine: the dish's cultural origin (e.g. "Pakistani", "Mexican", "Mediterranean", "Any").`,
     });

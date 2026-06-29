@@ -4,6 +4,9 @@ import { useState, useRef, RefObject } from 'react';
 import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
+import { compressImage } from '@/lib/compress-image';
+
+const MAX_RECIPE_PHOTOS = 5;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -196,8 +199,7 @@ function RecipeCard({ recipe, expanded, onToggle, saved, onSave, web, userIngred
 export default function RecipesPage() {
   const [tab, setTab] = useState<'type' | 'fridge' | 'pantry'>('type');
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [cuisine, setCuisine] = useState('Any cuisine');
   const [customCuisine, setCustomCuisine] = useState('');
   const [craving, setCraving] = useState('');
@@ -228,26 +230,35 @@ export default function RecipesPage() {
     setIngredients(prev => prev.filter(i => i !== ing));
   };
 
-  const handlePhotoFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setPhotoBase64(dataUrl);
-      setPhotoPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const clearPhoto = () => {
-    setPhotoBase64(null);
-    setPhotoPreview(null);
+  const handlePhotoFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const room = MAX_RECIPE_PHOTOS - photos.length;
+    const picked = Array.from(files).slice(0, Math.max(0, room));
+    // Compress each photo (resize + re-encode) so several photos stay well under
+    // the serverless body limit.
+    const compressed = await Promise.all(
+      picked.map(async (f) => {
+        try {
+          const { base64 } = await compressImage(f);
+          return base64;
+        } catch {
+          return null;
+        }
+      })
+    );
+    const valid = compressed.filter((b): b is string => !!b);
+    if (valid.length) setPhotos(prev => [...prev, ...valid].slice(0, MAX_RECIPE_PHOTOS));
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
+  const removePhoto = (idx: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const search = async () => {
-    if (!ingredients.length && !photoBase64) return;
-    setUsedPhoto(!!photoBase64);
+    if (!ingredients.length && photos.length === 0) return;
+    setUsedPhoto(photos.length > 0);
     setLoading(true);
     setSearched(true);
     setError(null);
@@ -257,7 +268,8 @@ export default function RecipesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ingredients,
-          photoBase64: photoBase64 ?? undefined,
+          photos: photos.length > 0 ? photos : undefined,
+          photoBase64: photos[0] ?? undefined, // back-compat
           cuisine: cuisine === 'Any cuisine' ? (customCuisine || 'Any') : cuisine,
           craving: craving || undefined,
         }),
@@ -296,7 +308,7 @@ export default function RecipesPage() {
     setSaved(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const canSearch = ingredients.length > 0 || !!photoBase64;
+  const canSearch = ingredients.length > 0 || photos.length > 0;
 
   // Defined as a plain render function (not a component) so React doesn't unmount/remount it on state changes, preserving input focus.
   const renderInputPanel = (web?: boolean) => (
@@ -311,14 +323,15 @@ export default function RecipesPage() {
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); }}
+        onChange={e => handlePhotoFiles(e.target.files)}
       />
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
+        multiple
         style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); }}
+        onChange={e => handlePhotoFiles(e.target.files)}
       />
 
       {/* Tabs */}
@@ -409,7 +422,7 @@ export default function RecipesPage() {
       {/* Fridge / Pantry tabs — real camera + gallery */}
       {(tab === 'fridge' || tab === 'pantry') && (
         <div style={{ marginTop: 16 }}>
-          {!photoPreview ? (
+          {photos.length === 0 ? (
             <div style={{
               border: '1.5px dashed rgba(1,35,116,0.3)', borderRadius: 18,
               background: '#F7EFE1', padding: '28px 20px', textAlign: 'center',
@@ -423,9 +436,9 @@ export default function RecipesPage() {
               </div>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#012374', marginTop: 12 }}>Snap your {tab}</div>
               <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.62)', marginTop: 4, lineHeight: 1.45 }}>
-                Chatita spots the ingredients and builds recipes from what it sees.
+                Add up to {MAX_RECIPE_PHOTOS} photos — different shelves, the door, the pantry. Chatita spots the ingredients across all of them.
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14 }}>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
                 <button
                   onClick={() => cameraInputRef.current?.click()}
                   style={{ background: '#012374', color: '#FFFDF9', border: 'none', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
@@ -436,28 +449,39 @@ export default function RecipesPage() {
                   onClick={() => galleryInputRef.current?.click()}
                   style={{ background: 'transparent', color: '#012374', border: '1.5px solid rgba(1,35,116,0.3)', padding: '10px 22px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
                 >
-                  Choose from gallery
+                  Choose photos
                 </button>
               </div>
             </div>
           ) : (
             <div>
-              <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="Photo preview" style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
-                <button
-                  onClick={clearPhoto}
-                  style={{
-                    position: 'absolute', top: 10, right: 10, width: 30, height: 30,
-                    borderRadius: '50%', background: 'rgba(22,24,42,0.7)', border: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8, marginBottom: 12 }}>
+                {photos.map((p, i) => (
+                  <div key={i} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1 / 1' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <button
+                      onClick={() => removePhoto(i)}
+                      aria-label="Remove photo"
+                      style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(22,24,42,0.7)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#FFFDF9" strokeWidth="2.4" strokeLinecap="round"/></svg>
+                    </button>
+                  </div>
+                ))}
+                {photos.length < MAX_RECIPE_PHOTOS && (
+                  <button
+                    onClick={() => galleryInputRef.current?.click()}
+                    aria-label="Add more photos"
+                    style={{ aspectRatio: '1 / 1', borderRadius: 12, border: '1.5px dashed rgba(1,35,116,0.3)', background: '#F7EFE1', color: '#012374', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 600 }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#012374" strokeWidth="2" strokeLinecap="round"/></svg>
+                    Add more
+                  </button>
+                )}
               </div>
               <div style={{ fontSize: 13, color: '#1C7A4F', background: 'rgba(28,122,79,0.1)', borderRadius: 10, padding: '9px 14px', marginBottom: 12 }}>
-                Photo ready — Chatita will detect ingredients and create recipes from it.
+                {photos.length} photo{photos.length === 1 ? '' : 's'} ready — Chatita will detect ingredients across {photos.length === 1 ? 'it' : 'them all'} and create recipes.
               </div>
             </div>
           )}
