@@ -54,8 +54,8 @@ Restaurant name: ${restaurantName}
 Cuisine type: ${cuisine}
 
 Rules:
-- Return 7-9 dishes that a restaurant of this cuisine and name would plausibly serve.
-- Group them by category (Appetizer, Entrée, Side, Dessert, Beverage — use only categories that apply).
+- Return a FULL representative menu: 16-22 dishes that a restaurant of this cuisine and name would plausibly serve, spread across every applicable category (don't return just a handful).
+- Group them by category (Appetizer, Soup/Salad, Entrée, Side, Dessert, Beverage — use only categories that apply), with several dishes per category.
 - Score each dish:
     "great"    = low-carb, high-protein or high-fibre, minimal blood-sugar impact
     "moderate" = some carbs but manageable with small tweaks
@@ -78,7 +78,7 @@ Respond ONLY with valid JSON, no markdown, no extra text:
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
+      max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }],
     });
 

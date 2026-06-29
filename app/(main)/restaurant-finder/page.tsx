@@ -220,6 +220,9 @@ export default function RestaurantFinderPage() {
 
             {menu && (
               <div style={{ padding: '12px 16px 16px' }}>
+                <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.5)', lineHeight: 1.5, marginBottom: 12 }}>
+                  A representative menu for this spot. For the exact dishes, <a href="/menu-scanner" style={{ color: '#012374', fontWeight: 600 }}>scan the real menu →</a>
+                </p>
                 {menuByCategory.map(([cat, dishes]) => (
                   <div key={cat} style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 8 }}>{cat}</div>
@@ -383,6 +386,9 @@ export default function RestaurantFinderPage() {
 
                 {menu && (
                   <div style={{ padding: '20px 24px' }}>
+                    <p style={{ fontSize: 12.5, color: 'rgba(22,24,42,0.5)', lineHeight: 1.5, marginBottom: 14 }}>
+                      A representative menu for this spot. For the exact dishes, <a href="/menu-scanner" style={{ color: '#012374', fontWeight: 600 }}>scan the real menu →</a>
+                    </p>
                     {/* Dish grid by category */}
                     {menuByCategory.map(([cat, dishes]) => (
                       <div key={cat} style={{ marginBottom: 18 }}>
