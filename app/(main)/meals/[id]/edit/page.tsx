@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
+import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
 import MealForm, { MealFormData } from '@/components/meal-form';
 import GlucoseImpactCard from '@/components/glucose-impact-card';
@@ -248,7 +249,9 @@ export default function EditMealPage() {
     c === 'high' ? '#1C7A4F' : c === 'medium' ? '#9A6F18' : '#012374';
 
   return (
-    <div className="min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
+    <div className="min-h-screen lg:flex lg:h-screen lg:overflow-hidden" style={{ background: '#F7EFE1' }}>
+      <div className="hidden lg:block"><WebNav /></div>
+      <div className="mobile-page-pb lg:flex-1 lg:overflow-y-auto lg:pb-0">
 
       {/* ── Header ── */}
       <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)' }}>
@@ -460,8 +463,8 @@ export default function EditMealPage() {
           />
         </div>
       </div>
-
-      <BottomNav />
+      </div>
+      <div className="lg:hidden"><BottomNav /></div>
     </div>
   );
 }
