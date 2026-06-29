@@ -11,106 +11,110 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  password          String?   // Made optional for OAuth users
-  name              String?
-  emailVerified     DateTime? // Required for NextAuth
-  image             String?   // Profile picture from OAuth
-  diabetesType      String?   // Type1, Type2, Gestational, PreDiabetes, Other
-  targetGlucoseMin  Int       @default(70)
-  targetGlucoseMax  Int       @default(180)
-  preferredLanguage String    @default("en") // en, es
-  weeklyReportEnabled Boolean @default(true) // Send weekly progress emails
-  lastReportSent    DateTime? // Track last email sent
-  tier              String    @default("free") // 'free' | 'pro' | 'unlimited'
-  subscriptionId    String?
-  subscriptionEnds  DateTime?
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String? // Made optional for OAuth users
+  name                String?
+  emailVerified       DateTime? // Required for NextAuth
+  image               String? // Profile picture from OAuth
+  diabetesType        String? // Type1, Type2, Gestational, PreDiabetes, Other
+  targetGlucoseMin    Int       @default(70)
+  targetGlucoseMax    Int       @default(180)
+  preferredLanguage   String    @default("en") // en, es
+  weeklyReportEnabled Boolean   @default(true) // Send weekly progress emails
+  lastReportSent      DateTime? // Track last email sent
+  tier                String    @default("free") // 'free' | 'pro' | 'unlimited'
+  subscriptionId      String?
+  subscriptionEnds    DateTime?
 
   // Extended health profile — for personalized guidance
-  age               Int?
-  heightCm          Float?              // centimeters
-  weightKg          Float?              // kilograms
+  age                Int?
+  heightCm           Float? // centimeters
+  weightKg           Float? // kilograms
   // Backward-compatible: old values (sedentary/light/moderate/active/very_active) still stored as-is
   // New preferred values: mostly_sitting | lightly_active | moderately_active | very_active | not_sure | prefer_not_to_say
-  activityLevel     String?
-  weightGoal        String?             // 'lose' | 'gain' | 'maintain'
-  otherConditions   String?   @db.Text  // JSON array: ["heart_disease","kidney_disease","hypertension"]
-  currentMedications String?  @db.Text  // JSON array of medication names
+  activityLevel      String?
+  weightGoal         String? // 'lose' | 'gain' | 'maintain'
+  otherConditions    String? @db.Text // JSON array: ["heart_disease","kidney_disease","hypertension"]
+  currentMedications String? @db.Text // JSON array of medication names
   dailyCalorieTarget Int?
-  dailyCarbTarget    Int?               // grams per day
-  mealsPerDay        Int?     @default(3)
+  dailyCarbTarget    Int? // grams per day
+  mealsPerDay        Int?    @default(3)
 
   // Sleep Profile — tracksSleep defaults true (core feature)
-  tracksSleep         Boolean   @default(true)
-  sleepGoalHours      Float?
-  typicalBedtime      String?              // "22:30" HH:MM
-  typicalWakeTime     String?              // "06:30" HH:MM
-  sleepTrackingNotes  String?   @db.Text
+  tracksSleep        Boolean @default(true)
+  sleepGoalHours     Float?
+  typicalBedtime     String? // "22:30" HH:MM
+  typicalWakeTime    String? // "06:30" HH:MM
+  sleepTrackingNotes String? @db.Text
 
   // Menstrual Cycle Profile — opt-in only, defaults false
-  tracksMenstrualCycle  Boolean  @default(false)
-  typicalCycleLength    Int?               // days, reasonable range 15–60
-  typicalPeriodLength   Int?               // days, reasonable range 1–14
-  cycleTrackingNotes    String?  @db.Text
+  tracksMenstrualCycle Boolean @default(false)
+  typicalCycleLength   Int? // days, reasonable range 15–60
+  typicalPeriodLength  Int? // days, reasonable range 1–14
+  cycleTrackingNotes   String? @db.Text
 
   // Movement & Activity Profile — all fields optional
-  preferredMovementTypes String?   @db.Text   // JSON array: ["walking","chores","dancing",...]
-  exerciseFrequency      String?              // 'daily'|'most_days'|'few_times_week'|'rarely'|'never'|'not_sure'
+  preferredMovementTypes String?  @db.Text // JSON array: ["walking","chores","dancing",...]
+  exerciseFrequency      String? // 'daily'|'most_days'|'few_times_week'|'rarely'|'never'|'not_sure'
   averageDailySteps      Int?
-  hasPhysicalJob         Boolean?  @default(false)
-  mobilityLimitations    String?   @db.Text   // free-text
-  movementGoal           String?              // 'more_energy'|'manage_glucose'|'lose_weight'|'feel_better'|'other'
-  movementNotes          String?   @db.Text   // free-text
+  hasPhysicalJob         Boolean? @default(false)
+  mobilityLimitations    String?  @db.Text // free-text
+  movementGoal           String? // 'more_energy'|'manage_glucose'|'lose_weight'|'feel_better'|'other'
+  movementNotes          String?  @db.Text // free-text
 
   // Cultural Food Profile — all fields optional, user-driven
-  countryOrRegion          String?              // e.g. "Mexico", "India", "Nigeria"
-  culturalFoodBackground   String?   @db.Text   // free-text: "I grew up eating ..."
-  commonMeals              String?   @db.Text   // JSON array of typical meals
-  stapleCarbs              String?   @db.Text   // JSON array: ["tortillas","rice","beans"]
-  commonProteins           String?   @db.Text   // JSON array: ["chicken","beans","eggs"]
-  commonVegetables         String?   @db.Text   // JSON array
-  commonDrinks             String?   @db.Text   // JSON array: ["agua fresca","horchata","tea"]
-  dietaryRestrictions      String?   @db.Text   // JSON array: ["halal","vegetarian","kosher","lactose-free"]
-  religiousFoodNeeds       String?              // free-text, optional
-  foodBudgetLevel          String?              // 'low' | 'medium' | 'high'
-  foodAccessContext        String?              // 'food_pantry' | 'grocery' | 'restaurant_heavy' | 'mixed'
-  cookingFrequency         String?              // 'rarely' | 'sometimes' | 'often' | 'daily'
-  foodPantryUse            Boolean?  @default(false)
-  comfortFoods             String?   @db.Text   // JSON array — foods user finds comfort in
-  foodsToKeep              String?   @db.Text   // JSON array — foods user does not want to give up
+  countryOrRegion        String? // e.g. "Mexico", "India", "Nigeria"
+  culturalFoodBackground String?  @db.Text // free-text: "I grew up eating ..."
+  commonMeals            String?  @db.Text // JSON array of typical meals
+  stapleCarbs            String?  @db.Text // JSON array: ["tortillas","rice","beans"]
+  commonProteins         String?  @db.Text // JSON array: ["chicken","beans","eggs"]
+  commonVegetables       String?  @db.Text // JSON array
+  commonDrinks           String?  @db.Text // JSON array: ["agua fresca","horchata","tea"]
+  dietaryRestrictions    String?  @db.Text // JSON array: ["halal","vegetarian","kosher","lactose-free"]
+  religiousFoodNeeds     String? // free-text, optional
+  foodBudgetLevel        String? // 'low' | 'medium' | 'high'
+  foodAccessContext      String? // 'food_pantry' | 'grocery' | 'restaurant_heavy' | 'mixed'
+  cookingFrequency       String? // 'rarely' | 'sometimes' | 'often' | 'daily'
+  foodPantryUse          Boolean? @default(false)
+  comfortFoods           String?  @db.Text // JSON array — foods user finds comfort in
+  foodsToKeep            String?  @db.Text // JSON array — foods user does not want to give up
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  meals             Meal[]
-  glucoseEntries    GlucoseEntry[]
-  moodEntries       MoodEntry[]
-  chatMessages      ChatMessage[]
-  badges            UserBadge[]
-  accounts          Account[] // OAuth accounts
-  sessions          Session[] // NextAuth sessions
-  customFoods       CustomFood[]
-  recipes           Recipe[]
-  mealPlans         MealPlan[]
-  favoriteRestaurants FavoriteRestaurant[]
-  restaurantVisits    RestaurantVisit[]
-  dexcomIntegration   DexcomIntegration?
-  libreIntegration    LibreIntegration?
-  mealFollowUps       MealFollowUp[]
-  chatPreference      ChatPreference?
-  aiUsage             AiUsage[]
-  hydrationLogs       HydrationLog[]
-  guidanceInsights    GuidanceInsight[]
-  activityLogs        ActivityLog[]
-  sleepLogs           SleepLog[]
-  cycleLogs           CycleLog[]
+  meals                Meal[]
+  glucoseEntries       GlucoseEntry[]
+  moodEntries          MoodEntry[]
+  chatMessages         ChatMessage[]
+  badges               UserBadge[]
+  accounts             Account[] // OAuth accounts
+  sessions             Session[] // NextAuth sessions
+  customFoods          CustomFood[]
+  recipes              Recipe[]
+  mealPlans            MealPlan[]
+  favoriteRestaurants  FavoriteRestaurant[]
+  restaurantVisits     RestaurantVisit[]
+  dexcomIntegration    DexcomIntegration?
+  libreIntegration     LibreIntegration?
+  mealFollowUps        MealFollowUp[]
+  chatPreference       ChatPreference?
+  aiUsage              AiUsage[]
+  hydrationLogs        HydrationLog[]
+  guidanceInsights     GuidanceInsight[]
+  activityLogs         ActivityLog[]
+  sleepLogs            SleepLog[]
+  cycleLogs            CycleLog[]
   // Connected health data
-  healthConnections     HealthConnection[]
-  healthDailySummaries  HealthDailySummary[]
-  healthMetricSamples   HealthMetricSample[]
-  healthImports         HealthImport[]
-  healthSyncLogs        HealthSyncLog[]
+  healthConnections    HealthConnection[]
+  healthDailySummaries HealthDailySummary[]
+  healthMetricSamples  HealthMetricSample[]
+  healthImports        HealthImport[]
+  healthSyncLogs       HealthSyncLog[]
+  // Smart Grocery List — real products
+  groceryItems         GroceryListItem[]
+  pantryItems          PantryItem[]
+  favoriteProducts     FavoriteProduct[]
 }
 
 // NextAuth models for OAuth and session management
@@ -153,44 +157,44 @@ model VerificationToken {
 }
 
 model Meal {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  photoUrl      String?   // or base64 blob
-  photoBase64   String?   @db.Text
-  detectedFoods String?   @db.Text // JSON array
+  photoUrl      String? // or base64 blob
+  photoBase64   String?     @db.Text
+  detectedFoods String?     @db.Text // JSON array
   foodEntries   FoodEntry[] // Detailed individual foods in this meal
 
   // AI-first fields
-  aiSummary     String?   // "chicken tacos with salsa"
-  aiConfidence  Int?      // 0-100
-  aiMode        String?   // 'ai' | '$0'
+  aiSummary       String? // "chicken tacos with salsa"
+  aiConfidence    Int? // 0-100
+  aiMode          String? // 'ai' | '$0'
   nutritionSource String? @default("manual") // 'ai' | 'manual' | 'user-edited' | 'usda' | 'barcode'
 
   // Meal identity
-  mealName      String?   // User-provided name e.g. "Curry chicken with rice"
-  source        String?   // home, restaurant, packaged, food_pantry, leftovers, other
+  mealName            String? // User-provided name e.g. "Curry chicken with rice"
+  source              String? // home, restaurant, packaged, food_pantry, leftovers, other
   portionEatenPercent Float? // 25, 50, 75, 100, or custom
   estimateConfidence  String? // exact, estimated, not_sure
-  timeFinished  DateTime?
+  timeFinished        DateTime?
 
   // Core nutrition
-  calories      Float?
-  carbs         Float?
-  protein       Float?
-  fat           Float?
-  fiber         Float?
-  sugar         Float?
-  sodium        Float?
-  portionSize   String?
+  calories    Float?
+  carbs       Float?
+  protein     Float?
+  fat         Float?
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+  portionSize String?
 
   // Extended nutrition
-  addedSugar    Float?
-  saturatedFat  Float?
-  transFat      Float?
-  cholesterol   Float?
-  potassium     Float?
+  addedSugar   Float?
+  saturatedFat Float?
+  transFat     Float?
+  cholesterol  Float?
+  potassium    Float?
 
   // Restaurant location tracking
   restaurantName    String?
@@ -198,29 +202,29 @@ model Meal {
   restaurantPlaceId String?
 
   // Glucose context
-  preMealGlucose   Float?
-  postMealGlucose  Float?   // 2-hour reading
-  cgmTrend         String?  // rising, stable, falling
-  glucoseSymptoms  String?  @db.Text // JSON array
+  preMealGlucose  Float?
+  postMealGlucose Float? // 2-hour reading
+  cgmTrend        String? // rising, stable, falling
+  glucoseSymptoms String? @db.Text // JSON array
 
   // Medication context
-  medicationTaken  Boolean?
-  medicationName   String?
-  medicationDose   String?
-  medicationTime   String?  // "08:00" format
-  medicationNotes  String?  @db.Text
-  isGlp1           Boolean?
-  glp1Symptoms     String?  @db.Text // JSON array
+  medicationTaken Boolean?
+  medicationName  String?
+  medicationDose  String?
+  medicationTime  String? // "08:00" format
+  medicationNotes String?  @db.Text
+  isGlp1          Boolean?
+  glp1Symptoms    String?  @db.Text // JSON array
 
   // Snack context
-  snackReason              String?  // hungry, craving, low_glucose, before_exercise, after_exercise, nausea, need_more_protein, routine, other
-  wasLowGlucoseTreatment   Boolean?
+  snackReason            String? // hungry, craving, low_glucose, before_exercise, after_exercise, nausea, need_more_protein, routine, other
+  wasLowGlucoseTreatment Boolean?
 
-  feeling       String?   @db.Text // How user felt after meal
-  mealType      String?   // breakfast, lunch, dinner, snack
-  eatenAt       DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  feeling   String?  @db.Text // How user felt after meal
+  mealType  String? // breakfast, lunch, dinner, snack
+  eatenAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   relatedGlucoseReadings GlucoseEntry[]
@@ -233,32 +237,32 @@ model Meal {
 
 // NEW: Individual food items within a meal
 model FoodEntry {
-  id          String @id @default(cuid())
-  mealId      String
-  meal        Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  mealId String
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
 
-  foodName    String
-  brand       String?
-  barcode     String? // UPC/EAN for barcode-scanned items
+  foodName String
+  brand    String?
+  barcode  String? // UPC/EAN for barcode-scanned items
 
   // Nutrition per serving
-  servingSize     String  // "1 cup", "100g", etc
-  servingsEaten   Float   @default(1)
+  servingSize   String // "1 cup", "100g", etc
+  servingsEaten Float  @default(1)
 
-  calories    Float
-  carbs       Float
-  protein     Float
-  fat         Float
-  fiber       Float?
-  sugar       Float?
-  sodium      Float?
+  calories Float
+  carbs    Float
+  protein  Float
+  fat      Float
+  fiber    Float?
+  sugar    Float?
+  sodium   Float?
 
   // Data source tracking
-  source      String  @default("manual") // 'usda' | 'barcode' | 'custom' | 'manual' | 'ai'
-  fdcId       String? // USDA FoodData Central ID
-  upcCode     String? // Barcode UPC code
+  source  String  @default("manual") // 'usda' | 'barcode' | 'custom' | 'manual' | 'ai'
+  fdcId   String? // USDA FoodData Central ID
+  upcCode String? // Barcode UPC code
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([mealId])
   @@index([barcode])
@@ -266,15 +270,15 @@ model FoodEntry {
 
 // NEW: USDA and barcode-scanned food database cache
 model FoodDatabase {
-  id          String @id @default(cuid())
+  id String @id @default(cuid())
 
-  foodName    String
-  foodNameEs  String? // Spanish translation
-  brand       String?
-  barcode     String? @unique // UPC/EAN
+  foodName   String
+  foodNameEs String? // Spanish translation
+  brand      String?
+  barcode    String? @unique // UPC/EAN
 
   // Nutrition per 100g or standard serving
-  servingSize     String  // "100g", "1 cup", etc
+  servingSize String // "100g", "1 cup", etc
   calories    Float
   carbs       Float
   protein     Float
@@ -284,22 +288,22 @@ model FoodDatabase {
   sodium      Float?
 
   // Additional micronutrients (optional)
-  vitaminA    Float?
-  vitaminC    Float?
-  calcium     Float?
-  iron        Float?
+  vitaminA Float?
+  vitaminC Float?
+  calcium  Float?
+  iron     Float?
 
   // Source tracking
-  source      String  // 'usda' | 'openfoodfacts' | 'custom'
+  source      String // 'usda' | 'openfoodfacts' | 'custom'
   fdcId       String? // USDA FoodData Central ID
   lastFetched DateTime @default(now())
 
   // Diabetes-specific flags
-  isLowCarb   Boolean @default(false)
-  isLowGI     Boolean @default(false)
+  isLowCarb Boolean @default(false)
+  isLowGI   Boolean @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([foodName])
   @@index([barcode])
@@ -308,14 +312,14 @@ model FoodDatabase {
 
 // NEW: User's custom foods
 model CustomFood {
-  id          String @id @default(cuid())
-  userId      String
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  foodName    String
-  brand       String?
+  foodName String
+  brand    String?
 
-  servingSize     String
+  servingSize String
   calories    Float
   carbs       Float
   protein     Float
@@ -324,99 +328,99 @@ model CustomFood {
   sugar       Float?
   sodium      Float?
 
-  notes       String? @db.Text
-  createdAt   DateTime @default(now())
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 // NEW: User's custom recipes
 model Recipe {
-  id          String @id @default(cuid())
-  userId      String
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name        String
   nameEs      String?
   description String? @db.Text
   photoUrl    String?
 
-  servings    Int     @default(1)
-  prepTime    Int?    // minutes
-  cookTime    Int?    // minutes
+  servings Int  @default(1)
+  prepTime Int? // minutes
+  cookTime Int? // minutes
 
-  ingredients String  @db.Text // JSON array of {foodName, amount, unit}
+  ingredients  String @db.Text // JSON array of {foodName, amount, unit}
   instructions String @db.Text // JSON array of steps
 
   // Total nutrition per serving
-  calories    Float
-  carbs       Float
-  protein     Float
-  fat         Float
-  fiber       Float?
-  sugar       Float?
-  sodium      Float?
+  calories Float
+  carbs    Float
+  protein  Float
+  fat      Float
+  fiber    Float?
+  sugar    Float?
+  sodium   Float?
 
-  tags        String? @db.Text // JSON array: ["breakfast", "low-carb", "mexican"]
+  tags String? @db.Text // JSON array: ["breakfast", "low-carb", "mexican"]
 
   // Diabetes-specific
-  carbCount   String? // "15g per serving"
+  carbCount    String? // "15g per serving"
   diabetesTips String? @db.Text
 
-  isPublic    Boolean @default(false) // Share with community?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublic  Boolean  @default(false) // Share with community?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // NEW: Meal planning
 model MealPlan {
-  id          String @id @default(cuid())
-  userId      String
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name        String  // "Week 1" or "Budget Friendly February"
-  startDate   DateTime
-  endDate     DateTime
+  name      String // "Week 1" or "Budget Friendly February"
+  startDate DateTime
+  endDate   DateTime
 
-  meals       String  @db.Text // JSON: {day: date, meals: [{type, recipeId, notes}]}
+  meals String @db.Text // JSON: {day: date, meals: [{type, recipeId, notes}]}
 
   groceryList String? @db.Text // JSON array of items
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model GlucoseEntry {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  value     Float    // mg/dL
+  value Float // mg/dL
 
   // NEW: Context fields
-  context   String?  // 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random'
+  context       String? // 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random'
   relatedMealId String? // Link to the meal if post-meal reading
   relatedMeal   Meal?   @relation(fields: [relatedMealId], references: [id], onDelete: SetNull)
 
-  notes     String?
+  notes      String?
   measuredAt DateTime @default(now())
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([userId, measuredAt])
   @@index([relatedMealId])
 }
 
 model MoodEntry {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  mood        String   // happy, grateful, calm, neutral, tired, anxious, sad
-  stressLevel Int      // 1-10
+  mood        String // happy, grateful, calm, neutral, tired, anxious, sad
+  stressLevel Int // 1-10
 
   // Contextual flags (legacy — kept for backward compat)
   notFeelingWell     Boolean @default(false)
@@ -425,13 +429,13 @@ model MoodEntry {
   havingCravings     Boolean @default(false)
 
   // Extended mood fields
-  moodIntensity      Int?    // 1-10
-  energyLevel        Int?    // 1-10
-  hungerLevel        Int?    // 1-10
-  fullnessLevel      Int?    // 1-10
-  cravings           String? @db.Text // JSON array: ["sweet","salty","carbs"]
-  symptoms           String? @db.Text // JSON array: ["headache","nausea","tired"]
-  contextTags        String? @db.Text // JSON array: ["poor_sleep","high_stress","injection_day"]
+  moodIntensity Int? // 1-10
+  energyLevel   Int? // 1-10
+  hungerLevel   Int? // 1-10
+  fullnessLevel Int? // 1-10
+  cravings      String? @db.Text // JSON array: ["sweet","salty","carbs"]
+  symptoms      String? @db.Text // JSON array: ["headache","nausea","tired"]
+  contextTags   String? @db.Text // JSON array: ["poor_sleep","high_stress","injection_day"]
 
   // Free-text user voice
   userWords          String? @db.Text // "I feel overwhelmed because I had class"
@@ -439,27 +443,27 @@ model MoodEntry {
   supportWanted      String? @db.Text // "Give me a quick snack idea"
 
   // AI summary (generated separately, not overwriting user words)
-  aiSummary          String? @db.Text
+  aiSummary String? @db.Text
 
   // Optional link to a meal
-  mealId      String?
-  meal        Meal?    @relation(fields: [mealId], references: [id], onDelete: SetNull)
+  mealId String?
+  meal   Meal?   @relation(fields: [mealId], references: [id], onDelete: SetNull)
 
-  notes       String?  @db.Text
-  recordedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
+  notes      String?  @db.Text
+  recordedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([userId, recordedAt])
   @@index([mealId])
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  role      String   // user, assistant
-  content   String   @db.Text
+  role    String // user, assistant
+  content String @db.Text
 
   // Context at time of message
   userContext String? @db.Text // JSON: {mood, onPeriod, feelingOverwhelmed, etc}
@@ -470,23 +474,23 @@ model ChatMessage {
 }
 
 model Badge {
-  id          String      @id @default(cuid())
-  name        String      @unique
-  nameEs      String      // Spanish translation
-  description String
+  id            String @id @default(cuid())
+  name          String @unique
+  nameEs        String // Spanish translation
+  description   String
   descriptionEs String
-  icon        String      // emoji or icon name
-  daysRequired Int
+  icon          String // emoji or icon name
+  daysRequired  Int
 
-  users       UserBadge[]
+  users UserBadge[]
 }
 
 model UserBadge {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badgeId   String
-  badge     Badge    @relation(fields: [badgeId], references: [id])
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id])
 
   unlockedAt DateTime @default(now())
 
@@ -496,45 +500,45 @@ model UserBadge {
 
 // Restaurant tracking
 model FavoriteRestaurant {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Restaurant details
-  placeId       String   // Google Place ID or simulated ID
-  name          String
-  address       String?
-  cuisine       String?
-  rating        Float?
-  priceLevel    Int?     // 1-4
+  placeId    String // Google Place ID or simulated ID
+  name       String
+  address    String?
+  cuisine    String?
+  rating     Float?
+  priceLevel Int? // 1-4
 
   // User notes
-  notes         String?  @db.Text
-  tags          String?  @db.Text // JSON array: ["low-carb", "quick", "family-friendly"]
+  notes String? @db.Text
+  tags  String? @db.Text // JSON array: ["low-carb", "quick", "family-friendly"]
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, placeId])
   @@index([userId])
 }
 
 model RestaurantVisit {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Restaurant details (denormalized for quick access)
-  placeId       String   // Google Place ID or simulated ID
-  name          String
-  address       String?
-  cuisine       String?
+  placeId String // Google Place ID or simulated ID
+  name    String
+  address String?
+  cuisine String?
 
   // Visit tracking
-  visitedAt     DateTime @default(now())
-  mealId        String?  // Link to meal if user logged it
+  visitedAt DateTime @default(now())
+  mealId    String? // Link to meal if user logged it
 
   // Performance metrics (for recommendations)
-  glucoseImpact String?  // 'low' | 'medium' | 'high' based on post-meal glucose
+  glucoseImpact String? // 'low' | 'medium' | 'high' based on post-meal glucose
 
   @@index([userId, visitedAt])
   @@index([userId, placeId])
@@ -542,89 +546,89 @@ model RestaurantVisit {
 
 // Dexcom CGM Integration
 model DexcomIntegration {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // OAuth tokens
-  accessToken     String   @db.Text
-  refreshToken    String   @db.Text
-  tokenExpiresAt  DateTime
+  accessToken    String   @db.Text
+  refreshToken   String   @db.Text
+  tokenExpiresAt DateTime
 
   // Dexcom user info
-  dexcomUserId    String?  // Dexcom's user identifier
+  dexcomUserId String? // Dexcom's user identifier
 
   // Sync settings
-  autoSync        Boolean  @default(true)
-  lastSyncAt      DateTime?
-  syncFrequency   Int      @default(15) // minutes
+  autoSync      Boolean   @default(true)
+  lastSyncAt    DateTime?
+  syncFrequency Int       @default(15) // minutes
 
   // Environment (sandbox vs production)
-  environment     String   @default("production") // 'sandbox' | 'production'
+  environment String @default("production") // 'sandbox' | 'production'
 
   // Connection status
-  isActive        Boolean  @default(true)
-  lastError       String?  @db.Text
+  isActive  Boolean @default(true)
+  lastError String? @db.Text
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 // FreeStyle Libre CGM Integration (via LibreLinkUp)
 model LibreIntegration {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // LibreLinkUp credentials (encrypted)
-  libreEmail      String   @db.Text
-  librePassword   String   @db.Text // Encrypted password
+  libreEmail    String @db.Text
+  librePassword String @db.Text // Encrypted password
 
   // Session token
-  authToken       String?  @db.Text
-  tokenExpiresAt  DateTime?
+  authToken      String?   @db.Text
+  tokenExpiresAt DateTime?
 
   // Libre user info
-  libreUserId     String?  // LibreLinkUp user ID (for account-id header)
-  librePatientId  String?  // Patient ID for data retrieval
-  region          String   @default("US") // 'US' | 'EU' | 'AP' (Asia-Pacific)
+  libreUserId    String? // LibreLinkUp user ID (for account-id header)
+  librePatientId String? // Patient ID for data retrieval
+  region         String  @default("US") // 'US' | 'EU' | 'AP' (Asia-Pacific)
 
   // Sync settings
-  autoSync        Boolean  @default(true)
-  lastSyncAt      DateTime?
-  syncFrequency   Int      @default(15) // minutes
+  autoSync      Boolean   @default(true)
+  lastSyncAt    DateTime?
+  syncFrequency Int       @default(15) // minutes
 
   // Connection status
-  isActive        Boolean  @default(true)
-  lastError       String?  @db.Text
+  isActive  Boolean @default(true)
+  lastError String? @db.Text
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model ChatPreference {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  communicationStyle   String   @default("warm")      // "warm" | "professional" | "casual"
-  responseLength       String   @default("medium")    // "short" | "medium" | "detailed"
-  enableNotifications  Boolean  @default(true)
-  notificationTime     String?                        // "09:00"
+  communicationStyle  String  @default("warm") // "warm" | "professional" | "casual"
+  responseLength      String  @default("medium") // "short" | "medium" | "detailed"
+  enableNotifications Boolean @default(true)
+  notificationTime    String? // "09:00"
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AiUsage {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  endpoint  String   // 'chat' | 'analyze-meal' | 'enhance-meal' | 'restaurant-tips' | etc.
+  endpoint  String // 'chat' | 'analyze-meal' | 'enhance-meal' | 'restaurant-tips' | etc.
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
@@ -633,19 +637,19 @@ model AiUsage {
 
 // Post-meal check-in follow-up
 model MealFollowUp {
-  id            String    @id @default(cuid())
-  mealId        String    @unique
-  meal          Meal      @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  mealId String @unique
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  scheduledFor  DateTime  // eatenAt + 2 hours
-  status        String    @default("pending") // 'pending' | 'responded' | 'dismissed'
-  response      String?   // 'ate_all' | 'ate_some' | 'didnt_eat' | 'changed_meal'
-  portionEaten  Float?    // 0.0 - 1.0 (only set when response = 'ate_some')
-  respondedAt   DateTime?
+  scheduledFor DateTime // eatenAt + 2 hours
+  status       String    @default("pending") // 'pending' | 'responded' | 'dismissed'
+  response     String? // 'ate_all' | 'ate_some' | 'didnt_eat' | 'changed_meal'
+  portionEaten Float? // 0.0 - 1.0 (only set when response = 'ate_some')
+  respondedAt  DateTime?
 
-  createdAt     DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, status])
   @@index([userId, scheduledFor])
@@ -660,7 +664,7 @@ model HydrationLog {
   meal     Meal?    @relation(fields: [mealId], references: [id], onDelete: SetNull)
   loggedAt DateTime @default(now())
 
-  drinkType            String   // water, coffee, tea, juice, soda, agua_fresca, electrolyte, broth, other
+  drinkType            String // water, coffee, tea, juice, soda, agua_fresca, electrolyte, broth, other
   amountOz             Float
   sweetened            Boolean?
   drinkCarbsG          Float?
@@ -673,16 +677,16 @@ model HydrationLog {
 
 // Daily guidance insights (gentle suggestions based on today's logs)
 model GuidanceInsight {
-  id       String   @id @default(cuid())
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date     String   // YYYY-MM-DD
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   String // YYYY-MM-DD
 
-  type     String   // low_protein, low_fiber, low_water, high_added_sugar, high_sodium,
-                    // carb_heavy_day, glp1_low_intake, low_glucose_safety, high_glucose_safety,
-                    // meal_idea, snack_idea, mood_food_pattern
-  message  String   @db.Text
-  reason   String   @db.Text
+  type             String // low_protein, low_fiber, low_water, high_added_sugar, high_sodium,
+  // carb_heavy_day, glp1_low_intake, low_glucose_safety, high_glucose_safety,
+  // meal_idea, snack_idea, mood_food_pattern
+  message          String  @db.Text
+  reason           String  @db.Text
   suggestedActions String? @db.Text // JSON array
 
   dismissed    Boolean @default(false)
@@ -701,9 +705,9 @@ model ActivityLog {
   date   DateTime @default(now())
 
   // What they did
-  activityType      String?  // walking|strength|chores|dancing|sports|physical_work|stretching|chair_exercise|biking|swimming|other
+  activityType      String? // walking|strength|chores|dancing|sports|physical_work|stretching|chair_exercise|biking|swimming|other
   activityMinutes   Int?
-  activityIntensity String?  // light|moderate|vigorous|not_sure
+  activityIntensity String? // light|moderate|vigorous|not_sure
   steps             Int?
 
   // Meal relationship (optional — can link a walk to a meal)
@@ -716,11 +720,11 @@ model ActivityLog {
   glucoseAfterActivity  Float?
 
   // How user felt
-  energyBefore Int?     // 1–10
-  energyAfter  Int?     // 1–10
+  energyBefore Int? // 1–10
+  energyAfter  Int? // 1–10
   moodAfter    String?
-  symptoms     String?  @db.Text  // JSON array
-  notes        String?  @db.Text
+  symptoms     String? @db.Text // JSON array
+  notes        String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -736,17 +740,17 @@ model SleepLog {
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date   DateTime @default(now())
 
-  sleepStart           DateTime?
-  wakeTime             DateTime?
-  totalSleepMinutes    Int?      // non-negative; calculated from start/wake or entered manually
+  sleepStart        DateTime?
+  wakeTime          DateTime?
+  totalSleepMinutes Int? // non-negative; calculated from start/wake or entered manually
 
-  sleepQuality         String?   // great | good | fair | poor | not_sure
-  wakeEnergy           Int?      // 1–10
-  nighttimeWakeups     Int?      // non-negative
-  stressBeforeBed      Int?      // 1–10
-  caffeineLaterInDay   Boolean?
+  sleepQuality       String? // great | good | fair | poor | not_sure
+  wakeEnergy         Int? // 1–10
+  nighttimeWakeups   Int? // non-negative
+  stressBeforeBed    Int? // 1–10
+  caffeineLaterInDay Boolean?
 
-  notes                String?   @db.Text
+  notes String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -761,19 +765,19 @@ model CycleLog {
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date   DateTime @default(now())
 
-  periodStartDate       DateTime?
-  periodEndDate         DateTime?
-  cycleDay              Int?      // positive if provided
-  cyclePhase            String?   // period | follicular | ovulation | luteal | not_sure
-  flow                  String?   // light | medium | heavy | not_sure
+  periodStartDate DateTime?
+  periodEndDate   DateTime?
+  cycleDay        Int? // positive if provided
+  cyclePhase      String? // period | follicular | ovulation | luteal | not_sure
+  flow            String? // light | medium | heavy | not_sure
 
-  symptoms              String?   @db.Text  // JSON array: ["cramps","headache","bloating","fatigue",...]
+  symptoms              String? @db.Text // JSON array: ["cramps","headache","bloating","fatigue",...]
   cravings              String?
-  appetiteChange        String?   // increased | decreased | unchanged | not_sure
+  appetiteChange        String? // increased | decreased | unchanged | not_sure
   mood                  String?
-  energy                Int?      // 1–10
-  glucoseChangesNoticed String?   // free-text note
-  notes                 String?   @db.Text
+  energy                Int? // 1–10
+  glucoseChangesNoticed String? // free-text note
+  notes                 String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -786,20 +790,20 @@ model CycleLog {
 
 // OAuth connection record — tokens stored AES-256-GCM encrypted
 model HealthConnection {
-  id             String    @id @default(cuid())
-  userId         String
-  provider       String    // google_health | apple_health_export | ...
-  status         String    @default("disconnected") // connected | disconnected | error | pending
+  id       String @id @default(cuid())
+  userId   String
+  provider String // google_health | apple_health_export | ...
+  status   String @default("disconnected") // connected | disconnected | error | pending
 
-  providerUserId String?
-  scopes         String?   @db.Text  // JSON array of granted scopes
-  accessTokenEnc  String?  @db.Text  // AES-256-GCM encrypted: iv:authTag:ciphertext
-  refreshTokenEnc String?  @db.Text  // AES-256-GCM encrypted
-  tokenExpiresAt DateTime?
+  providerUserId  String?
+  scopes          String?   @db.Text // JSON array of granted scopes
+  accessTokenEnc  String?   @db.Text // AES-256-GCM encrypted: iv:authTag:ciphertext
+  refreshTokenEnc String?   @db.Text // AES-256-GCM encrypted
+  tokenExpiresAt  DateTime?
 
-  lastSyncedAt   DateTime?
-  syncCursor     String?   @db.Text
-  errorMessage   String?   @db.Text
+  lastSyncedAt DateTime?
+  syncCursor   String?   @db.Text
+  errorMessage String?   @db.Text
 
   consentVersion String?
   consentedAt    DateTime?
@@ -819,26 +823,26 @@ model HealthDailySummary {
   id       String   @id @default(cuid())
   userId   String
   date     DateTime
-  provider String   // google_health | apple_health_export | manual
+  provider String // google_health | apple_health_export | manual
 
-  steps            Int?
-  activeMinutes    Int?
-  exerciseMinutes  Int?
-  distanceMeters   Float?
-  activeCalories   Float?
-  totalCalories    Float?
+  steps           Int?
+  activeMinutes   Int?
+  exerciseMinutes Int?
+  distanceMeters  Float?
+  activeCalories  Float?
+  totalCalories   Float?
 
   sleepMinutes     Int?
   sleepQuality     String?
   restingHeartRate Int?
   averageHeartRate Int?
 
-  workoutCount     Int?
+  workoutCount Int?
 
-  sourceRawId  String?
-  importedAt   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  sourceRawId String?
+  importedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -848,16 +852,16 @@ model HealthDailySummary {
 
 // Detailed metric samples (heart rate points, workout segments, etc.)
 model HealthMetricSample {
-  id         String    @id @default(cuid())
-  userId     String
-  provider   String
-  metricType String    // steps | heart_rate | active_calories | sleep | workout | weight | blood_glucose
-  value      Float?
-  unit       String?
-  startTime  DateTime?
-  endTime    DateTime?
+  id          String    @id @default(cuid())
+  userId      String
+  provider    String
+  metricType  String // steps | heart_rate | active_calories | sleep | workout | weight | blood_glucose
+  value       Float?
+  unit        String?
+  startTime   DateTime?
+  endTime     DateTime?
   sourceRawId String?
-  metadata   Json?
+  metadata    Json?
 
   importedAt DateTime @default(now())
   createdAt  DateTime @default(now())
@@ -870,14 +874,14 @@ model HealthMetricSample {
 
 // Apple Health export upload / Google sync job record
 model HealthImport {
-  id               String    @id @default(cuid())
+  id               String  @id @default(cuid())
   userId           String
   provider         String
-  importType       String    // full_sync | incremental | manual_export
+  importType       String // full_sync | incremental | manual_export
   filename         String?
-  status           String    @default("pending") // pending | processing | completed | failed
+  status           String  @default("pending") // pending | processing | completed | failed
   recordsProcessed Int?
-  errorMessage     String?   @db.Text
+  errorMessage     String? @db.Text
 
   createdAt   DateTime  @default(now())
   completedAt DateTime?
@@ -892,7 +896,7 @@ model HealthSyncLog {
   id            String    @id @default(cuid())
   userId        String
   provider      String
-  status        String    // started | completed | failed | partial
+  status        String // started | completed | failed | partial
   startedAt     DateTime  @default(now())
   completedAt   DateTime?
   recordsSynced Int?
@@ -901,4 +905,133 @@ model HealthSyncLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, provider, startedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Smart Grocery List — real products, pantry, favorites
+// ─────────────────────────────────────────────────────────────────────────────
+
+// One row per item on a user's current grocery list. Items can be real products
+// (from a photo, barcode, search, receipt) or generic/manual entries.
+model GroceryListItem {
+  id     String @id @default(cuid())
+  userId String
+
+  itemType    String  @default("manual") // generic | real_product | manual | photo_extracted | barcode | receipt_item
+  name        String
+  brand       String?
+  store       String?
+  imageUrl    String? @db.Text
+  barcode     String?
+  category    String?
+  quantity    String?
+  size        String?
+  servingSize String?
+
+  // Nutrition (per serving where known)
+  calories     Float?
+  totalCarbs   Float?
+  fiber        Float?
+  addedSugar   Float?
+  protein      Float?
+  sodium       Float?
+  saturatedFat Float?
+  ingredients  String? @db.Text // free text or JSON
+
+  source          String  @default("user") // photo | barcode | manual | search | receipt | pantry_photo | open_food_facts | usda | kroger | instacart | user
+  confidenceScore Float? // 0..1
+  fitLabel        String? // great_fit | good_with_portion | check_label | use_with_caution
+  diabetesNote    String? @db.Text
+  adhdNote        String? @db.Text
+  quickUseIdeas   String? @db.Text // JSON array
+  tags            String? @db.Text // JSON array
+
+  status                  String    @default("planned") // planned | bought | skipped | removed
+  storageType             String? // fridge | freezer | pantry | counter
+  estimatedExpirationDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// Items the user actually has at home. Bought grocery items flow here.
+model PantryItem {
+  id     String @id @default(cuid())
+  userId String
+
+  sourceGroceryListItemId String?
+  sourceType              String  @default("manual") // bought_from_list | receipt_upload | pantry_photo | manual | barcode | product_photo
+
+  name        String
+  brand       String?
+  store       String?
+  imageUrl    String? @db.Text
+  barcode     String?
+  category    String?
+  quantity    String?
+  servingSize String?
+
+  calories     Float?
+  totalCarbs   Float?
+  fiber        Float?
+  addedSugar   Float?
+  protein      Float?
+  sodium       Float?
+  saturatedFat Float?
+  ingredients  String? @db.Text
+
+  tags         String? @db.Text // JSON array
+  diabetesNote String? @db.Text
+  adhdNote     String? @db.Text
+  storageType  String? // fridge | freezer | pantry | counter
+
+  dateBought              DateTime?
+  estimatedExpirationDate DateTime?
+  status                  String    @default("available") // available | used | expired | removed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// Products the user saves to reuse ("My usual Greek yogurt").
+model FavoriteProduct {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  brand       String?
+  store       String?
+  imageUrl    String? @db.Text
+  barcode     String?
+  category    String?
+  servingSize String?
+
+  calories     Float?
+  totalCarbs   Float?
+  fiber        Float?
+  addedSugar   Float?
+  protein      Float?
+  sodium       Float?
+  saturatedFat Float?
+
+  fitLabel     String?
+  diabetesNote String? @db.Text
+  adhdNote     String? @db.Text
+  notes        String? @db.Text
+  tags         String? @db.Text // JSON array
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

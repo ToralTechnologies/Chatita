@@ -86,6 +86,17 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    href: '/grocery-list',
+    title: 'Grocery list',
+    subtitle: 'Add real products',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M5 7h14l-1.2 10a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z" stroke="#012374" strokeWidth="1.6"/>
+        <path d="M9 7a3 3 0 0 1 6 0" stroke="#012374" strokeWidth="1.6"/>
+      </svg>
+    ),
+  },
+  {
     href: '/menu-scanner',
     title: 'Scan a menu',
     subtitle: 'Photo → ranked dishes',
