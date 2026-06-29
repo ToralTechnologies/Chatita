@@ -106,6 +106,53 @@ export async function calculateMealGlucoseImpact(
   };
 }
 
+export interface CompactGlucoseImpact {
+  available: boolean;
+  preMealGlucose: number | null;
+  peakPostMeal: number | null;
+  glucoseRise: number | null;
+  timeToSpike: number | null;
+  impact: GlucoseImpactResult['impact'];
+}
+
+/**
+ * Compute a compact glucose impact for one meal from an already-fetched,
+ * time-ascending list of readings. Used to attach impact to many meals in the
+ * meal-history list with a single batched glucose query (no per-meal queries).
+ */
+export function computeCompactImpact(
+  mealTimeMs: number,
+  readings: { value: number; measuredAt: Date }[]
+): CompactGlucoseImpact {
+  const withMin = readings
+    .map((r) => ({
+      value: r.value,
+      minutesFromMeal: Math.round((r.measuredAt.getTime() - mealTimeMs) / 60000),
+    }))
+    .filter((r) => r.minutesFromMeal >= -30 && r.minutesFromMeal <= 180);
+
+  if (withMin.length === 0) {
+    return { available: false, preMealGlucose: null, peakPostMeal: null, glucoseRise: null, timeToSpike: null, impact: 'unknown' };
+  }
+
+  const pre = withMin.filter((r) => r.minutesFromMeal >= -30 && r.minutesFromMeal <= 0);
+  const preMealGlucose = pre.length > 0 ? pre[pre.length - 1].value : null;
+
+  const post = withMin.filter((r) => r.minutesFromMeal >= 30 && r.minutesFromMeal <= 120);
+  const peak = post.length > 0 ? post.reduce((m, r) => (r.value > m.value ? r : m), post[0]) : null;
+
+  const peakPostMeal = peak?.value ?? null;
+  const timeToSpike = peak?.minutesFromMeal ?? null;
+  const glucoseRise = preMealGlucose !== null && peakPostMeal !== null ? peakPostMeal - preMealGlucose : null;
+
+  let impact: GlucoseImpactResult['impact'] = 'unknown';
+  if (glucoseRise !== null) {
+    impact = glucoseRise < 30 ? 'minimal' : glucoseRise < 60 ? 'moderate' : glucoseRise < 100 ? 'significant' : 'high';
+  }
+
+  return { available: peakPostMeal !== null, preMealGlucose, peakPostMeal, glucoseRise, timeToSpike, impact };
+}
+
 function emptyResult(): GlucoseImpactResult {
   return {
     available: false,

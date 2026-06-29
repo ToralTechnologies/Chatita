@@ -552,11 +552,11 @@ export default function InsightsPage() {
       .filter((p: any) => !isNaN(p.date.getTime()));
 
     // Timeline: spread chronologically so each reading sits at its own x (a real
-    // CGM trace, one point per moment). Time-of-day: overlay every day on a 24h axis.
-    let minT = Infinity, maxT = -Infinity;
-    if (chartMode === 'timeline') {
-      for (const p of points) { const t = p.date.getTime(); if (t < minT) minT = t; if (t > maxT) maxT = t; }
-    }
+    // CGM trace, one point per moment). The axis spans the SELECTED period
+    // (now − period … now) so switching 7/30/90 days visibly changes the range.
+    // Time-of-day: overlay every day on a 24h axis.
+    const maxT = Date.now();
+    const minT = maxT - period * 24 * 60 * 60 * 1000;
     const span = maxT - minT || 1;
 
     return points.map((p: any) => {
@@ -570,18 +570,17 @@ export default function InsightsPage() {
         : p.date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       return { x, y: Math.round(yVal), color: glucoseDotColor(p.v, targetMin, targetMax), v: p.v, label, t };
     });
-  }, [correlation, chartMode]);
+  }, [correlation, chartMode, period]);
 
-  // X-axis labels depend on the mode: 5 dates across the range (timeline) or
-  // fixed times of day (overlay).
+  // X-axis labels depend on the mode: dates across the SELECTED period (timeline)
+  // or fixed times of day (overlay).
   const axisLabels = useMemo((): string[] => {
     if (chartMode !== 'timeline') return ['12 am', '6 am', '12 pm', '6 pm', '11 pm'];
-    if (scatterDots.length === 0) return [];
-    const ts = scatterDots.map(d => d.t);
-    const minT = Math.min(...ts), maxT = Math.max(...ts);
+    const maxT = Date.now();
+    const minT = maxT - period * 24 * 60 * 60 * 1000;
     const fmt = (t: number) => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
     return [0, 0.25, 0.5, 0.75, 1].map(f => fmt(minT + (maxT - minT) * f));
-  }, [scatterDots, chartMode]);
+  }, [chartMode, period]);
 
   // Real daily time-in-range bars (last 7 days) for the featured card.
   const dailyTirBars = useMemo((): InsightBar[] => {

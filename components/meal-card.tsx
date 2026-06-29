@@ -31,9 +31,25 @@ interface MealCardProps {
     feeling?: string | null;
     nutritionSource?: string | null;
     eatenAt: Date | string;
+    glucoseImpact?: {
+      available: boolean;
+      preMealGlucose: number | null;
+      peakPostMeal: number | null;
+      glucoseRise: number | null;
+      timeToSpike: number | null;
+      impact: 'minimal' | 'moderate' | 'significant' | 'high' | 'unknown';
+    } | null;
   };
   onDelete?: (id: string) => void;
 }
+
+const IMPACT_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  minimal:     { label: 'Minimal impact',     color: '#1C7A4F', bg: 'rgba(28,122,79,0.10)' },
+  moderate:    { label: 'Moderate impact',    color: '#9A6F18', bg: 'rgba(200,147,43,0.13)' },
+  significant: { label: 'Significant impact', color: '#B5562E', bg: 'rgba(181,86,46,0.10)' },
+  high:        { label: 'High impact',        color: '#D0021B', bg: 'rgba(208,2,27,0.08)' },
+  unknown:     { label: 'Logged',             color: '#012374', bg: 'rgba(1,35,116,0.07)' },
+};
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   breakfast: { bg: 'rgba(200,147,43,0.13)', text: '#9A6F18' },
@@ -180,6 +196,33 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
                   {extended.map(({ label, val }) => (
                     <NutrStat key={label} label={label} value={val!} small />
                   ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Blood-sugar impact (CGM) */}
+        {meal.glucoseImpact?.available && (() => {
+          const gi = meal.glucoseImpact!;
+          const s = IMPACT_STYLE[gi.impact] ?? IMPACT_STYLE.unknown;
+          return (
+            <div style={{ marginBottom: 10, background: s.bg, borderRadius: 12, padding: '10px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: s.color }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 13h4l2-6 4 12 2-6h6" stroke={s.color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Blood sugar · {s.label}
+                </span>
+                {gi.glucoseRise != null && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: s.color }}>{gi.glucoseRise >= 0 ? '+' : ''}{gi.glucoseRise} mg/dL</span>
+                )}
+              </div>
+              {(gi.preMealGlucose != null || gi.peakPostMeal != null) && (
+                <div style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.6)', marginTop: 4 }}>
+                  {gi.preMealGlucose != null && <>before {gi.preMealGlucose}</>}
+                  {gi.preMealGlucose != null && gi.peakPostMeal != null && ' → '}
+                  {gi.peakPostMeal != null && <>peak {gi.peakPostMeal}</>}
+                  {gi.timeToSpike != null && <> · {gi.timeToSpike} min to peak</>}
                 </div>
               )}
             </div>

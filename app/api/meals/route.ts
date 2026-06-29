@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { computeCompactImpact } from '@/lib/glucose-impact';
 
 export async function GET(request: Request) {
   try {
@@ -31,7 +32,28 @@ export async function GET(request: Request) {
       take: limit,
     });
 
-    return NextResponse.json({ meals });
+    // Attach a compact blood-sugar impact to each meal using ONE batched glucose
+    // query (covering all meals' windows), so meal history can show impact
+    // without a request per meal.
+    let mealsWithImpact: any[] = meals;
+    if (meals.length > 0) {
+      const times = meals.map((m) => m.eatenAt.getTime());
+      const windowStart = new Date(Math.min(...times) - 30 * 60 * 1000);
+      const windowEnd = new Date(Math.max(...times) + 3 * 60 * 60 * 1000);
+      const readings = await prisma.glucoseEntry.findMany({
+        where: { userId: session.user.id, measuredAt: { gte: windowStart, lte: windowEnd } },
+        orderBy: { measuredAt: 'asc' },
+        select: { value: true, measuredAt: true },
+      });
+      if (readings.length > 0) {
+        mealsWithImpact = meals.map((m) => ({
+          ...m,
+          glucoseImpact: computeCompactImpact(m.eatenAt.getTime(), readings),
+        }));
+      }
+    }
+
+    return NextResponse.json({ meals: mealsWithImpact });
   } catch (error) {
     console.error('Meals fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
