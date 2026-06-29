@@ -8,7 +8,6 @@ import Image from 'next/image';
 import GlucoseWidget from '@/components/glucose-widget';
 import MealFollowUpBanner from '@/components/meal-followup-banner';
 import MoodSelector from '@/components/mood-selector';
-import ContextTags from '@/components/context-tags';
 import BottomNav from '@/components/bottom-nav';
 import ChatInterface from '@/components/chat-interface';
 import ThemeToggle from '@/components/theme-toggle';
@@ -117,17 +116,35 @@ export default function HomePage() {
       .catch(() => {});
   }, [session]);
 
-  // Load CGM latest reading if connected
+  // Load CGM latest reading if connected. For Libre, pull fresh data on load so
+  // today's glucose is current (the cron only runs once a day), then refetch.
   useEffect(() => {
     if (!session) return;
+    let cancelled = false;
+
+    const applyStatus = (d: any) => {
+      if (cancelled) return;
+      if (d?.connected && d.latestReading) {
+        setCgmReading({ ...d.latestReading, provider: d.provider });
+      }
+    };
+
     fetch('/api/cgm/status')
       .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.connected && d.latestReading) {
-          setCgmReading({ ...d.latestReading, provider: d.provider });
+      .then(async d => {
+        applyStatus(d);
+        // If Libre is connected, refresh from LibreLinkUp then re-read status.
+        if (d?.connected && d.provider === 'libre') {
+          try {
+            await fetch('/api/libre/sync', { method: 'POST' });
+            const r2 = await fetch('/api/cgm/status');
+            if (r2.ok) applyStatus(await r2.json());
+          } catch { /* keep the cached reading */ }
         }
       })
       .catch(() => {});
+
+    return () => { cancelled = true; };
   }, [session]);
 
   // Load a gentle insight from API
@@ -402,15 +419,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── Context tags ── */}
-        <div style={{ marginTop: '20px' }}>
-          <ContextTags onSave={handleContextSave} />
-        </div>
-
         {/* ── Disclaimer ── */}
         <div style={{ marginTop: '20px', marginBottom: '8px', padding: '12px 14px', borderRadius: '12px', background: 'rgba(200,147,43,0.10)', border: '1px solid rgba(200,147,43,0.2)' }}>
           <p style={{ fontSize: '11px', color: 'rgba(1,35,116,0.65)', lineHeight: 1.5 }}>
-            ⚠️ {t.home.disclaimer}
+            {t.home.disclaimer}
           </p>
         </div>
       </div>

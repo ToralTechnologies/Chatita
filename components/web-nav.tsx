@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import ChatInterface from '@/components/chat-interface';
 
 const NAV = [
   {
@@ -100,6 +102,7 @@ export default function WebNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const firstName = (session?.user?.name ?? '').split(' ')[0] || 'you';
+  const [showChat, setShowChat] = useState(false);
 
   return (
     <nav
@@ -151,7 +154,32 @@ export default function WebNav() {
             </Link>
           );
         })}
+
+        {/* Chat with Chatita */}
+        <button
+          onClick={() => setShowChat(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '13px', padding: '12px 14px',
+            borderRadius: '13px', fontSize: '15px', fontWeight: 600, marginTop: '6px',
+            color: '#012374', background: '#FFFDF9', border: 'none', cursor: 'pointer',
+            fontFamily: 'inherit', textAlign: 'left', width: '100%',
+          }}
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+            <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" stroke="#012374" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Chat with Chatita
+        </button>
       </div>
+
+      {showChat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(1,26,77,0.45)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowChat(false); }}>
+          <div style={{ width: '100%', maxWidth: 480, height: 'min(680px, 90vh)', display: 'flex' }}>
+            <ChatInterface onClose={() => setShowChat(false)} />
+          </div>
+        </div>
+      )}
 
       {/* User section */}
       <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 10px', borderTop: '1px solid rgba(255,253,249,0.14)' }}>

@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import WebNav from '@/components/web-nav';
 import HealthTodayCard from '@/components/health-today-card';
+import MovementCard from '@/components/movement-card';
+import SleepCard from '@/components/sleep-card';
+import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
@@ -72,6 +75,17 @@ function contextFromMeal(meal: string): GlucoseContext {
 
 const QUICK_ACTIONS = [
   {
+    href: '/add-meal',
+    title: 'Log a meal',
+    subtitle: 'Photo or type it in',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M12 5v14" stroke="#012374" strokeWidth="1.8" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="9.5" stroke="#012374" strokeWidth="1.4" opacity="0.4"/>
+      </svg>
+    ),
+  },
+  {
     href: '/menu-scanner',
     title: 'Scan a menu',
     subtitle: 'Photo → ranked dishes',
@@ -129,6 +143,28 @@ export default function WebHomeLayout({
   onContextSave,
 }: WebHomeLayoutProps) {
   const [showAddReading, setShowAddReading] = useState(false);
+  const [showMovementModal, setShowMovementModal] = useState(false);
+  const [showSleepModal, setShowSleepModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [waterOz, setWaterOz] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/hydration')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setWaterOz(d.totalOz ?? d.totalWaterOz ?? 0); })
+      .catch(() => {});
+  }, []);
+
+  const logWater = async (oz: number) => {
+    setWaterOz(prev => prev + oz);
+    try {
+      await fetch('/api/hydration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drinkType: 'water', amountOz: oz }),
+      });
+    } catch { /* optimistic; non-fatal */ }
+  };
   // 'checkin' = mood-first flow; 'reading' = glucose-first flow
   const [flowType, setFlowType] = useState<'checkin' | 'reading'>('checkin');
   const [step, setStep] = useState(1);
@@ -508,7 +544,7 @@ export default function WebHomeLayout({
                   <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Movement today</div>
                   <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>Context for your glucose — never a target.</div>
                 </div>
-                <button onClick={() => {}} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#2A8A8A', color: '#FFFDF9', borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => setShowMovementModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#2A8A8A', color: '#FFFDF9', borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
                   Add movement
                 </button>
@@ -533,10 +569,35 @@ export default function WebHomeLayout({
               <div style={{ background: '#F7EFE1', borderRadius: 13, padding: '13px 15px', fontSize: 13, color: '#012374', lineHeight: 1.5 }}>
                 No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.
               </div>
-              <button onClick={() => {}} style={{ width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#F7EFE1', color: '#4A5578', borderRadius: 11, padding: '11px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setShowSleepModal(true)} style={{ width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#F7EFE1', color: '#4A5578', borderRadius: 11, padding: '11px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4A5578" strokeWidth="2.2" strokeLinecap="round"/></svg>
                 Log sleep
               </button>
+            </div>
+
+            {/* Water */}
+            <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '22px 24px', border: '1px solid rgba(42,111,168,0.22)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(42,111,168,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" stroke="#2A6FA8" strokeWidth="1.7" strokeLinejoin="round"/></svg>
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Water today</div>
+                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>
+                    <span className="font-serif-italic" style={{ fontSize: 18, color: '#2A6FA8' }}>{waterOz}</span> oz so far
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: 12, height: 8, borderRadius: 99, background: '#F7EFE1', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (waterOz / 64) * 100)}%`, background: '#2A6FA8', transition: 'width 0.3s' }} />
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                {[8, 12, 16].map(oz => (
+                  <button key={oz} onClick={() => logWater(oz)} style={{ flex: 1, padding: '10px', borderRadius: 11, background: 'rgba(42,111,168,0.1)', color: '#2A6FA8', fontSize: 13.5, fontWeight: 600, border: '1px solid rgba(42,111,168,0.2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    +{oz} oz
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* This week */}
@@ -1229,6 +1290,53 @@ export default function WebHomeLayout({
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Movement logging modal */}
+      {showMovementModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(1,26,77,0.45)', zIndex: 60, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', overflowY: 'auto' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowMovementModal(false); }}>
+          <div style={{ background: '#F7EFE1', borderRadius: 22, width: '100%', maxWidth: 460, padding: 20, position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button type="button" onClick={() => setShowMovementModal(false)} style={{ background: 'none', border: 'none', fontSize: 24, color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <MovementCard />
+          </div>
+        </div>
+      )}
+
+      {/* Sleep logging modal */}
+      {showSleepModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(1,26,77,0.45)', zIndex: 60, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 20px', overflowY: 'auto' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSleepModal(false); }}>
+          <div style={{ background: '#F7EFE1', borderRadius: 22, width: '100%', maxWidth: 460, padding: 20, position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button type="button" onClick={() => setShowSleepModal(false)} style={{ background: 'none', border: 'none', fontSize: 24, color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <SleepCard />
+          </div>
+        </div>
+      )}
+
+      {/* Floating chat button (parity with mobile) */}
+      <button
+        onClick={() => setShowChat(true)}
+        aria-label="Chat with Chatita"
+        style={{ position: 'fixed', right: 28, bottom: 28, width: 60, height: 60, borderRadius: '50%', background: '#012374', border: 'none', cursor: 'pointer', boxShadow: '0 10px 28px -8px rgba(1,35,116,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 55 }}
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" stroke="#FFFDF9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Chat modal */}
+      {showChat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(1,26,77,0.45)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowChat(false); }}>
+          <div style={{ width: '100%', maxWidth: 480, height: 'min(680px, 90vh)', display: 'flex' }}>
+            <ChatInterface userContext={userContext} onClose={() => setShowChat(false)} />
           </div>
         </div>
       )}
