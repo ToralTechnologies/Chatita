@@ -6,6 +6,7 @@ import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
 import type { MealGuidance } from '@/lib/ai/meal-analyzer';
+import { compressImage } from '@/lib/compress-image';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,9 @@ interface PageState {
   error: string | null;
   correcting: boolean;
   correctionText: string;
+  /** When the photo was actually taken (from EXIF) — used as eatenAt so CGM
+   *  glucose-impact lines up with when you really ate, not when you uploaded. */
+  photoTakenAt: Date | null;
 }
 
 // ── Tone styles ───────────────────────────────────────────────────────────────
@@ -224,6 +228,7 @@ export default function AddMealPage() {
     error: null,
     correcting: false,
     correctionText: '',
+    photoTakenAt: null,
   });
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -234,25 +239,38 @@ export default function AddMealPage() {
   const MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
   const handleFileSelected = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string;
-      update({ phase: 'scanning', imagePreview: dataUrl, error: null });
-      try {
-        const res = await fetch('/api/analyze-meal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photoBase64: dataUrl }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Analysis failed');
-        const aiResult: AiResult = data;
-        update({ phase: 'detected', aiResult, foods: aiResult.detectedFoods });
-      } catch (err) {
-        update({ phase: 'idle', error: (err as Error).message || 'Could not analyze photo. Try again.' });
-      }
-    };
-    reader.readAsDataURL(file);
+    update({ phase: 'scanning', error: null });
+
+    // Compress the photo (resize + re-encode) BEFORE upload. Raw phone photos
+    // are 5-15MB and blow past Vercel's ~4.5MB body limit, which made saves fail
+    // silently. compressImage also returns EXIF, including when the photo was
+    // taken — used as eatenAt so CGM glucose-impact lines up with the real meal.
+    let dataUrl: string;
+    let photoTakenAt: Date | null = null;
+    try {
+      const { base64, exif } = await compressImage(file);
+      dataUrl = base64;
+      // Only trust a plausible, non-future capture time.
+      if (exif.date && exif.date.getTime() <= Date.now() + 60_000) photoTakenAt = exif.date;
+    } catch {
+      update({ phase: 'idle', error: 'Could not read that photo. Please try another one.' });
+      return;
+    }
+
+    update({ phase: 'scanning', imagePreview: dataUrl, error: null, photoTakenAt });
+    try {
+      const res = await fetch('/api/analyze-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoBase64: dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      const aiResult: AiResult = data;
+      update({ phase: 'detected', aiResult, foods: aiResult.detectedFoods });
+    } catch (err) {
+      update({ phase: 'idle', error: (err as Error).message || 'Could not analyze photo. Try again.' });
+    }
   };
 
   const handleGetGuidance = async () => {
@@ -278,9 +296,10 @@ export default function AddMealPage() {
   };
 
   const handleSave = async () => {
-    update({ saved: true });
     const n = state.aiResult?.nutrition ?? {};
-    fetch('/api/meals', {
+    update({ error: null });
+    try {
+      const res = await fetch('/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -291,6 +310,9 @@ export default function AddMealPage() {
         aiMode: state.aiResult?.mode,
         nutritionSource: state.aiResult?.mode === 'ai' ? 'ai' : 'manual',
         portionSize: state.aiResult?.portionSize || undefined,
+        // Log at the photo's capture time so CGM glucose-impact aligns to when
+        // the food was actually eaten.
+        eatenAt: state.photoTakenAt ? state.photoTakenAt.toISOString() : undefined,
         // Core nutrition from AI
         calories: n.calories ?? undefined,
         carbs: n.carbs ?? undefined,
@@ -308,7 +330,15 @@ export default function AddMealPage() {
         mealType: state.mealType,
         feeling: state.feeling || undefined,
       }),
-    }).catch(() => {});
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Save failed');
+      }
+      update({ saved: true });
+    } catch {
+      update({ error: 'We could not save your meal. Please check your connection and try again.' });
+    }
   };
 
   const handleCorrect = async () => {
@@ -326,7 +356,7 @@ export default function AddMealPage() {
       const finalFoods = data.detectedFoods?.length ? data.detectedFoods : corrected;
       // Auto-save the corrected meal to meal history
       const cn = (data.nutrition as AiNutrition) ?? {};
-      fetch('/api/meals', {
+      const saveRes = await fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -337,6 +367,7 @@ export default function AddMealPage() {
           aiMode: data.mode,
           nutritionSource: data.mode === 'ai' ? 'ai' : 'manual',
           portionSize: data.portionSize || undefined,
+          eatenAt: state.photoTakenAt ? state.photoTakenAt.toISOString() : undefined,
           calories: cn.calories ?? undefined,
           carbs: cn.carbs ?? undefined,
           protein: cn.protein ?? undefined,
@@ -352,7 +383,8 @@ export default function AddMealPage() {
           mealType: state.mealType,
           feeling: state.feeling || undefined,
         }),
-      }).catch(() => {});
+      });
+      if (!saveRes.ok) throw new Error('Could not save your meal. Please try again.');
       update({ phase: 'detected', aiResult: data, foods: finalFoods, saved: true });
     } catch (err) {
       update({ phase: 'detected', error: (err as Error).message || 'Could not get guidance. Try again.' });

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import BottomNav from '@/components/bottom-nav';
 import BackButton from '@/components/back-button';
 import MealForm, { MealFormData } from '@/components/meal-form';
+import GlucoseImpactCard from '@/components/glucose-impact-card';
 import { useTranslation } from '@/lib/i18n/context';
 import { MealType } from '@/types';
 
@@ -261,6 +262,10 @@ export default function EditMealPage() {
 
       {/* ── Content ── */}
       <div className="max-w-2xl mx-auto px-6 py-5" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {/* Blood-sugar impact (CGM users) — how this meal affected glucose over
+            the 3h after it was eaten. Hidden when there's no CGM data. */}
+        <GlucoseImpactCard mealId={id} />
 
         {/* Date / Time */}
         <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 8px 24px -16px rgba(1,35,116,0.2)', padding: '18px 20px' }}>
