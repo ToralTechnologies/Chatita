@@ -112,17 +112,27 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180 }: {
         <line x1="0" y1={band70Y}  x2="1000" y2={band70Y}  stroke="rgba(28,122,79,0.4)" strokeWidth="1.5" strokeDasharray="7 7" />
         <text x="6" y={band180Y - 3} fill="rgba(22,24,42,0.4)" fontSize="10">{targetMax}</text>
         <text x="6" y={band70Y + 10} fill="rgba(22,24,42,0.4)" fontSize="10">{targetMin}</text>
-        {dots.map((d, i) => (
-          <g key={i}>
-            <circle cx={d.x} cy={d.y} r="4" fill={d.color} opacity="0.82" />
-            <circle
-              cx={d.x} cy={d.y} r="12" fill="transparent"
-              style={{ cursor: 'pointer' }}
-              onMouseEnter={() => setTooltip({ dot: d })}
-              onClick={() => setTooltip(prev => prev?.dot === d ? null : { dot: d })}
-            />
-          </g>
-        ))}
+        {(() => {
+          // Dense CGM data (≈288 readings/day) overlaid by time-of-day across
+          // many days becomes thousands of points. Shrink + fade the dots so the
+          // overlap reads as a pattern cloud rather than a blob, while every
+          // reading stays individually hoverable.
+          const n = dots.length;
+          const r = n > 1500 ? 1.7 : n > 600 ? 2.3 : n > 200 ? 3 : 4;
+          const op = n > 1500 ? 0.3 : n > 600 ? 0.42 : n > 200 ? 0.6 : 0.82;
+          const hit = n > 1500 ? 5 : n > 600 ? 7 : 10;
+          return dots.map((d, i) => (
+            <g key={i}>
+              <circle cx={d.x} cy={d.y} r={r} fill={d.color} opacity={op} />
+              <circle
+                cx={d.x} cy={d.y} r={hit} fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setTooltip({ dot: d })}
+                onClick={() => setTooltip(prev => prev?.dot === d ? null : { dot: d })}
+              />
+            </g>
+          ));
+        })()}
       </svg>
 
       {tooltip && (
@@ -313,7 +323,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '24px' : '22px', color: '#012374' }}>Daily glucose pattern</h2>
-            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '3px' }}>Every reading, plotted by time of day — your target band shaded.</p>
+            <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '3px' }}>Every reading from this period, overlaid by time of day — so each day stacks onto one 24-hour view. Hover any point for its exact value and time.</p>
           </div>
           <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
             {[7, 30, 90].map(d => (

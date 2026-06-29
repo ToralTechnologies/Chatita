@@ -95,7 +95,11 @@ export async function POST(request: Request) {
         for (const egv of records) {
           if (!egv.value || egv.value < 40 || egv.value > 400) continue;
 
-          const measuredAt = new Date(egv.systemTime);
+          // Dexcom systemTime is UTC but has no timezone suffix; mark it as UTC
+          // so JS doesn't parse it as local time and shift every reading.
+          const measuredAt = new Date(
+            /[zZ]|[+-]\d\d:?\d\d$/.test(egv.systemTime) ? egv.systemTime : egv.systemTime + 'Z'
+          );
 
           // Check for duplicates
           const existing = await prisma.glucoseEntry.findFirst({
