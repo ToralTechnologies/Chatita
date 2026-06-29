@@ -138,7 +138,7 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
   if (healthCtx?.culturalProfile) {
     const cp = healthCtx.culturalProfile;
     const cpLines: string[] = [];
-    if (cp.countryOrRegion) cpLines.push(`  - Country/region: ${cp.countryOrRegion}`);
+    if (cp.countryOrRegion) cpLines.push(`  - Cultural/heritage cuisine: ${cp.countryOrRegion} (their FOOD heritage — do NOT assume they live there or say "since you're based in…"; their country of residence is unknown)`);
     if (cp.culturalFoodBackground) cpLines.push(`  - Food background: ${cp.culturalFoodBackground}`);
     if (cp.stapleCarbs?.length) cpLines.push(`  - Staple carbs: ${cp.stapleCarbs.join(', ')}`);
     if (cp.commonProteins?.length) cpLines.push(`  - Common proteins: ${cp.commonProteins.join(', ')}`);
@@ -186,7 +186,7 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     }
   }
 
-  const regionalSnippet = buildRegionalPromptSnippet(healthCtx?.culturalProfile?.countryOrRegion);
+  const regionalSnippet = buildRegionalPromptSnippet(healthCtx?.culturalProfile?.countryOrRegion, { cuisineContext: true });
   const healthContextBlock =
     sections.length > 0
       ? `\n\n== CURRENT USER HEALTH DATA ==\n${sections.join('\n')}\n== END HEALTH DATA ==`

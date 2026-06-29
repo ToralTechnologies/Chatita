@@ -587,8 +587,9 @@ export default function ProfileSetupPage() {
                 </p>
 
                 <div>
-                  <label style={labelStyle}>Country or Region</label>
-                  <input type="text" value={cultural.countryOrRegion} onChange={(e) => set('countryOrRegion', e.target.value)} placeholder="e.g. Mexico, India, Nigeria, Philippines" style={inputStyle} />
+                  <label style={labelStyle}>Your food culture or heritage</label>
+                  <input type="text" value={cultural.countryOrRegion} onChange={(e) => set('countryOrRegion', e.target.value)} placeholder="e.g. Mexican, Indian, Nigerian, Filipino" style={inputStyle} />
+                  <p className="text-xs leading-relaxed" style={{ ...muted, marginTop: 4 }}>The cuisine your everyday cooking comes from — not necessarily where you live now.</p>
                 </div>
 
                 <div>

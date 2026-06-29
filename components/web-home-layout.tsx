@@ -1302,7 +1302,7 @@ export default function WebHomeLayout({
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
               <button type="button" onClick={() => setShowMovementModal(false)} style={{ background: 'none', border: 'none', fontSize: 24, color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
-            <MovementCard />
+            <MovementCard defaultOpen />
           </div>
         </div>
       )}
@@ -1315,7 +1315,7 @@ export default function WebHomeLayout({
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
               <button type="button" onClick={() => setShowSleepModal(false)} style={{ background: 'none', border: 'none', fontSize: 24, color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
-            <SleepCard />
+            <SleepCard defaultOpen />
           </div>
         </div>
       )}

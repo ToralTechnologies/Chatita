@@ -251,16 +251,17 @@ export default function CulturalFoodProfileCard() {
                 All fields are optional. What you share helps Chatita adapt food guidance to your culture, budget, and access — not just American food assumptions.
               </p>
 
-              {/* Country */}
+              {/* Food culture / heritage */}
               <div>
-                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'rgba(22,24,42,0.7)', marginBottom: 5 }}>Country or Region</label>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'rgba(22,24,42,0.7)', marginBottom: 5 }}>Your food culture or heritage</label>
                 <input
                   type="text"
                   value={profile.countryOrRegion}
                   onChange={(e) => set('countryOrRegion', e.target.value)}
-                  placeholder="e.g. Mexico, India, Nigeria, Philippines"
+                  placeholder="e.g. Mexican, Indian, Nigerian, Filipino"
                   style={inputStyle}
                 />
+                <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.5)', marginTop: 4, lineHeight: 1.5 }}>The cuisine your everyday cooking comes from — not necessarily where you live now.</p>
               </div>
 
               {/* Cultural food background */}

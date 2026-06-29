@@ -35,6 +35,8 @@ interface MovementSummary {
 
 interface Props {
   lastMealId?: string;
+  /** Open straight into the logging form (used when shown inside a modal). */
+  defaultOpen?: boolean;
 }
 
 function DancerIcon({ color = '#2A8A8A' }: { color?: string }) {
@@ -46,10 +48,10 @@ function DancerIcon({ color = '#2A8A8A' }: { color?: string }) {
   );
 }
 
-export default function MovementCard({ lastMealId }: Props) {
+export default function MovementCard({ lastMealId, defaultOpen = false }: Props) {
   const [summary, setSummary]   = useState<MovementSummary | null>(null);
   const [loading, setLoading]   = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(defaultOpen);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
 

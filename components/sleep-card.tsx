@@ -37,10 +37,10 @@ function formatDuration(start: string, end: string): string {
   } catch { return ''; }
 }
 
-export default function SleepCard() {
+export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const [summary, setSummary]   = useState<SleepSummary | null>(null);
   const [loading, setLoading]   = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(defaultOpen);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
 

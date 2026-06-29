@@ -300,9 +300,24 @@ export function getRegionalGuidance(countryOrRegion: string | null | undefined):
  * Build a compact prompt snippet for injection into AI prompts.
  * Returns empty string if no meaningful regional layer found.
  */
-export function buildRegionalPromptSnippet(countryOrRegion: string | null | undefined): string {
+export function buildRegionalPromptSnippet(
+  countryOrRegion: string | null | undefined,
+  opts?: { cuisineContext?: boolean }
+): string {
   const guidance = getRegionalGuidance(countryOrRegion);
   if (guidance.code === 'global') return '';
+
+  // cuisineContext: the value came from the user's cultural/heritage CUISINE,
+  // not a stated location. Keep the cultural food guidance but never assert
+  // where they live or give country-specific emergency numbers.
+  if (opts?.cuisineContext) {
+    const lines = [
+      `Cultural cuisine context — ${guidance.label} cuisine (${guidance.source}). This reflects the user's FOOD heritage; their country of residence is unknown — do NOT say they are "based in" or "from" a country, and do NOT give country-specific emergency numbers.`,
+      `  ${guidance.promptNote}`,
+    ];
+    if (guidance.nutritionNote) lines.push(`  Nutrition context: ${guidance.nutritionNote}`);
+    return lines.join('\n');
+  }
 
   const lines = [
     `Regional guidance layer — ${guidance.label} (${guidance.source}):`,

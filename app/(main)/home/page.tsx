@@ -462,7 +462,7 @@ export default function HomePage() {
               <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#2A8A8A', fontWeight: 700 }}>Log movement</span>
               <button type="button" onClick={() => setShowMovementModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
-            <MovementCard />
+            <MovementCard defaultOpen />
           </div>
         </div>
       )}
