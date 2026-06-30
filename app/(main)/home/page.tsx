@@ -60,6 +60,12 @@ const QUICK_ACTIONS = [
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.6"/><circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.6"/></svg>,
   },
   {
+    href: '/grocery-list',
+    label: 'Grocery list',
+    bg: 'rgba(1,35,116,0.08)',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14l-1.2 10a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z" stroke="#012374" strokeWidth="1.6"/><path d="M9 7a3 3 0 0 1 6 0" stroke="#012374" strokeWidth="1.6"/></svg>,
+  },
+  {
     href: '/recipes',
     label: 'Recipes',
     bg: 'rgba(1,35,116,0.08)',

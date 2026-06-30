@@ -303,6 +303,40 @@ export class LibreLinkUpClient {
 }
 
 /**
+ * Parse a LibreLinkUp timestamp into a true UTC Date instant.
+ *
+ * Each reading carries two timestamps in "M/D/YYYY h:mm:ss AM/PM" format:
+ *  - `Timestamp`        — the patient's LOCAL wall-clock time, with NO timezone
+ *  - `FactoryTimestamp` — the same moment expressed in UTC
+ *
+ * Always pass `FactoryTimestamp` here. Passing the local `Timestamp` (which has
+ * no offset) makes `new Date()` read it as UTC on a UTC server, so readings land
+ * hours in the past and then get filtered out as "older than last sync" — they
+ * never import. Returns null if the string can't be parsed.
+ */
+export function parseLibreUtcTimestamp(factoryTimestamp: string): Date | null {
+  if (!factoryTimestamp) return null;
+  const m = factoryTimestamp
+    .trim()
+    .match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?$/i);
+  if (m) {
+    const [, mo, day, year, hh, mm, ss, ap] = m;
+    let hour = parseInt(hh, 10);
+    if (ap) {
+      const upper = ap.toUpperCase();
+      if (upper === 'PM' && hour !== 12) hour += 12;
+      else if (upper === 'AM' && hour === 12) hour = 0;
+    }
+    const d = new Date(Date.UTC(+year, +mo - 1, +day, hour, +mm, +ss));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Fallback: force a UTC reading if the string lacks an explicit timezone.
+  const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(factoryTimestamp.trim());
+  const d = new Date(hasTz ? factoryTimestamp : `${factoryTimestamp} UTC`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Encrypt password for storage using AES-256-GCM.
  * Requires ENCRYPTION_KEY env var (64 hex chars = 32 bytes).
  * Stored format: iv:authTag:ciphertext (all hex, colon-delimited)

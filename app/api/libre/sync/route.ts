@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { LibreLinkUpClient, decryptPassword } from '@/lib/libre-api';
+import { LibreLinkUpClient, decryptPassword, parseLibreUtcTimestamp } from '@/lib/libre-api';
 
 /**
  * POST /api/libre/sync
@@ -165,14 +165,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // Import readings
+    // Import readings.
+    // LibreLinkUp's graph data lags real time by ~15-20 min, but lastSyncAt is
+    // wall-clock "now", so a naive `measuredAt > lastSyncAt` filter starves once
+    // the lag exceeds the sync interval. Look back a buffer before lastSyncAt and
+    // rely on the duplicate check below to avoid re-inserting.
     let importedCount = 0;
-    const startDate = integration.lastSyncAt || new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const SYNC_BUFFER_MS = 30 * 60 * 1000;
+    const startDate = integration.lastSyncAt
+      ? new Date(integration.lastSyncAt.getTime() - SYNC_BUFFER_MS)
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     for (const reading of glucoseData) {
       if (!reading.ValueInMgPerDl) continue;
 
-      const measuredAt = new Date(reading.Timestamp);
+      // FactoryTimestamp is UTC; Timestamp is the patient's local time with no
+      // offset and must NOT be used (see parseLibreUtcTimestamp).
+      const measuredAt = parseLibreUtcTimestamp(reading.FactoryTimestamp);
+      if (!measuredAt) continue;
 
       // Only import readings after last sync
       if (measuredAt <= startDate) continue;
