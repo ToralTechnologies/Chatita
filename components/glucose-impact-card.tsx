@@ -67,6 +67,20 @@ export default function GlucoseImpactCard({ mealId, compact = false }: GlucoseIm
     fetchImpact();
   }, [mealId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // While the post-meal window is still open, poll so the card fills in as new
+  // CGM readings arrive after the meal (each fetch also refreshes from Libre
+  // server-side). Stop once the window completes.
+  useEffect(() => {
+    if (!data || data.windowComplete) return;
+    const interval = setInterval(fetchImpact, 3 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchImpact(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [data?.windowComplete, mealId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchImpact = async () => {
     try {
       const res = await fetch(`/api/meals/${mealId}/glucose-impact`);

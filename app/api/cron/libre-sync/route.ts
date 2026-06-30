@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { LibreLinkUpClient, decryptPassword, parseLibreUtcTimestamp } from '@/lib/libre-api';
+import { syncLibreReadings } from '@/lib/libre-sync';
 
 /**
  * POST /api/cron/libre-sync
@@ -44,176 +44,31 @@ export async function POST(request: Request) {
 
     for (const integration of integrations) {
       try {
-        // Check if it's time to sync
-        const now = Date.now();
-        const lastSync = integration.lastSyncAt?.getTime() || 0;
-        const syncInterval = integration.syncFrequency * 60 * 1000;
+        // syncLibreReadings throttles itself via minIntervalMs (the per-user
+        // sync frequency) and records its own lastError on failure.
+        const result = await syncLibreReadings(integration.userId, {
+          minIntervalMs: integration.syncFrequency * 60 * 1000,
+        });
 
-        if (now - lastSync < syncInterval) {
+        if (result.skipped) {
           results.skipped++;
           continue;
         }
-
-        const client = new LibreLinkUpClient(
-          integration.region as 'US' | 'EU' | 'AP'
-        );
-
-        // Set account ID from stored user ID (required for API v4.16.0+)
-        if (!integration.libreUserId) {
-          throw new Error('LibreLinkUp user ID not found. User needs to reconnect account.');
+        if (!result.ok) {
+          results.failed++;
+          results.errors.push({ userId: integration.userId, email: integration.user.email, error: result.error });
+          console.error(`[Libre Cron] Failed to sync for user ${integration.user.email}: ${result.error}`);
+          continue;
         }
-
-        await client.setAccountIdFromUserId(integration.libreUserId);
-
-        // Re-authenticate if needed
-        let authToken = integration.authToken;
-        let patientId = integration.librePatientId;
-
-        if (
-          !authToken ||
-          !integration.tokenExpiresAt ||
-          new Date() >= integration.tokenExpiresAt
-        ) {
-          const decryptedPassword = decryptPassword(integration.librePassword);
-          const authResult = await client.login(
-            integration.libreEmail,
-            decryptedPassword
-          );
-
-          authToken = authResult.token;
-          patientId = authResult.patientId || patientId;
-
-          await prisma.libreIntegration.update({
-            where: { id: integration.id },
-            data: {
-              authToken: authResult.token,
-              tokenExpiresAt: authResult.expires,
-              libreUserId: authResult.userId,
-              librePatientId: patientId,
-            },
-          });
-
-          // Update client with new account ID
-          await client.setAccountIdFromUserId(authResult.userId);
-        }
-
-        if (!patientId) {
-          throw new Error('No patient ID available');
-        }
-
-        // Fetch glucose data
-        const glucoseData = await client.getGlucoseData(patientId, authToken!);
-
-        // Import new readings. Graph data lags real time by ~15-20 min while
-        // lastSyncAt is wall-clock "now", so look back a buffer before it (the
-        // duplicate check prevents re-inserts) to avoid starving on the lag.
-        let imported = 0;
-        const SYNC_BUFFER_MS = 30 * 60 * 1000;
-        const startDate = integration.lastSyncAt
-          ? new Date(integration.lastSyncAt.getTime() - SYNC_BUFFER_MS)
-          : new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        for (const reading of glucoseData) {
-          if (!reading.ValueInMgPerDl) continue;
-
-          // FactoryTimestamp is UTC; Timestamp is patient-local with no offset
-          // and must NOT be used (see parseLibreUtcTimestamp).
-          const measuredAt = parseLibreUtcTimestamp(reading.FactoryTimestamp);
-          if (!measuredAt) continue;
-
-          if (measuredAt <= startDate) continue;
-
-          const existing = await prisma.glucoseEntry.findFirst({
-            where: {
-              userId: integration.userId,
-              measuredAt,
-              value: reading.ValueInMgPerDl,
-            },
-          });
-
-          if (!existing) {
-            const trendSymbol = LibreLinkUpClient.getTrendSymbol(reading.TrendArrow);
-
-            await prisma.glucoseEntry.create({
-              data: {
-                userId: integration.userId,
-                value: reading.ValueInMgPerDl,
-                measuredAt,
-                notes: `FreeStyle Libre (Trend: ${trendSymbol})`,
-                context: 'random',
-              },
-            });
-            imported++;
-          }
-        }
-
-        // Auto-link new readings to recent meals
-        if (imported > 0) {
-          try {
-            const recentMeals = await prisma.meal.findMany({
-              where: {
-                userId: integration.userId,
-                eatenAt: {
-                  gte: new Date(Date.now() - 4 * 60 * 60 * 1000),
-                },
-              },
-              select: { id: true, eatenAt: true },
-            });
-
-            for (const meal of recentMeals) {
-              const mealTime = meal.eatenAt.getTime();
-              await prisma.glucoseEntry.updateMany({
-                where: {
-                  userId: integration.userId,
-                  relatedMealId: null,
-                  measuredAt: {
-                    gte: meal.eatenAt,
-                    lte: new Date(mealTime + 3 * 60 * 60 * 1000),
-                  },
-                },
-                data: {
-                  relatedMealId: meal.id,
-                  context: 'post-meal',
-                },
-              });
-            }
-          } catch (linkError) {
-            console.error(`[Libre Cron] Auto-link error for user ${integration.user.email}:`, linkError);
-          }
-        }
-
-        // Update integration
-        await prisma.libreIntegration.update({
-          where: { id: integration.id },
-          data: {
-            lastSyncAt: new Date(),
-            lastError: null,
-          },
-        });
 
         results.synced++;
         console.log(
-          `[Libre Cron] Synced ${imported}/${glucoseData.length} readings for user ${integration.user.email}`
+          `[Libre Cron] Synced ${result.imported}/${result.total} readings for user ${integration.user.email}`
         );
       } catch (error: any) {
         results.failed++;
-        results.errors.push({
-          userId: integration.userId,
-          email: integration.user.email,
-          error: error.message,
-        });
-
-        await prisma.libreIntegration.update({
-          where: { id: integration.id },
-          data: {
-            lastError: error.message,
-          },
-        });
-
-        console.error(
-          `[Libre Cron] Failed to sync for user ${integration.user.email}:`,
-          error
-        );
+        results.errors.push({ userId: integration.userId, email: integration.user.email, error: error.message });
+        console.error(`[Libre Cron] Failed to sync for user ${integration.user.email}:`, error);
       }
     }
 
