@@ -139,10 +139,16 @@ export default function HomePage() {
       .then(r => r.ok ? r.json() : null)
       .then(async d => {
         applyStatus(d);
-        // If Libre is connected, refresh from LibreLinkUp then re-read status.
-        if (d?.connected && d.provider === 'libre') {
+        // If a CGM is connected, refresh it then re-read status so today's
+        // glucose is current (the cron only runs once a day).
+        const syncPath = d?.connected
+          ? d.provider === 'libre' ? '/api/libre/sync'
+          : d.provider === 'dexcom' ? '/api/dexcom/sync'
+          : null
+          : null;
+        if (syncPath) {
           try {
-            await fetch('/api/libre/sync', { method: 'POST' });
+            await fetch(syncPath, { method: 'POST' });
             const r2 = await fetch('/api/cgm/status');
             if (r2.ok) applyStatus(await r2.json());
           } catch { /* keep the cached reading */ }

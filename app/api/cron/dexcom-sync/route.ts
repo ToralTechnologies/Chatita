@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { syncDexcomReadings } from '@/lib/dexcom-sync';
 
 /**
  * POST /api/cron/dexcom-sync
@@ -44,154 +45,31 @@ export async function POST(request: Request) {
 
     for (const integration of integrations) {
       try {
-        // Check if it's time to sync based on frequency
-        const now = Date.now();
-        const lastSync = integration.lastSyncAt?.getTime() || 0;
-        const syncInterval = integration.syncFrequency * 60 * 1000; // Convert minutes to ms
+        // syncDexcomReadings throttles itself via minIntervalMs (the per-user
+        // sync frequency) and records its own lastError on failure.
+        const result = await syncDexcomReadings(integration.userId, {
+          minIntervalMs: integration.syncFrequency * 60 * 1000,
+        });
 
-        if (now - lastSync < syncInterval) {
+        if (result.skipped) {
           results.skipped++;
           continue;
         }
-
-        // Check if token needs refresh
-        let accessToken = integration.accessToken;
-        if (new Date() >= integration.tokenExpiresAt) {
-          accessToken = await refreshDexcomToken(integration);
+        if (!result.ok) {
+          results.failed++;
+          results.errors.push({ userId: integration.userId, email: integration.user.email, error: result.error });
+          console.error(`[Dexcom Cron] Failed to sync for user ${integration.user.email}: ${result.error}`);
+          continue;
         }
-
-        // Fetch glucose data
-        const baseUrl =
-          integration.environment === 'production'
-            ? 'https://api.dexcom.com'
-            : 'https://sandbox-api.dexcom.com';
-
-        const startDate = integration.lastSyncAt
-          ? new Date(integration.lastSyncAt)
-          : new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        const endDate = new Date();
-
-        const egvsUrl = new URL(`${baseUrl}/v3/users/self/egvs`);
-        egvsUrl.searchParams.append('startDate', startDate.toISOString());
-        egvsUrl.searchParams.append('endDate', endDate.toISOString());
-
-        const response = await fetch(egvsUrl.toString(), {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        const records = data.records || [];
-
-        // Import new readings
-        let imported = 0;
-        for (const egv of records) {
-          if (!egv.value || egv.value < 40 || egv.value > 400) continue;
-
-          // Dexcom systemTime is UTC but has no timezone suffix; mark it as UTC
-          // so JS doesn't parse it as local time and shift every reading.
-          const measuredAt = new Date(
-            /[zZ]|[+-]\d\d:?\d\d$/.test(egv.systemTime) ? egv.systemTime : egv.systemTime + 'Z'
-          );
-
-          // Check for duplicates
-          const existing = await prisma.glucoseEntry.findFirst({
-            where: {
-              userId: integration.userId,
-              measuredAt,
-              value: egv.value,
-            },
-          });
-
-          if (!existing) {
-            await prisma.glucoseEntry.create({
-              data: {
-                userId: integration.userId,
-                value: egv.value,
-                measuredAt,
-                notes: `Dexcom CGM (Trend: ${egv.trend})`,
-                context: 'random',
-              },
-            });
-            imported++;
-          }
-        }
-
-        // Auto-link new readings to recent meals
-        if (imported > 0) {
-          try {
-            const recentMeals = await prisma.meal.findMany({
-              where: {
-                userId: integration.userId,
-                eatenAt: {
-                  gte: new Date(Date.now() - 4 * 60 * 60 * 1000),
-                },
-              },
-              select: { id: true, eatenAt: true },
-            });
-
-            for (const meal of recentMeals) {
-              const mealTime = meal.eatenAt.getTime();
-              await prisma.glucoseEntry.updateMany({
-                where: {
-                  userId: integration.userId,
-                  relatedMealId: null,
-                  measuredAt: {
-                    gte: meal.eatenAt,
-                    lte: new Date(mealTime + 3 * 60 * 60 * 1000),
-                  },
-                },
-                data: {
-                  relatedMealId: meal.id,
-                  context: 'post-meal',
-                },
-              });
-            }
-          } catch (linkError) {
-            console.error(`[Dexcom Cron] Auto-link error for user ${integration.user.email}:`, linkError);
-          }
-        }
-
-        // Update integration
-        await prisma.dexcomIntegration.update({
-          where: { id: integration.id },
-          data: {
-            lastSyncAt: new Date(),
-            lastError: null,
-          },
-        });
 
         results.synced++;
         console.log(
-          `[Dexcom Cron] Synced ${imported}/${records.length} readings for user ${integration.user.email}`
+          `[Dexcom Cron] Synced ${result.imported}/${result.total} readings for user ${integration.user.email}`
         );
       } catch (error: any) {
         results.failed++;
-        results.errors.push({
-          userId: integration.userId,
-          email: integration.user.email,
-          error: error.message,
-        });
-
-        // Update error in database
-        await prisma.dexcomIntegration.update({
-          where: { id: integration.id },
-          data: {
-            lastError: error.message,
-          },
-        });
-
-        console.error(
-          `[Dexcom Cron] Failed to sync for user ${integration.user.email}:`,
-          error
-        );
+        results.errors.push({ userId: integration.userId, email: integration.user.email, error: error.message });
+        console.error(`[Dexcom Cron] Failed to sync for user ${integration.user.email}:`, error);
       }
     }
 
@@ -208,51 +86,6 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-async function refreshDexcomToken(integration: {
-  id: string;
-  refreshToken: string;
-  environment: string;
-}): Promise<string> {
-  const clientId = process.env.DEXCOM_CLIENT_ID!;
-  const clientSecret = process.env.DEXCOM_CLIENT_SECRET!;
-
-  const baseUrl =
-    integration.environment === 'production'
-      ? 'https://api.dexcom.com'
-      : 'https://sandbox-api.dexcom.com';
-
-  const response = await fetch(`${baseUrl}/v3/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: integration.refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to refresh token');
-  }
-
-  const tokenData = await response.json();
-  const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-
-  await prisma.dexcomIntegration.update({
-    where: { id: integration.id },
-    data: {
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      tokenExpiresAt: expiresAt,
-    },
-  });
-
-  return tokenData.access_token;
 }
 
 // Vercel Cron invokes scheduled jobs with GET, so GET must run the same worker

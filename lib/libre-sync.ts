@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { LibreLinkUpClient, decryptPassword, parseLibreUtcTimestamp } from '@/lib/libre-api';
+import { linkReadingsToRecentMeals } from '@/lib/cgm-meal-link';
 
 export interface LibreSyncResult {
   ok: boolean;
@@ -144,25 +145,9 @@ export async function syncLibreReadings(
   // Link new (and any still-unlinked) readings to recent meals so each meal's
   // blood-sugar impact picks them up as post-meal context.
   if (imported > 0) {
-    try {
-      const recentMeals = await prisma.meal.findMany({
-        where: { userId, eatenAt: { gte: new Date(Date.now() - 4 * 60 * 60 * 1000) } },
-        select: { id: true, eatenAt: true },
-      });
-      for (const meal of recentMeals) {
-        const mealTime = meal.eatenAt.getTime();
-        await prisma.glucoseEntry.updateMany({
-          where: {
-            userId,
-            relatedMealId: null,
-            measuredAt: { gte: meal.eatenAt, lte: new Date(mealTime + 3 * 60 * 60 * 1000) },
-          },
-          data: { relatedMealId: meal.id, context: 'post-meal' },
-        });
-      }
-    } catch (linkError) {
-      console.error('[libre-sync] auto-link error:', linkError);
-    }
+    await linkReadingsToRecentMeals(userId).catch((e) =>
+      console.error('[libre-sync] auto-link error:', e)
+    );
   }
 
   await prisma.libreIntegration.update({
