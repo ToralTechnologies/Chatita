@@ -13,10 +13,6 @@ export interface LibreSyncResult {
   error?: string;
 }
 
-// LibreLinkUp graph data lags real time by ~15-20 min, but lastSyncAt is
-// wall-clock "now", so a naive `measuredAt > lastSyncAt` filter starves once the
-// lag exceeds the sync interval. Look back this buffer and rely on the dedupe.
-const SYNC_BUFFER_MS = 30 * 60 * 1000;
 
 /**
  * Pull the latest glucose readings from LibreLinkUp for one user, import the new
@@ -115,30 +111,36 @@ export async function syncLibreReadings(
     }
   }
 
-  // Import new readings.
-  const startDate = integration.lastSyncAt
-    ? new Date(integration.lastSyncAt.getTime() - SYNC_BUFFER_MS)
-    : new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Import the FULL available graph window (~12h) and gap-fill, rather than only
+  // readings past a watermark. LibreLinkUp only serves ~12h, so importing
+  // everything each sync (deduped) keeps history continuous and lets a
+  // just-uploaded older photo's window be backfilled on demand.
+  //
+  // FactoryTimestamp is UTC; Timestamp is the patient's local time with no
+  // offset and must NOT be used (see parseLibreUtcTimestamp).
+  const candidates = glucoseData
+    .map((r) => ({ measuredAt: parseLibreUtcTimestamp(r.FactoryTimestamp), value: r.ValueInMgPerDl, trend: r.TrendArrow }))
+    .filter((r): r is { measuredAt: Date; value: number; trend: number } => !!r.measuredAt && !!r.value);
 
   let imported = 0;
-  for (const reading of glucoseData) {
-    if (!reading.ValueInMgPerDl) continue;
-
-    // FactoryTimestamp is UTC; Timestamp is the patient's local time with no
-    // offset and must NOT be used (see parseLibreUtcTimestamp).
-    const measuredAt = parseLibreUtcTimestamp(reading.FactoryTimestamp);
-    if (!measuredAt) continue;
-    if (measuredAt <= startDate) continue;
-
-    const existing = await prisma.glucoseEntry.findFirst({
-      where: { userId, measuredAt, value: reading.ValueInMgPerDl },
+  if (candidates.length > 0) {
+    const earliest = candidates.reduce((min, r) => (r.measuredAt < min ? r.measuredAt : min), candidates[0].measuredAt);
+    // One read of existing readings in the window → in-memory dedupe → one bulk insert.
+    const existing = await prisma.glucoseEntry.findMany({
+      where: { userId, measuredAt: { gte: earliest } },
+      select: { measuredAt: true, value: true },
     });
-    if (!existing) {
-      const trendSymbol = LibreLinkUpClient.getTrendSymbol(reading.TrendArrow);
-      await prisma.glucoseEntry.create({
-        data: { userId, value: reading.ValueInMgPerDl, measuredAt, notes: `FreeStyle Libre (Trend: ${trendSymbol})`, context: 'random' },
-      });
-      imported++;
+    const seen = new Set(existing.map((e) => `${e.measuredAt.getTime()}|${e.value}`));
+    const toCreate: { userId: string; value: number; measuredAt: Date; notes: string; context: string }[] = [];
+    for (const r of candidates) {
+      const key = `${r.measuredAt.getTime()}|${r.value}`;
+      if (seen.has(key)) continue;
+      seen.add(key); // guard against duplicates within this batch too
+      toCreate.push({ userId, value: r.value, measuredAt: r.measuredAt, notes: `FreeStyle Libre (Trend: ${LibreLinkUpClient.getTrendSymbol(r.trend)})`, context: 'random' });
+    }
+    if (toCreate.length > 0) {
+      await prisma.glucoseEntry.createMany({ data: toCreate });
+      imported = toCreate.length;
     }
   }
 

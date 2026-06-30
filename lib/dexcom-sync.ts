@@ -11,9 +11,8 @@ export interface DexcomSyncResult {
   error?: string;
 }
 
-// Dexcom EGVs lag real time, but lastSyncAt is wall-clock "now". Querying
-// startDate=lastSyncAt then advancing lastSyncAt to now drops readings that land
-// in the lag gap, so look back this buffer and rely on the dedupe check.
+// Normal sync looks back a little before lastSyncAt so a reading that lands in
+// Dexcom's reporting lag isn't skipped; the dedupe handles re-fetches.
 const SYNC_BUFFER_MS = 30 * 60 * 1000;
 
 function dexcomBaseUrl(environment: string): string {
@@ -69,10 +68,14 @@ async function refreshDexcomToken(integration: {
  *
  * @param opts.minIntervalMs  Skip (no upstream call) if we synced more recently
  *   than this. Lets the impact route poll without hammering Dexcom.
+ * @param opts.since / opts.until  Targeted historical backfill of an exact
+ *   window (e.g. an older meal's window). Dexcom retains history, so we can fetch
+ *   any past range. A backfill never throttles and never moves lastSyncAt — it
+ *   just fills in the requested gap.
  */
 export async function syncDexcomReadings(
   userId: string,
-  opts: { minIntervalMs?: number } = {}
+  opts: { minIntervalMs?: number; since?: Date; until?: Date } = {}
 ): Promise<DexcomSyncResult> {
   const integration = await prisma.dexcomIntegration.findUnique({ where: { userId } });
 
@@ -83,7 +86,10 @@ export async function syncDexcomReadings(
     return { ok: false, imported: 0, total: 0, status: 400, error: 'Dexcom integration is disabled' };
   }
 
+  const backfill = !!opts.since;
+
   if (
+    !backfill &&
     opts.minIntervalMs &&
     integration.lastSyncAt &&
     Date.now() - integration.lastSyncAt.getTime() < opts.minIntervalMs
@@ -97,10 +103,12 @@ export async function syncDexcomReadings(
       accessToken = await refreshDexcomToken(integration);
     }
 
-    const startDate = integration.lastSyncAt
+    const startDate = backfill
+      ? opts.since!
+      : integration.lastSyncAt
       ? new Date(integration.lastSyncAt.getTime() - SYNC_BUFFER_MS)
       : new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const endDate = new Date();
+    const endDate = backfill && opts.until ? opts.until : new Date();
 
     const egvsUrl = new URL(`${dexcomBaseUrl(integration.environment)}/v3/users/self/egvs`);
     egvsUrl.searchParams.append('startDate', startDate.toISOString());
@@ -111,26 +119,36 @@ export async function syncDexcomReadings(
     });
 
     if (!res.ok) {
-      await prisma.dexcomIntegration.update({ where: { userId }, data: { lastError: `Failed to fetch data: ${res.status}` } });
+      if (!backfill) await prisma.dexcomIntegration.update({ where: { userId }, data: { lastError: `Failed to fetch data: ${res.status}` } });
       return { ok: false, imported: 0, total: 0, status: 500, error: 'Failed to fetch glucose data from Dexcom' };
     }
 
     const data = await res.json();
     const records: any[] = data.records || [];
 
-    let imported = 0;
-    for (const egv of records) {
-      if (!egv.value || egv.value < 40 || egv.value > 400) continue;
+    // Build candidates → one read of existing readings → in-memory dedupe → bulk insert.
+    const candidates = records
+      .filter((egv) => egv.value && egv.value >= 40 && egv.value <= 400)
+      .map((egv) => ({ measuredAt: parseDexcomUtc(egv.systemTime), value: egv.value as number, trend: egv.trend }));
 
-      const measuredAt = parseDexcomUtc(egv.systemTime);
-      const existing = await prisma.glucoseEntry.findFirst({
-        where: { userId, measuredAt, value: egv.value },
+    let imported = 0;
+    if (candidates.length > 0) {
+      const earliest = candidates.reduce((min, r) => (r.measuredAt < min ? r.measuredAt : min), candidates[0].measuredAt);
+      const existing = await prisma.glucoseEntry.findMany({
+        where: { userId, measuredAt: { gte: earliest } },
+        select: { measuredAt: true, value: true },
       });
-      if (!existing) {
-        await prisma.glucoseEntry.create({
-          data: { userId, value: egv.value, measuredAt, notes: `Dexcom CGM (Trend: ${egv.trend})`, context: 'random' },
-        });
-        imported++;
+      const seen = new Set(existing.map((e) => `${e.measuredAt.getTime()}|${e.value}`));
+      const toCreate: { userId: string; value: number; measuredAt: Date; notes: string; context: string }[] = [];
+      for (const r of candidates) {
+        const key = `${r.measuredAt.getTime()}|${r.value}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        toCreate.push({ userId, value: r.value, measuredAt: r.measuredAt, notes: `Dexcom CGM (Trend: ${r.trend})`, context: 'random' });
+      }
+      if (toCreate.length > 0) {
+        await prisma.glucoseEntry.createMany({ data: toCreate });
+        imported = toCreate.length;
       }
     }
 
@@ -140,16 +158,21 @@ export async function syncDexcomReadings(
       );
     }
 
-    await prisma.dexcomIntegration.update({
-      where: { userId },
-      data: { lastSyncAt: new Date(), lastError: null },
-    });
+    // A targeted backfill must not move the forward-sync watermark.
+    if (!backfill) {
+      await prisma.dexcomIntegration.update({
+        where: { userId },
+        data: { lastSyncAt: new Date(), lastError: null },
+      });
+    }
 
     return { ok: true, imported, total: records.length };
   } catch (error: any) {
-    await prisma.dexcomIntegration
-      .update({ where: { userId }, data: { lastError: String(error?.message ?? 'Sync failed').slice(0, 200) } })
-      .catch(() => {});
+    if (!backfill) {
+      await prisma.dexcomIntegration
+        .update({ where: { userId }, data: { lastError: String(error?.message ?? 'Sync failed').slice(0, 200) } })
+        .catch(() => {});
+    }
     return { ok: false, imported: 0, total: 0, status: 500, error: 'Failed to sync glucose data' };
   }
 }
