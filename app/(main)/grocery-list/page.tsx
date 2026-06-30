@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/i18n/context';
 import { compressImage } from '@/lib/compress-image';
 import { FIT_LABEL_META, type ProductCandidate, type FitLabel } from '@/lib/products/types';
 import { toast } from '@/components/toast';
+import BarcodeScanner from '@/components/barcode-scanner';
 
 const C = { blue: '#012374', cream: '#F7EFE1', card: '#FFFDF9', green: '#1C7A4F', gold: '#9A6F18', ink: '#16182A' };
 
@@ -114,6 +115,22 @@ export default function GroceryListPage() {
     } catch { toast('Lookup failed. Try manual entry.', 'error'); } finally { setBusy(false); }
   }
 
+  async function runSearch(query: string) {
+    const q = (query || '').trim();
+    if (!q) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const products: ProductCandidate[] = data.products ?? [];
+      if (products.length === 0) { toast(g.noProductsFound, 'info'); setAddMode('manual'); return; }
+      // A lone low-confidence "search" candidate means nothing real matched.
+      if (products.length === 1 && products[0].source === 'search') toast(g.noProductsFound, 'info');
+      setReview(products);
+      setReviewTarget('list');
+    } catch { toast('Search failed. Try manual entry.', 'error'); setAddMode('manual'); } finally { setBusy(false); }
+  }
+
   const plannedItems = items.filter(i => i.status !== 'bought');
   const boughtItems = items.filter(i => i.status === 'bought');
 
@@ -141,7 +158,7 @@ export default function GroceryListPage() {
       {/* Add real items entry */}
       {!shoppingMode && (
         <AddItemsEntry g={g} addMode={addMode} setAddMode={setAddMode} busy={busy}
-          onPhotos={onPhotos} lookupBarcode={lookupBarcode}
+          onPhotos={onPhotos} lookupBarcode={lookupBarcode} onSearch={runSearch}
           onManual={(c: ProductCandidate) => { setReview([c]); setReviewTarget('list'); setAddMode(null); }}
           onSuggestions={() => addProducts(SUGGESTIONS.map(s => ({ ...s, source: 'manual' })), 'list')} />
       )}
@@ -197,16 +214,17 @@ export default function GroceryListPage() {
 }
 
 // ───────────────────────── AddItemsEntry ─────────────────────────
-function AddItemsEntry({ g, addMode, setAddMode, busy, onPhotos, lookupBarcode, onManual, onSuggestions }: any) {
+function AddItemsEntry({ g, addMode, setAddMode, busy, onPhotos, lookupBarcode, onSearch, onManual, onSuggestions }: any) {
   const photoRef = useRef<HTMLInputElement>(null);
   const receiptRef = useRef<HTMLInputElement>(null);
   const pantryRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<'product' | 'receipt' | 'pantry'>('product');
   const [barcode, setBarcode] = useState('');
+  const [scanning, setScanning] = useState(false);
 
   const OPTIONS: { id: AddMode | 'photo' | 'receipt' | 'pantryphoto'; label: string; icon: string; onClick: () => void }[] = [
     { id: 'photo', label: g.takeProductPhoto, icon: 'M5 7h3l1-2h6l1 2h3v12H5V7zM12 16a3 3 0 100-6 3 3 0 000 6z', onClick: () => { setKind('product'); photoRef.current?.click(); } },
-    { id: 'barcode', label: g.scanBarcode, icon: 'M4 6v12M8 6v12M12 6v12M16 6v12M20 6v12', onClick: () => setAddMode('barcode') },
+    { id: 'barcode', label: g.scanBarcode, icon: 'M4 6v12M8 6v12M12 6v12M16 6v12M20 6v12', onClick: () => { setAddMode('barcode'); setScanning(true); } },
     { id: 'search', label: g.searchProduct, icon: 'M11 4a7 7 0 105 12l4 4M11 4a7 7 0 010 14', onClick: () => setAddMode('search') },
     { id: 'manual', label: g.addManually, icon: 'M12 5v14M5 12h14', onClick: () => setAddMode('manual') },
     { id: 'receipt', label: g.uploadReceipt, icon: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6', onClick: () => { setKind('receipt'); receiptRef.current?.click(); } },
@@ -233,18 +251,33 @@ function AddItemsEntry({ g, addMode, setAddMode, busy, onPhotos, lookupBarcode, 
       <button onClick={onSuggestions} disabled={busy} style={{ marginTop: 8, width: '100%', padding: '11px', borderRadius: 13, border: 'none', background: 'rgba(28,122,79,0.1)', color: C.green, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600 }}>{g.chatitaSuggestions}</button>
 
       <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.5)', marginTop: 10, lineHeight: 1.5 }}>{g.addHelper}</p>
-      {busy && <p style={{ fontSize: 12.5, color: C.blue, marginTop: 8 }}>Reading…</p>}
+      {busy && <p style={{ fontSize: 12.5, color: C.blue, marginTop: 8 }}>{addMode === 'search' ? g.searching : 'Reading…'}</p>}
 
-      {/* Barcode entry */}
+      {/* Barcode entry — camera scan + manual number fallback */}
       {addMode === 'barcode' && (
-        <InlineField placeholder="Barcode number" value={barcode} onChange={setBarcode} onSubmit={() => lookupBarcode(barcode)} cta={g.scanBarcode} busy={busy} />
+        <div style={{ marginTop: 12 }}>
+          <button onClick={() => setScanning(true)} disabled={busy} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px', borderRadius: 11, border: 'none', background: C.blue, color: C.card, fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#FFFDF9" strokeWidth="1.6" /><circle cx="12" cy="12" r="3" stroke="#FFFDF9" strokeWidth="1.6" /></svg>
+            {g.scanWithCamera}
+          </button>
+          <InlineField placeholder="Barcode number" value={barcode} onChange={setBarcode} onSubmit={() => lookupBarcode(barcode)} cta={g.searchProduct} busy={busy} />
+        </div>
       )}
-      {/* Search → manual candidate from text */}
+      {/* Search → real products via USDA + Open Food Facts */}
       {addMode === 'search' && (
-        <InlineField placeholder="e.g. Kirkland Greek yogurt" onSubmit={(v: string) => onManual({ name: v, source: 'search' as const })} cta={g.searchProduct} busy={busy} note={g.availabilityVaries} />
+        <InlineField placeholder="e.g. Kirkland Greek yogurt" onSubmit={(v: string) => onSearch(v)} cta={g.searchProduct} busy={busy} note={g.availabilityVaries} />
       )}
       {/* Manual full form */}
       {addMode === 'manual' && <ManualForm g={g} onAdd={onManual} />}
+
+      {scanning && (
+        <BarcodeScanner
+          labels={{ title: g.scanBarcode, help: g.scanningHelp, denied: g.cameraDenied, enter: g.enterBarcodeInstead }}
+          onDetect={(code: string) => { setScanning(false); lookupBarcode(code); }}
+          onClose={() => setScanning(false)}
+          onManual={() => { setScanning(false); setAddMode('barcode'); }}
+        />
+      )}
     </div>
   );
 }
