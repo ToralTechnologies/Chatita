@@ -51,10 +51,12 @@ export default function MealHistoryPage() {
   };
 
   const filteredMeals = meals.filter((meal) => {
+    const q = searchTerm.toLowerCase();
     const matchesSearch =
       searchTerm === '' ||
-      meal.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meal.detectedFoods?.toLowerCase().includes(searchTerm.toLowerCase());
+      meal.mealName?.toLowerCase().includes(q) ||
+      meal.aiSummary?.toLowerCase().includes(q) ||
+      meal.detectedFoods?.toLowerCase().includes(q);
     const matchesType = filterType === '' || meal.mealType?.toLowerCase() === filterType.toLowerCase();
     return matchesSearch && matchesType;
   });
