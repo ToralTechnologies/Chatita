@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { computeCompactImpact } from '@/lib/glucose-impact';
+import { linkReadingsToMeal } from '@/lib/cgm-meal-link';
 
 export async function GET(request: Request) {
   try {
@@ -229,6 +230,16 @@ export async function POST(request: Request) {
           addToDailyWaterTotal: true,
         },
       }).catch((err) => console.error('Hydration log error:', err));
+    }
+
+    // Backdated meal (e.g. a photo of a past meal, logged at its EXIF capture
+    // time): immediately link any CGM readings already in its post-meal window
+    // so analytics/insights pick this meal up — the recent-meals auto-linker
+    // only covers meals eaten in the last 4h. Best-effort; the glucose-impact
+    // route backfills + links any readings that arrive later.
+    if (meal.eatenAt.getTime() < Date.now() - 30 * 60 * 1000) {
+      await linkReadingsToMeal(session.user.id, meal.id, meal.eatenAt)
+        .catch((err) => console.error('Backdated meal link error:', err));
     }
 
     // Create follow-up check-in for 2 hours after meal

@@ -13,14 +13,29 @@ export async function linkReadingsToRecentMeals(userId: string): Promise<void> {
   });
 
   for (const meal of recentMeals) {
-    const mealTime = meal.eatenAt.getTime();
-    await prisma.glucoseEntry.updateMany({
-      where: {
-        userId,
-        relatedMealId: null,
-        measuredAt: { gte: meal.eatenAt, lte: new Date(mealTime + 3 * 60 * 60 * 1000) },
-      },
-      data: { relatedMealId: meal.id, context: 'post-meal' },
-    });
+    await linkReadingsToMeal(userId, meal.id, meal.eatenAt);
   }
+}
+
+/**
+ * Link still-unlinked glucose readings inside ONE meal's post-meal window
+ * (0…+3h), regardless of the meal's age. Used for backdated meals — e.g. a
+ * photo of a past meal uploaded later — so analytics/insights (which pair
+ * meals and readings via relatedMealId + context 'post-meal') learn from them,
+ * not just meals logged right after eating. Returns how many readings linked.
+ */
+export async function linkReadingsToMeal(
+  userId: string,
+  mealId: string,
+  eatenAt: Date
+): Promise<number> {
+  const res = await prisma.glucoseEntry.updateMany({
+    where: {
+      userId,
+      relatedMealId: null,
+      measuredAt: { gte: eatenAt, lte: new Date(eatenAt.getTime() + 3 * 60 * 60 * 1000) },
+    },
+    data: { relatedMealId: mealId, context: 'post-meal' },
+  });
+  return res.count;
 }

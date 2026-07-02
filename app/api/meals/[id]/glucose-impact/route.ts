@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { calculateMealGlucoseImpact } from '@/lib/glucose-impact';
 import { syncLibreReadings } from '@/lib/libre-sync';
 import { syncDexcomReadings } from '@/lib/dexcom-sync';
+import { linkReadingsToMeal } from '@/lib/cgm-meal-link';
 
 // LibreLinkUp only serves the last ~12h, so its on-demand refresh can only fill
 // a meal whose window is still inside that graph. Dexcom retains history, so we
@@ -53,6 +54,12 @@ export async function GET(
       );
 
       if (refreshes.length) await Promise.all(refreshes);
+
+      // Link this meal's window regardless of meal age — the sync-triggered
+      // auto-linker only covers meals from the last 4h, so backdated/older
+      // meals would otherwise stay invisible to analytics/insights (which
+      // pair meals ↔ readings via relatedMealId + context 'post-meal').
+      await linkReadingsToMeal(userId, id, meal.eatenAt).catch(() => {});
     }
 
     const impact = await calculateMealGlucoseImpact(id, userId);

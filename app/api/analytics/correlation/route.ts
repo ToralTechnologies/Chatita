@@ -130,11 +130,21 @@ function identifyPatterns(glucoseEntries: any[], meals: any[]) {
       const spikeFoods: Record<string, number> = {};
 
       highSpikes.forEach((spike) => {
-        if (spike.relatedMeal?.foodEntries) {
-          spike.relatedMeal.foodEntries.forEach((food: any) => {
-            spikeFoods[food.foodName] = (spikeFoods[food.foodName] || 0) + 1;
-          });
-        }
+        // Structured entries when present; photo-logged meals only carry
+        // detectedFoods JSON (or a meal name), so fall back to those —
+        // otherwise meals logged from a photo can never surface here.
+        const names: string[] = spike.relatedMeal?.foodEntries?.length
+          ? spike.relatedMeal.foodEntries.map((f: any) => f.foodName)
+          : (() => {
+              try {
+                const parsed = JSON.parse(spike.relatedMeal?.detectedFoods ?? '[]');
+                if (Array.isArray(parsed) && parsed.length) return parsed;
+              } catch { /* fall through */ }
+              return spike.relatedMeal?.mealName ? [spike.relatedMeal.mealName] : [];
+            })();
+        names.forEach((name: string) => {
+          spikeFoods[name] = (spikeFoods[name] || 0) + 1;
+        });
       });
 
       const topSpikeFoods = Object.entries(spikeFoods)

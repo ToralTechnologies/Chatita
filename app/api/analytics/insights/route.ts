@@ -216,7 +216,9 @@ async function generateAIInsights(glucoseEntries: any[], meals: any[], userData:
 
   // Food-glucose correlations
   const postMealWithFood = glucoseEntries.filter(
-    (e) => e.context === 'post-meal' && e.relatedMeal?.foodEntries?.length > 0
+    (e) =>
+      e.context === 'post-meal' &&
+      (e.relatedMeal?.foodEntries?.length > 0 || e.relatedMeal?.detectedFoods || e.relatedMeal?.mealName)
   );
 
   if (postMealWithFood.length >= 3) {
