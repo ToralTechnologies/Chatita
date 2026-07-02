@@ -154,6 +154,8 @@ export default function HealthTodayCard() {
               alignItems: 'center',
               gap: 4,
               flexShrink: 0,
+              padding: '13px 10px',
+              margin: '-13px -10px',
             }}
           >
             View trends

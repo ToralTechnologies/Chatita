@@ -61,7 +61,7 @@ export default function DailyPatternChart({
 
   return (
     <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 240 }}>
         <AreaChart data={fullDayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="colorGlucose" x1="0" y1="0" x2="0" y2="1">

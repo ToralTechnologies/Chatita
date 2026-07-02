@@ -63,7 +63,7 @@ export default function TimeInRangeChart({ data }: TimeInRangeChartProps) {
 
   return (
     <div className="w-full h-72">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 240 }}>
         <PieChart>
           <Pie
             data={chartData}

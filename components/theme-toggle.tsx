@@ -12,7 +12,7 @@ export default function ThemeToggle({ onDark = false }: { onDark?: boolean }) {
       aria-label="Toggle theme"
       className="flex items-center gap-1 transition-all active:scale-95"
       style={{
-        padding: '6px 10px',
+        padding: '12px 12px',
         borderRadius: '99px',
         fontSize: '11px',
         fontWeight: 600,

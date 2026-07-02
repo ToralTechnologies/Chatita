@@ -265,7 +265,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
             </span>
             <button
               onClick={() => setIsEditing(true)}
-              style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700 }}
+              style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700, padding: '14px 10px', margin: '-14px -10px' }}
             >
               + {currentValue ? 'Update' : 'Add reading'}
             </button>

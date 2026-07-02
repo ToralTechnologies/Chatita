@@ -348,7 +348,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
             {[7, 30, 90].map(d => (
               <button key={d} onClick={() => setPeriod(d)} style={{
-                padding: '7px 15px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 600,
+                padding: '13px 16px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 600,
                 cursor: 'pointer', border: 'none', fontFamily: 'inherit',
                 background: period === d ? '#012374' : '#F7EFE1',
                 color: period === d ? '#FFFDF9' : '#012374',
@@ -363,7 +363,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           <div style={{ marginTop: '14px', display: 'inline-flex', gap: '4px', background: '#F7EFE1', borderRadius: '999px', padding: '4px' }}>
             {([['timeline', 'Timeline'], ['timeOfDay', 'Time of day']] as const).map(([m, label]) => (
               <button key={m} onClick={() => setChartMode(m)} style={{
-                padding: '6px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
+                padding: '13px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
                 cursor: 'pointer', border: 'none', fontFamily: 'inherit',
                 background: chartMode === m ? '#012374' : 'transparent',
                 color: chartMode === m ? '#FFFDF9' : 'rgba(1,35,116,0.7)',
@@ -518,6 +518,19 @@ export default function InsightsPage() {
   const [aiLoading, setAiLoading]     = useState(true);
   const [period, setPeriod]           = useState(30);
   const [chartMode, setChartMode]     = useState<'timeline' | 'timeOfDay'>('timeline');
+
+  // After mount, render only the active layout tree. Rendering both (one
+  // CSS-hidden) makes recharts measure the hidden tree at 0×0 and log
+  // container-size warnings. Both trees still render pre-mount so hydration
+  // matches the server HTML.
+  const [layout, setLayout] = useState<'both' | 'mobile' | 'desktop'>('both');
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setLayout(mq.matches ? 'desktop' : 'mobile');
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   useEffect(() => { fetchAnalytics(); }, [period]);
 
@@ -686,6 +699,7 @@ export default function InsightsPage() {
   return (
     <>
       {/* ── Mobile layout ─────────────────────────────────────────────────────── */}
+      {layout !== 'desktop' && (
       <div className="lg:hidden min-h-screen mobile-page-pb" style={{ background: '#F7EFE1' }}>
         {/* Mobile header */}
         <div style={{ background: '#FFFDF9', borderBottom: '1px solid rgba(1,35,116,0.07)', padding: '18px 20px 14px' }}>
@@ -717,8 +731,10 @@ export default function InsightsPage() {
 
         <BottomNav />
       </div>
+      )}
 
       {/* ── Web / desktop layout ───────────────────────────────────────────────── */}
+      {layout !== 'mobile' && (
       <div className="hidden lg:flex" style={{ height: '100vh', background: '#F7EFE1', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
         <WebNav />
 
@@ -749,6 +765,7 @@ export default function InsightsPage() {
           <InsightsContent {...sharedProps} isWeb />
         </div>
       </div>
+      )}
     </>
   );
 }

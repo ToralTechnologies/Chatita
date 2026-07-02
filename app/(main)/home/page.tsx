@@ -388,7 +388,7 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
               {[8, 12, 16].map(oz => (
                 <button key={oz} type="button" onClick={() => logWater(oz)}
-                  style={{ flex: 1, padding: '5px 0', borderRadius: '8px', fontSize: '11px', fontWeight: 600, background: 'rgba(42,111,168,0.1)', color: '#2A6FA8', border: 'none', cursor: 'pointer' }}>
+                  style={{ flex: 1, padding: '13px 0', borderRadius: '10px', fontSize: '11px', fontWeight: 600, background: 'rgba(42,111,168,0.1)', color: '#2A6FA8', border: 'none', cursor: 'pointer' }}>
                   +{oz}oz
                 </button>
               ))}

@@ -95,7 +95,7 @@ export default function MealHistoryPage() {
             <button
               key={type}
               onClick={() => setFilterType(type === 'All' ? '' : type)}
-              style={{ padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: active ? 700 : 500, background: active ? '#012374' : '#FFFDF9', color: active ? '#FFFDF9' : 'rgba(1,35,116,0.7)', border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)', cursor: 'pointer' }}
+              style={{ padding: '12px 16px', borderRadius: 999, fontSize: 13, fontWeight: active ? 700 : 500, background: active ? '#012374' : '#FFFDF9', color: active ? '#FFFDF9' : 'rgba(1,35,116,0.7)', border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)', cursor: 'pointer' }}
             >
               {type}
             </button>

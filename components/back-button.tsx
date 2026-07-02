@@ -31,7 +31,10 @@ export default function BackButton({ href, label = 'Back', light = false }: Back
         color: light ? 'rgba(255,253,249,0.75)' : 'rgba(1,35,116,0.55)',
         background: 'none',
         border: 'none',
-        padding: '4px 0',
+        // 44px touch target without shifting surrounding layout
+        padding: '12px 8px',
+        margin: '-8px -8px -8px -8px',
+        minHeight: 44,
         cursor: 'pointer',
         fontFamily: 'inherit',
         letterSpacing: '0.01em',
