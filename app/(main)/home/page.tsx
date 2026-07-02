@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -100,6 +100,18 @@ export default function HomePage() {
   const [waterOz, setWaterOz] = useState(0);
   const [gentleInsight, setGentleInsight] = useState<{ message: string; reason?: string } | null>(null);
   const [cgmReading, setCgmReading] = useState<{ value: number; measuredAt: string; trend: string | null; provider: string } | null>(null);
+  // Widget-seeding bookkeeping: a manual entry always wins; otherwise the
+  // newest of the (racing) /api/glucose and CGM-status reads wins.
+  const glucoseSeedTimeRef = useRef(0);
+  const manualGlucoseRef = useRef(false);
+
+  const seedGlucose = (value: number, measuredAt: string) => {
+    const t = new Date(measuredAt).getTime();
+    const isToday = new Date(measuredAt).toDateString() === new Date().toDateString();
+    if (manualGlucoseRef.current || !isToday || t <= glucoseSeedTimeRef.current) return;
+    glucoseSeedTimeRef.current = t;
+    setCurrentGlucose(value);
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -111,6 +123,20 @@ export default function HomePage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => data && setUserData(data.user))
       .catch(console.error);
+  }, [session]);
+
+  // Seed the glucose widget with today's latest stored reading (manual or CGM)
+  // so mobile matches the desktop hero instead of showing "no data yet" until a
+  // manual entry. A manual entry this session still overrides via onUpdate.
+  useEffect(() => {
+    if (!session) return;
+    fetch('/api/glucose?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const latest = d?.entries?.[0];
+        if (latest) seedGlucose(latest.value, latest.measuredAt);
+      })
+      .catch(() => {});
   }, [session]);
 
   // Load today's water total from API
@@ -132,6 +158,8 @@ export default function HomePage() {
       if (cancelled) return;
       if (d?.connected && d.latestReading) {
         setCgmReading({ ...d.latestReading, provider: d.provider });
+        // Keep the glucose widget in sync with the freshest CGM reading.
+        seedGlucose(d.latestReading.value, d.latestReading.measuredAt);
       }
     };
 
@@ -178,7 +206,10 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value, context, relatedMealId, notes }),
       });
-      if (res.ok) setCurrentGlucose(value);
+      if (res.ok) {
+        manualGlucoseRef.current = true;
+        setCurrentGlucose(value);
+      }
     } catch (err) { console.error(err); }
   };
 
