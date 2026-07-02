@@ -398,6 +398,16 @@ export const translations = {
       highWarning: 'This meal caused a significant glucose spike. Consider smaller portions or pairing with protein/fiber next time.',
     },
 
+    // Location-aware chat (nearby food suggestions)
+    chatLocation: {
+      consentPrompt: 'I can look for real options near you. Want to share your location just for this one search? I never save it.',
+      allow: 'Yes, use my location',
+      deny: 'No thanks',
+      searching: 'Looking for places near you…',
+      locationError: "I couldn't get your location right now — no worries. I can still give you general ideas, or you can search in your maps app.",
+      deniedFallback: "That's totally fine — your choice. I can still help with general ideas for eating out.",
+    },
+
     // Common
     common: {
       back: 'Back',
@@ -872,6 +882,16 @@ export const translations = {
       stillTracking: 'Aun rastreando...',
       completeIn: 'Completo en {minutes} min',
       highWarning: 'Esta comida causo un pico significativo de glucosa. Considera porciones mas pequenas o combinar con proteina/fibra la proxima vez.',
+    },
+
+    // Chat con ubicación (sugerencias de comida cercana)
+    chatLocation: {
+      consentPrompt: 'Puedo buscar opciones reales cerca de ti. ¿Quieres compartir tu ubicación solo para esta búsqueda? Nunca la guardo.',
+      allow: 'Sí, usar mi ubicación',
+      deny: 'No, gracias',
+      searching: 'Buscando lugares cerca de ti…',
+      locationError: 'No pude obtener tu ubicación ahorita — no te preocupes. Te puedo dar ideas generales, o puedes buscar en tu app de mapas.',
+      deniedFallback: 'Está perfecto — tú decides. Igual te puedo ayudar con ideas generales para comer fuera.',
     },
 
     // Común

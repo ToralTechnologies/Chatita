@@ -501,6 +501,21 @@ async function getLocationName(lat: number, lng: number): Promise<string> {
   return 'your location';
 }
 
+// Straight-line distance between two coordinates, formatted for display
+// ("0.4 mi" / "2.1 mi"). Used so chat/nearby results can say how far away a
+// place is; the coordinates themselves are never stored.
+function formatDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): string {
+  const R = 3958.8; // Earth radius in miles
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const miles = 2 * R * Math.asin(Math.sqrt(a));
+  return `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi`;
+}
+
 // Google Places API Mode (optional)
 async function getRestaurantsFromGoogle(lat: number, lng: number): Promise<Restaurant[]> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -542,11 +557,13 @@ async function getRestaurantsFromGoogle(lat: number, lng: number): Promise<Resta
         else if (placeTypes.includes('american_restaurant')) cuisine = 'American';
       }
 
+      const placeLoc = place.geometry?.location;
       return {
         id: place.place_id,
         name: place.name,
         cuisine,
         rating: place.rating,
+        distance: placeLoc ? formatDistanceMiles(lat, lng, placeLoc.lat, placeLoc.lng) : undefined,
         address: place.vicinity,
         diabetesFriendly: true,
         recommendations: mealRecommendationsByCuisine[cuisine] || [

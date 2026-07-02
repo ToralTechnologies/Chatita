@@ -40,8 +40,12 @@ const nextConfig = {
             value: 'strict-origin-when-cross-origin',
           },
           {
+            // Same-origin only: camera powers the barcode scanner
+            // (@zxing getUserMedia) and geolocation powers restaurant finder +
+            // chat nearby-food consent flow. Both were fully blocked before,
+            // which silently broke those features. Microphone stays blocked.
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value: 'camera=(self), microphone=(), geolocation=(self)',
           },
         ],
       },

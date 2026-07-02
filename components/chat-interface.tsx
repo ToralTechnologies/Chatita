@@ -1,9 +1,24 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Send, X, AlertCircle, RefreshCw, MapPin } from 'lucide-react';
 import { UserContext } from '@/types';
 import ChatOptionsMenu from './chat-options-menu';
+import { useTranslation } from '@/lib/i18n/context';
+
+interface NearbyPlace {
+  name: string;
+  cuisine?: string;
+  distance?: string;
+  rating?: number;
+}
+
+// Does this message ask for food options near the user? Checked locally (free)
+// so the Places API is only ever called for real nearby-food requests.
+// NOTE: no \b at the edges — JS \b is ASCII-only and fails after accented
+// characters (e.g. "cerca de mí"), which would silently break the Spanish side.
+const NEARBY_INTENT =
+  /(\bnear me\b|\bnearby\b|\bclose by\b|\baround here\b|\bnear here\b|\bwalking distance\b|\bclosest\b|\b(?:restaurants?|food|places?|options?|eat) (?:near|around|close)\b|cerca de m[ií]|cerquita|por aqu[ií]|aqu[ií] cerca|d[oó]nde (?:puedo )?comer|qu[eé] hay cerca|restaurantes? cerca|lugares? cerca)/i;
 
 interface ChatInterfaceProps {
   userContext?: UserContext;
@@ -77,6 +92,7 @@ function ContextChip({ label }: { label: string }) {
 }
 
 export default function ChatInterface({ userContext, onClose }: ChatInterfaceProps) {
+  const { t, language } = useTranslation();
   const initialMessage: Message = {
     role: 'assistant',
     content: getGreeting(userContext),
@@ -89,6 +105,12 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
   const [suggestions, setSuggestions] = useState<string[]>(() => getInitialSuggestions(userContext));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  // Location consent flow: message waiting on the user's location decision.
+  // PRIVACY: coordinates go only to /api/restaurants/nearby for the lookup and
+  // are never stored; the chat API receives place names/distances only.
+  const [pendingLocationMessage, setPendingLocationMessage] = useState<string | null>(null);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const locationDeclinedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -97,9 +119,9 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, pendingLocationMessage, locationBusy]);
 
-  const sendMessage = useCallback(async (messageText: string) => {
+  const sendMessage = useCallback(async (messageText: string, nearbyPlaces?: NearbyPlace[]) => {
     if (!messageText.trim() || loading) return;
 
     const userMessage: Message = {
@@ -122,6 +144,8 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
         body: JSON.stringify({
           message: messageText,
           context: userContext,
+          language,
+          ...(nearbyPlaces?.length ? { nearbyPlaces } : {}),
         }),
       });
 
@@ -146,7 +170,71 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
     } finally {
       setLoading(false);
     }
-  }, [loading, userContext]);
+  }, [loading, userContext, language]);
+
+  // Route a message through the location-consent flow when it asks for nearby
+  // food; otherwise send directly. Permission is only ever requested in the
+  // moment, for the message that needs it.
+  const submitMessage = useCallback((messageText: string) => {
+    if (!messageText.trim() || loading || locationBusy) return;
+    if (
+      NEARBY_INTENT.test(messageText) &&
+      !locationDeclinedRef.current &&
+      typeof navigator !== 'undefined' &&
+      'geolocation' in navigator
+    ) {
+      setPendingLocationMessage(messageText);
+      setInput('');
+      return;
+    }
+    sendMessage(messageText);
+  }, [loading, locationBusy, sendMessage]);
+
+  const handleLocationAllow = async () => {
+    const messageText = pendingLocationMessage;
+    if (!messageText) return;
+    setPendingLocationMessage(null);
+    setLocationBusy(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          maximumAge: 60000,
+        })
+      );
+      const res = await fetch('/api/restaurants/nearby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      });
+      if (!res.ok) throw new Error('nearby lookup failed');
+      const data = await res.json();
+      const places: NearbyPlace[] = (data.restaurants || []).slice(0, 6).map((r: any) => ({
+        name: r.name,
+        cuisine: r.cuisine,
+        distance: r.distance,
+        rating: r.rating,
+      }));
+      setLocationBusy(false);
+      sendMessage(messageText, places.length ? places : undefined);
+    } catch {
+      // Permission denied at browser level, timeout, or lookup failure:
+      // fall back gracefully to the normal (no-location) answer.
+      setLocationBusy(false);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: t.chatLocation.locationError, timestamp: new Date() },
+      ]);
+      sendMessage(messageText);
+    }
+  };
+
+  const handleLocationDeny = () => {
+    const messageText = pendingLocationMessage;
+    locationDeclinedRef.current = true; // don't re-ask this session
+    setPendingLocationMessage(null);
+    if (messageText) sendMessage(messageText);
+  };
 
   const handleRetry = () => {
     if (lastFailedMessage) {
@@ -156,11 +244,11 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    submitMessage(input);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion);
+    submitMessage(suggestion);
   };
 
   const handleClearChat = async () => {
@@ -296,21 +384,63 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           </div>
         ))}
 
-        {loading && (
+        {/* Location consent bubble — asked in the moment, never on load */}
+        {pendingLocationMessage && (
+          <div className="flex justify-start">
+            <div
+              className="max-w-[82%] px-4 py-3"
+              style={{
+                borderRadius: '18px 18px 18px 4px',
+                background: 'var(--bg-card-alt)',
+                border: '1px solid rgba(1,35,116,0.14)',
+                boxShadow: '0 4px 12px -4px rgba(1,35,116,0.12)',
+              }}
+            >
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#C8932B' }} />
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                  {t.chatLocation.consentPrompt}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button
+                  onClick={handleLocationAllow}
+                  className="text-xs font-semibold transition-all active:scale-95"
+                  style={{ minHeight: 44, padding: '10px 18px', borderRadius: '99px', background: '#012374', color: '#FFFDF9', border: 'none' }}
+                >
+                  {t.chatLocation.allow}
+                </button>
+                <button
+                  onClick={handleLocationDeny}
+                  className="text-xs font-semibold transition-all active:scale-95"
+                  style={{ minHeight: 44, padding: '10px 18px', borderRadius: '99px', background: 'transparent', color: 'var(--text-primary)', border: '1px solid rgba(1,35,116,0.22)' }}
+                >
+                  {t.chatLocation.deny}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(loading || locationBusy) && (
           <div className="flex justify-start">
             <div
               className="px-4 py-3"
               style={{ borderRadius: '18px 18px 18px 4px', background: 'var(--bg-card-alt)' }}
             >
-              <div className="flex gap-1.5 items-center h-4">
-                {[0, 150, 300].map((delay) => (
-                  <div
-                    key={delay}
-                    className="w-1.5 h-1.5 rounded-full animate-bounce"
-                    style={{ background: 'rgba(1,35,116,0.4)', animationDelay: `${delay}ms` }}
-                  />
-                ))}
-              </div>
+              {locationBusy ? (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.chatLocation.searching}</p>
+              ) : (
+                <div className="flex gap-1.5 items-center h-4">
+                  {[0, 150, 300].map((delay) => (
+                    <div
+                      key={delay}
+                      className="w-1.5 h-1.5 rounded-full animate-bounce"
+                      style={{ background: 'rgba(1,35,116,0.4)', animationDelay: `${delay}ms` }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

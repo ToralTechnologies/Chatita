@@ -248,11 +248,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { message, context } = await request.json();
+    const { message, context, nearbyPlaces, language } = await request.json();
 
     if (!message || message.trim().length === 0) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
+
+    // Nearby restaurants the user explicitly shared for this one message.
+    // PRIVACY: names/cuisines/distances only — never coordinates — and this
+    // field is intentionally NOT saved with the chat message below.
+    const safeNearbyPlaces = Array.isArray(nearbyPlaces)
+      ? nearbyPlaces.slice(0, 8).flatMap((p: any) =>
+          p && typeof p.name === 'string'
+            ? [{
+                name: p.name.slice(0, 80),
+                cuisine: typeof p.cuisine === 'string' ? p.cuisine.slice(0, 40) : undefined,
+                distance: typeof p.distance === 'string' ? p.distance.slice(0, 20) : undefined,
+                rating: typeof p.rating === 'number' ? p.rating : undefined,
+              }]
+            : []
+        )
+      : undefined;
 
     // Save user message
     await prisma.chatMessage.create({
@@ -288,6 +304,9 @@ export async function POST(request: Request) {
           const conversationHistory = recentMessages
             .reverse()
             .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+          if (safeNearbyPlaces?.length) healthCtx.nearbyPlaces = safeNearbyPlaces;
+          if (language === 'en' || language === 'es') healthCtx.language = language;
 
           response = await getChatResponseAI(message, conversationHistory, healthCtx);
           await recordAiUsage(session.user.id, 'chat');

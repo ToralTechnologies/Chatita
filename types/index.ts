@@ -349,6 +349,17 @@ export interface ChatHealthContext {
     averageHeartRate?: number | null;
     activeCalories?: number | null;
   } | null;
+
+  // Nearby restaurants the user explicitly agreed to share for THIS message
+  // (names/distances only — never coordinates; never persisted).
+  nearbyPlaces?: Array<{
+    name: string;
+    cuisine?: string;
+    distance?: string;
+    rating?: number;
+  }>;
+  // User's UI language for this message ('en' | 'es') so replies match.
+  language?: string;
 }
 
 // Health provider types for connected data

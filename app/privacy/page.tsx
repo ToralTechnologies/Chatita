@@ -96,6 +96,17 @@ export default function PrivacyPage() {
             <li>CGM integration credentials (encrypted at rest with AES-256-GCM)</li>
             <li>Chat messages with Chatita&apos;s AI assistant</li>
           </ul>
+          <p style={{ marginTop: '12px', color: '#16182A', lineHeight: 1.75 }}>
+            <strong>Location:</strong> if you ask Chatita for food options near you, the app asks for
+            your location <em>at that moment</em> and uses it once to look up nearby places. Your
+            coordinates are never stored in our database or logs — only the resulting place names and
+            distances are shared with the AI for that single reply. Declining never limits the rest of
+            the app. / <em>Si le pides a Chatita opciones de comida cerca de ti, la app pide tu
+            ubicación en ese momento y la usa una sola vez para buscar lugares cercanos. Tus
+            coordenadas nunca se guardan en nuestra base de datos ni en registros — solo los nombres y
+            distancias de los lugares se comparten con la IA para esa única respuesta. Decir que no
+            nunca limita el resto de la app.</em>
+          </p>
         </section>
 
         {/* 3. Third-Party Services */}
@@ -138,6 +149,14 @@ export default function PrivacyPage() {
             <li>
               <strong>Google Fitness / Health</strong> — Optional wearable data integration.
               Activity, sleep, and heart rate data may be fetched from Google&apos;s APIs.{' '}
+              <a href="https://policies.google.com/privacy" style={linkStyle} target="_blank" rel="noopener noreferrer">
+                Google&apos;s Privacy Policy
+              </a>
+            </li>
+            <li>
+              <strong>Google Places</strong> — Optional restaurant search. When you explicitly share
+              your location for a nearby-food request, coordinates are sent to Google&apos;s Places API
+              for that lookup only and are not stored by Chatita.{' '}
               <a href="https://policies.google.com/privacy" style={linkStyle} target="_blank" rel="noopener noreferrer">
                 Google&apos;s Privacy Policy
               </a>

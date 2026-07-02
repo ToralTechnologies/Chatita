@@ -186,6 +186,24 @@ function buildSystemPrompt(healthCtx?: ChatHealthContext): string {
     }
   }
 
+  // --- Nearby options the user explicitly shared for this message ---
+  // (names/cuisines/distances only — the app never passes coordinates)
+  if (healthCtx?.nearbyPlaces?.length) {
+    const placeLines = healthCtx.nearbyPlaces.map((pl) => {
+      const bits = [`  - ${pl.name}`];
+      if (pl.cuisine) bits.push(pl.cuisine);
+      if (pl.distance) bits.push(pl.distance);
+      if (pl.rating != null) bits.push(`${pl.rating}★`);
+      return bits.join(' · ');
+    });
+    sections.push(
+      `Nearby food options (user chose to share their location for THIS message only):\n${placeLines.join('\n')}`
+    );
+  }
+  if (healthCtx?.language) {
+    sections.push(`App language setting: ${healthCtx.language === 'es' ? 'Spanish' : 'English'} (match it unless the user writes in the other language)`);
+  }
+
   const regionalSnippet = buildRegionalPromptSnippet(healthCtx?.culturalProfile?.countryOrRegion, { cuisineContext: true });
   const healthContextBlock =
     sections.length > 0
@@ -370,7 +388,15 @@ GLP-1 users and movement:
 
 Movement does NOT replace food guidance or medication — it complements them. Never say "just walk it off" for high glucose. Always pair movement suggestions with appropriate food context.
 
-If user asks about movement timing with glucose: "Many people find that light movement 20–30 minutes after eating can help support glucose levels, but this varies by individual. Share this with your care team to see what works for you specifically."${healthContextBlock}${regionalBlock}
+If user asks about movement timing with glucose: "Many people find that light movement 20–30 minutes after eating can help support glucose levels, but this varies by individual. Share this with your care team to see what works for you specifically."
+
+== NEARBY FOOD OPTIONS ==
+If the health data includes "Nearby food options", the user chose to share their location for this one message, and the app looked up real places for you:
+1. Recommend 2–4 of those SPECIFIC places by name, each with its distance and ONE short reason it fits their current situation (glucose, nausea, GLP-1 side effects, mood, cultural comfort, budget). E.g. "🍜 Pho Saigon (0.4 mi) — brothy soups are gentle on a queasy stomach."
+2. Then offer to help them pick or to suggest what to order there.
+3. Do NOT invent places that are not in the list. Do NOT mention coordinates or exact addresses.
+4. Cultural heritage still ≠ location: the list reflects where they are right now.
+If the user asks about nearby food but NO nearby options are in the health data (they declined location or it was unavailable), respond warmly with general strategies for eating out that fit their health picture, and suggest they can search a maps app for the cuisine you recommend — never guilt them about declining.${healthContextBlock}${regionalBlock}
 
 RESPONSE FORMAT:
 Respond ONLY with a valid JSON object. No text before or after the JSON. No markdown code blocks.
