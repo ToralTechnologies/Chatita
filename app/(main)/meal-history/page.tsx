@@ -9,14 +9,15 @@ import MealCard from '@/components/meal-card';
 import MealCardSkeleton from '@/components/skeletons/meal-card-skeleton';
 import ExportButton from '@/components/export-button';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import { es as esLocale } from 'date-fns/locale';
 import { useTranslation } from '@/lib/i18n/context';
 import { exportMealsToCSV, exportMealsToPDF } from '@/lib/export-utils';
 
-const MEAL_TYPES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
+const MEAL_TYPE_VALUES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
 export default function MealHistoryPage() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [meals, setMeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +65,7 @@ export default function MealHistoryPage() {
   const groupedMeals: Record<string, any[]> = {};
   filteredMeals.forEach((meal) => {
     const date = parseISO(meal.eatenAt);
-    const dateKey = isToday(date) ? t.mealHistory.today : isYesterday(date) ? t.mealHistory.yesterday : format(date, 'EEEE, MMM d');
+    const dateKey = isToday(date) ? t.mealHistory.today : isYesterday(date) ? t.mealHistory.yesterday : format(date, 'EEEE, MMM d', language === 'es' ? { locale: esLocale } : undefined);
     if (!groupedMeals[dateKey]) groupedMeals[dateKey] = [];
     groupedMeals[dateKey].push(meal);
   });
@@ -89,15 +90,16 @@ export default function MealHistoryPage() {
       </div>
       {/* Type filter pills */}
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-        {MEAL_TYPES.map((type) => {
-          const active = type === 'All' ? filterType === '' : filterType.toLowerCase() === type.toLowerCase();
+        {(['all', ...MEAL_TYPE_VALUES] as const).map((type) => {
+          const active = type === 'all' ? filterType === '' : filterType.toLowerCase() === type;
+          const label = type === 'all' ? t.mealHistory.all : t.mealHistory.types[type];
           return (
             <button
               key={type}
-              onClick={() => setFilterType(type === 'All' ? '' : type)}
+              onClick={() => setFilterType(type === 'all' ? '' : type)}
               style={{ padding: '12px 16px', borderRadius: 999, fontSize: 13, fontWeight: active ? 700 : 500, background: active ? '#012374' : '#FFFDF9', color: active ? '#FFFDF9' : 'rgba(1,35,116,0.7)', border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)', cursor: 'pointer' }}
             >
-              {type}
+              {label}
             </button>
           );
         })}
@@ -126,19 +128,19 @@ export default function MealHistoryPage() {
           </div>
           {meals.length === 0 ? (
             <>
-              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>No meals yet</p>
-              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8, lineHeight: 1.6 }}>Start tracking to see your meal history and patterns.</p>
+              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>{t.mealHistory.noMealsYet}</p>
+              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8, lineHeight: 1.6 }}>{t.mealHistory.emptyBody}</p>
               <button
                 onClick={() => router.push('/add-meal')}
                 style={{ marginTop: 20, padding: '12px 26px', borderRadius: 999, background: '#012374', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
               >
-                Log your first meal
+                {t.mealHistory.logFirstMealCta}
               </button>
             </>
           ) : (
             <>
-              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>No matches</p>
-              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8 }}>Try a different search or filter.</p>
+              <p className="font-serif-italic" style={{ fontSize: 22, color: '#012374' }}>{t.mealHistory.noMatches}</p>
+              <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', marginTop: 8 }}>{t.mealHistory.noMatchesBody}</p>
             </>
           )}
         </div>
@@ -170,8 +172,8 @@ export default function MealHistoryPage() {
           <BackButton href="/home" />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
             <div>
-              <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Meal log</div>
-              <h1 className="font-serif-italic" style={{ fontSize: 24, color: '#012374', lineHeight: 1.05 }}>What have you eaten?</h1>
+              <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>{t.mealHistory.kicker}</div>
+              <h1 className="font-serif-italic" style={{ fontSize: 24, color: '#012374', lineHeight: 1.05 }}>{t.mealHistory.heading}</h1>
             </div>
             <ExportButton
               onExportPDF={() => exportMealsToPDF(filteredMeals)}
@@ -197,13 +199,13 @@ export default function MealHistoryPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
             <div>
               <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-                Meal log · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                {t.mealHistory.kicker} · {new Date().toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </div>
               <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', lineHeight: 1.05, marginTop: 6 }}>
-                What have you eaten?
+                {t.mealHistory.heading}
               </h1>
               <p style={{ fontSize: 16, color: 'rgba(22,24,42,0.65)', marginTop: 4 }}>
-                {meals.length > 0 ? `${meals.length} meal${meals.length === 1 ? '' : 's'} tracked so far.` : 'Start tracking to see patterns.'}
+                {meals.length > 0 ? (meals.length === 1 ? t.mealHistory.mealTracked : t.mealHistory.mealsTracked.replace('{count}', String(meals.length))) : t.mealHistory.startTracking}
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
@@ -216,7 +218,7 @@ export default function MealHistoryPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', borderRadius: 14, background: '#012374', color: '#FFFDF9', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 8px 18px -8px rgba(1,35,116,.5)' }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                Log a meal
+                {t.mealHistory.logAMeal}
               </button>
             </div>
           </div>
@@ -237,11 +239,11 @@ export default function MealHistoryPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* Stats card */}
               <div style={{ background: '#FFFDF9', borderRadius: 22, border: '1px solid rgba(1,35,116,0.07)', padding: 22, boxShadow: '0 6px 20px -12px rgba(1,35,116,.25)' }}>
-                <div className="font-serif-italic" style={{ fontSize: 21, color: '#012374', marginBottom: 14 }}>Your stats</div>
+                <div className="font-serif-italic" style={{ fontSize: 21, color: '#012374', marginBottom: 14 }}>{t.mealHistory.yourStats}</div>
                 {loading ? (
                   <div style={{ height: 80, background: '#F7EFE1', borderRadius: 12 }} />
                 ) : meals.length === 0 ? (
-                  <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', lineHeight: 1.6 }}>No meals logged yet. Snap your first plate!</p>
+                  <p style={{ fontSize: 13.5, color: 'rgba(22,24,42,0.55)', lineHeight: 1.6 }}>{t.mealHistory.statsEmpty}</p>
                 ) : (() => {
                   const counts: Record<string, number> = {};
                   meals.forEach(m => {
@@ -261,7 +263,7 @@ export default function MealHistoryPage() {
                         </div>
                       ))}
                       <div style={{ borderTop: '1px solid rgba(1,35,116,0.07)', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)' }}>Total logged</span>
+                        <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)' }}>{t.mealHistory.totalLogged}</span>
                         <span style={{ fontSize: 16, fontWeight: 700, color: '#012374' }}>{meals.length}</span>
                       </div>
                     </div>
@@ -271,9 +273,9 @@ export default function MealHistoryPage() {
 
               {/* Tip card */}
               <div style={{ background: '#012374', borderRadius: 22, padding: 22, color: '#FFFDF9' }}>
-                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700, marginBottom: 10 }}>Chatita tip</div>
+                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700, marginBottom: 10 }}>{t.mealHistory.chatitaTip}</div>
                 <p style={{ fontSize: 15, lineHeight: 1.65, opacity: 0.92 }}>
-                  Logging meals consistently — even imperfect ones — helps you spot how different foods affect your glucose and energy.
+                  {t.mealHistory.tipBody}
                 </p>
               </div>
             </div>

@@ -7,6 +7,7 @@ import BackButton from '@/components/back-button';
 import ExportButton from '@/components/export-button';
 import { exportAnalyticsToPDF, exportAnalyticsToCSV } from '@/lib/export-utils';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '@/lib/i18n/context';
 
 const GlucoseTrendChart = dynamic(() => import('@/components/charts/glucose-trend-chart'), { ssr: false });
 const MealComparisonChart = dynamic(() => import('@/components/charts/meal-comparison-chart'), { ssr: false });
@@ -21,31 +22,31 @@ const SEVERITY_THEME: Record<string, { color: string; bg: string; iconD: string 
   info:     { color: '#012374', bg: 'rgba(1,35,116,0.08)',    iconD: 'M4 14l4-4 3 3 5-6 4 5' },
 };
 
-const TYPE_THEME: Record<string, { color: string; bg: string; iconD: string; kicker: string }> = {
-  'spike':           { color: '#B5562E', bg: 'rgba(181,86,46,0.12)',  iconD: 'M12 3l9 16H3L12 3zM12 10v4M12 16.5v.5', kicker: 'A gentle pattern to watch' },
-  'fasting-high':    { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kicker: 'Glucose patterns' },
-  'timeofday-high':  { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kicker: 'Glucose patterns' },
-  'fasting-good':    { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kicker: 'Glucose patterns' },
-  'lowcarb-success': { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kicker: 'Protein + fiber' },
-  'warning':         { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M12 3l9 16H3L12 3zM12 10v4M12 16.5v.5', kicker: 'A gentle pattern to watch' },
-  'tip':             { color: '#012374', bg: 'rgba(1,35,116,0.08)',   iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 8v4M12 16v.5', kicker: 'Chatita suggests' },
+const TYPE_THEME: Record<string, { color: string; bg: string; iconD: string; kickerKey: string }> = {
+  'spike':           { color: '#B5562E', bg: 'rgba(181,86,46,0.12)',  iconD: 'M12 3l9 16H3L12 3zM12 10v4M12 16.5v.5', kickerKey: 'watch' },
+  'fasting-high':    { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kickerKey: 'glucose' },
+  'timeofday-high':  { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kickerKey: 'glucose' },
+  'fasting-good':    { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  iconD: 'M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5',  kickerKey: 'glucose' },
+  'lowcarb-success': { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',  iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kickerKey: 'protein' },
+  'warning':         { color: '#9A6F18', bg: 'rgba(200,147,43,0.14)', iconD: 'M12 3l9 16H3L12 3zM12 10v4M12 16.5v.5', kickerKey: 'watch' },
+  'tip':             { color: '#012374', bg: 'rgba(1,35,116,0.08)',   iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 8v4M12 16v.5', kickerKey: 'suggests' },
   // Richer connected-data domains (Insights v2)
-  'mood':            { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM8.5 14c1 1.3 5 1.3 6 0M9 9.5v.5M15 9.5v.5', kicker: 'Mood + energy' },
-  'hydration':       { color: '#2A6FA8', bg: 'rgba(42,111,168,0.13)',  iconD: 'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z', kicker: 'Hydration check' },
-  'protein':         { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kicker: 'Protein + fiber' },
-  'glp1':            { color: '#9A6F18', bg: 'rgba(200,147,43,0.16)',  iconD: 'M3 12h18M7 8l-2 4 2 4M17 8l2 4-2 4', kicker: 'GLP-1 check-in' },
-  'sleep':           { color: '#4A5578', bg: 'rgba(74,85,120,0.13)',   iconD: 'M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z', kicker: 'Sleep + energy' },
-  'movement':        { color: '#2A8A8A', bg: 'rgba(42,138,138,0.14)',  iconD: 'M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4', kicker: 'Meals + movement' },
-  'cycle':           { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 4a8 8 0 1 0 8 8M12 4v8l5 3', kicker: 'Cycle patterns' },
+  'mood':            { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM8.5 14c1 1.3 5 1.3 6 0M9 9.5v.5M15 9.5v.5', kickerKey: 'mood' },
+  'hydration':       { color: '#2A6FA8', bg: 'rgba(42,111,168,0.13)',  iconD: 'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z', kickerKey: 'hydration' },
+  'protein':         { color: '#1C7A4F', bg: 'rgba(28,122,79,0.12)',   iconD: 'M5 11h14M5 11a4 4 0 0 1 8 0M5 11a4 4 0 0 0 8 0M9 5v2M12 19v-4', kickerKey: 'protein' },
+  'glp1':            { color: '#9A6F18', bg: 'rgba(200,147,43,0.16)',  iconD: 'M3 12h18M7 8l-2 4 2 4M17 8l2 4-2 4', kickerKey: 'glp1' },
+  'sleep':           { color: '#4A5578', bg: 'rgba(74,85,120,0.13)',   iconD: 'M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z', kickerKey: 'sleep' },
+  'movement':        { color: '#2A8A8A', bg: 'rgba(42,138,138,0.14)',  iconD: 'M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4', kickerKey: 'movement' },
+  'cycle':           { color: '#8A6FB0', bg: 'rgba(138,111,176,0.13)', iconD: 'M12 4a8 8 0 1 0 8 8M12 4v8l5 3', kickerKey: 'cycle' },
 };
 
 function domainTheme(type?: string, severity?: string) {
   if (type && TYPE_THEME[type]) return TYPE_THEME[type];
   if (severity && SEVERITY_THEME[severity]) return {
     ...SEVERITY_THEME[severity],
-    kicker: severity === 'warning' ? 'Something to notice' : severity === 'success' ? 'Going well' : 'Insight',
+    kickerKey: severity === 'warning' ? 'notice' : severity === 'success' ? 'goingWell' : 'insight',
   };
-  return { color: '#012374', bg: 'rgba(1,35,116,0.08)', iconD: 'M4 14l4-4 3 3 5-6 4 5', kicker: 'Insight' };
+  return { color: '#012374', bg: 'rgba(1,35,116,0.08)', iconD: 'M4 14l4-4 3 3 5-6 4 5', kickerKey: 'insight' };
 }
 
 function MiniIcon({ d, color, size = 16 }: { d: string; color: string; size?: number }) {
@@ -58,12 +59,13 @@ function MiniIcon({ d, color, size = 16 }: { d: string; color: string; size?: nu
   );
 }
 
-function getDateRange(period: number) {
+function getDateRange(period: number, language: string = 'en') {
   const now = new Date();
   const start = new Date(now);
   start.setDate(now.getDate() - period + 1);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${start.getDate()} ${months[start.getMonth()]}–${now.getDate()} ${months[now.getMonth()]}`;
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
+  const f = (d: Date) => d.toLocaleDateString(locale, { day: 'numeric', month: 'short' }).replace('.', '');
+  return `${f(start)}–${f(now)}`;
 }
 
 // ── Glucose scatter chart ─────────────────────────────────────────────────────
@@ -189,6 +191,7 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay
 // ── TIR bar ───────────────────────────────────────────────────────────────────
 
 function TirBar({ low = 0, normal = 0, high = 0 }: { low?: number; normal?: number; high?: number }) {
+  const { t } = useTranslation();
   return (
     <div>
       <div style={{ display: 'flex', height: '14px', borderRadius: '99px', overflow: 'hidden' }}>
@@ -198,9 +201,9 @@ function TirBar({ low = 0, normal = 0, high = 0 }: { low?: number; normal?: numb
       </div>
       <div style={{ marginTop: '8px', display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: '#16182A' }}>
         {[
-          { color: '#1C7A4F', label: `In range ${normal}%` },
-          { color: '#B5562E', label: `Low ${low}%` },
-          { color: '#C8932B', label: `High ${high}%` },
+          { color: '#1C7A4F', label: t.insightsPage.legendInRange.replace('{pct}', String(normal)) },
+          { color: '#B5562E', label: t.insightsPage.legendLow.replace('{pct}', String(low)) },
+          { color: '#C8932B', label: t.insightsPage.legendHigh.replace('{pct}', String(high)) },
         ].map(({ color, label }) => (
           <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: color, display: 'inline-block' }} />
@@ -260,6 +263,7 @@ function InsightCard({ title, message, type, severity, action, foods, bars, spli
   bars?: InsightBar[]; splits?: InsightSplit[];
 }) {
   const theme = domainTheme(type, severity);
+  const { t } = useTranslation();
   return (
     <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '20px', boxShadow: '0 14px 30px -26px rgba(1,35,116,.3)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
@@ -267,7 +271,7 @@ function InsightCard({ title, message, type, severity, action, foods, bars, spli
           <MiniIcon d={theme.iconD} color={theme.color} size={16} />
         </span>
         <span style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, color: theme.color }}>
-          {theme.kicker}
+          {(t.insightsPage.kickers as Record<string, string>)[theme.kickerKey] ?? theme.kickerKey}
         </span>
       </div>
       <p className="font-serif-italic" style={{ fontSize: '17px', color: '#16182A', lineHeight: 1.28 }}>{title}</p>
@@ -308,6 +312,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
   axisLabels?: string[];
   isWeb?: boolean;
 }) {
+  const { t } = useTranslation();
   const stats = correlation?.stats;
   const tir = stats?.timeInRange;
   const featuredCard = allCards[0];
@@ -320,13 +325,13 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
             <path d="M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5" stroke="rgba(1,35,116,0.3)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <h2 className="font-serif-italic" style={{ fontSize: '24px', color: '#012374', marginBottom: '12px' }}>Patterns appear over time.</h2>
+        <h2 className="font-serif-italic" style={{ fontSize: '24px', color: '#012374', marginBottom: '12px' }}>{t.insightsPage.emptyTitle}</h2>
         <p style={{ fontSize: '14px', color: 'rgba(22,24,42,0.62)', maxWidth: '380px', margin: '0 auto 24px', lineHeight: 1.6 }}>
-          Log a few meals and glucose readings and Chatita will start connecting them — offered as observations, never scores.
+          {t.insightsPage.emptyBody}
         </p>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          <a href="/add-meal" style={{ padding: '11px 22px', borderRadius: '999px', background: '#012374', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>Log a meal</a>
-          <a href="/home" style={{ padding: '11px 22px', borderRadius: '999px', border: '1px solid rgba(1,35,116,0.2)', color: '#001A4D', background: '#FFFDF9', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>Add glucose</a>
+          <a href="/add-meal" style={{ padding: '11px 22px', borderRadius: '999px', background: '#012374', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>{t.insightsPage.logAMeal}</a>
+          <a href="/home" style={{ padding: '11px 22px', borderRadius: '999px', border: '1px solid rgba(1,35,116,0.2)', color: '#001A4D', background: '#FFFDF9', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>{t.insightsPage.addGlucose}</a>
         </div>
       </div>
     );
@@ -338,11 +343,9 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
       <div style={{ background: '#FFFDF9', borderRadius: '22px', border: '1px solid rgba(1,35,116,0.07)', padding: '24px 26px', boxShadow: '0 14px 30px -24px rgba(1,35,116,.3)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div>
-            <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '24px' : '22px', color: '#012374' }}>{chartMode === 'timeline' ? 'Your glucose, over time' : 'Daily glucose pattern'}</h2>
+            <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '24px' : '22px', color: '#012374' }}>{chartMode === 'timeline' ? t.insightsPage.glucoseOverTime : t.insightsPage.dailyPattern}</h2>
             <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.6)', marginTop: '3px' }}>
-              {chartMode === 'timeline'
-                ? 'Each reading at its actual date and time — a continuous trace. Hover any point for its exact value and time.'
-                : 'Every reading overlaid by time of day, so each day stacks onto one 24-hour view. Hover any point for its value and time.'}
+              {chartMode === 'timeline' ? t.insightsPage.timelineDesc : t.insightsPage.timeOfDayDesc}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
@@ -353,7 +356,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
                 background: period === d ? '#012374' : '#F7EFE1',
                 color: period === d ? '#FFFDF9' : '#012374',
                 outline: period === d ? 'none' : '1px solid rgba(1,35,116,0.16)',
-              }}>{d} days</button>
+              }}>{t.insightsPage.daysButton.replace('{d}', String(d))}</button>
             ))}
           </div>
         </div>
@@ -361,7 +364,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         {/* View toggle: chronological timeline vs time-of-day overlay */}
         {setChartMode && (
           <div style={{ marginTop: '14px', display: 'inline-flex', gap: '4px', background: '#F7EFE1', borderRadius: '999px', padding: '4px' }}>
-            {([['timeline', 'Timeline'], ['timeOfDay', 'Time of day']] as const).map(([m, label]) => (
+            {([['timeline', t.insightsPage.timeline], ['timeOfDay', t.insightsPage.timeOfDay]] as const).map(([m, label]) => (
               <button key={m} onClick={() => setChartMode(m)} style={{
                 padding: '13px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
                 cursor: 'pointer', border: 'none', fontFamily: 'inherit',
@@ -375,10 +378,10 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         {/* Stat boxes */}
         <div style={{ marginTop: '18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
           {[
-            { label: 'Avg glucose', val: stats?.averageGlucose ? `${Math.round(stats.averageGlucose)}` : '—', unit: 'mg/dL', color: '#012374' },
-            { label: 'Time in range', val: stats?.inRangePercent != null ? `${stats.inRangePercent}%` : '—', unit: '70–180', color: '#1C7A4F' },
-            { label: 'Est. A1C', val: correlation?.a1cEstimate?.estimated ? `${correlation.a1cEstimate.estimated}%` : '—', unit: 'from readings', color: '#012374' },
-            { label: 'Readings', val: stats?.readingsCount != null ? stats.readingsCount.toLocaleString() : '—', unit: 'glucose readings', color: '#2A8A8A' },
+            { label: t.insightsPage.avgGlucose, val: stats?.averageGlucose ? `${Math.round(stats.averageGlucose)}` : '—', unit: 'mg/dL', color: '#012374' },
+            { label: t.insightsPage.timeInRange, val: stats?.inRangePercent != null ? `${stats.inRangePercent}%` : '—', unit: '70–180', color: '#1C7A4F' },
+            { label: t.insightsPage.estA1c, val: correlation?.a1cEstimate?.estimated ? `${correlation.a1cEstimate.estimated}%` : '—', unit: t.insightsPage.fromReadings, color: '#012374' },
+            { label: t.insightsPage.readings, val: stats?.readingsCount != null ? stats.readingsCount.toLocaleString() : '—', unit: t.insightsPage.glucoseReadings, color: '#2A8A8A' },
           ].map(({ label, val, unit, color }) => (
             <div key={label} style={{ background: '#F7EFE1', borderRadius: '14px', padding: '14px 16px' }}>
               <div style={{ fontSize: '12px', color: 'rgba(22,24,42,0.58)' }}>{label}</div>
@@ -404,7 +407,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
             <GlucoseTrendChart data={correlation.chartData.trendData} />
           ) : (
             <div style={{ height: '120px', borderRadius: '12px', background: '#F7EFE1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.4)' }}>No readings in this period yet.</p>
+              <p style={{ fontSize: '13px', color: 'rgba(22,24,42,0.4)' }}>{t.insightsPage.noReadingsPeriod}</p>
             </div>
           )}
         </div>
@@ -415,7 +418,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         {(stats?.readingsCount ?? 0) > 0 && (
           <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '7px', background: 'rgba(28,122,79,0.08)', borderRadius: '999px', padding: '7px 14px', width: 'fit-content' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1C7A4F', display: 'inline-block' }} />
-            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1C7A4F' }}>{stats.readingsCount} readings · all visible</span>
+            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1C7A4F' }}>{t.insightsPage.readingsAllVisible.replace('{count}', String(stats.readingsCount))}</span>
           </div>
         )}
       </div>
@@ -429,14 +432,14 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
                 <path d="M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5" stroke="#7FD0D0" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-            <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7FD0D0', fontWeight: 700 }}>Pattern of the week</span>
+            <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7FD0D0', fontWeight: 700 }}>{t.insightsPage.patternOfWeek}</span>
           </div>
           <h2 className="font-serif-italic" style={{ fontSize: isWeb ? '26px' : '24px', lineHeight: 1.25, maxWidth: '600px' }}>{featuredCard.title}</h2>
           <p style={{ fontSize: '14.5px', color: 'rgba(255,253,249,0.82)', marginTop: '10px', lineHeight: 1.55, maxWidth: '580px' }}>{featuredCard.message}</p>
           {featuredCard.bars && featuredCard.bars.length > 0 && (
             <div style={{ marginTop: '18px', maxWidth: '420px' }}>
               <div style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,253,249,0.6)', fontWeight: 700, marginBottom: '12px' }}>
-                {featuredCard.barsLabel ?? 'Time in range by day'}
+                {t.insightsPage.tirByDay}
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '92px' }}>
                 {featuredCard.bars.map((b: InsightBar, i: number) => (
@@ -472,7 +475,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
       {aiLoading && aiInsights.length === 0 && (
         <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '18px 22px' }}>
           <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid rgba(1,35,116,0.18)', borderTopColor: '#012374', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ fontSize: '13.5px', color: 'rgba(22,24,42,0.6)' }}>Chatita is looking for gentle patterns in your week…</span>
+          <span style={{ fontSize: '13.5px', color: 'rgba(22,24,42,0.6)' }}>{t.insightsPage.aiLooking}</span>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
@@ -482,13 +485,13 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {correlation.chartData.mealComparison?.length > 0 && (
             <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '22px 24px', boxShadow: '0 14px 30px -26px rgba(1,35,116,.3)' }}>
-              <h3 className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', marginBottom: '16px' }}>Average glucose by meal type</h3>
+              <h3 className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', marginBottom: '16px' }}>{t.insightsPage.avgByMealType}</h3>
               <MealComparisonChart data={correlation.chartData.mealComparison} />
             </div>
           )}
           {correlation.chartData.dailyPattern?.length > 0 && (
             <div style={{ background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '22px 24px', boxShadow: '0 14px 30px -26px rgba(1,35,116,.3)' }}>
-              <h3 className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', marginBottom: '16px' }}>Hourly glucose pattern</h3>
+              <h3 className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', marginBottom: '16px' }}>{t.insightsPage.hourlyPattern}</h3>
               <DailyPatternChart data={correlation.chartData.dailyPattern} />
             </div>
           )}
@@ -501,8 +504,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           <path d="M12 3l7 3v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" stroke="#9A6F18" strokeWidth="1.5" strokeLinejoin="round"/>
         </svg>
         <span>
-          Insights are observations to explore with your care team — not diagnoses or medical advice.
-          Chatita follows global diabetes principles (IDF &amp; WHO) and adapts to your foods and goals.
+          {t.insightsPage.disclaimer}
         </span>
       </div>
     </>
@@ -512,6 +514,7 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function InsightsPage() {
+  const { t, language } = useTranslation();
   const [correlation, setCorrelation] = useState<any>(null);
   const [aiInsights, setAiInsights]   = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -657,7 +660,7 @@ export default function InsightsPage() {
     // Give the featured card (first) a real daily time-in-range chart if it has
     // no viz of its own.
     if (cards.length > 0 && !cards[0].bars && !cards[0].splits && dailyTirBars.length >= 3) {
-      cards[0] = { ...cards[0], bars: dailyTirBars, barsLabel: 'Time in range by day' };
+      cards[0] = { ...cards[0], bars: dailyTirBars };
     }
     return cards;
   }, [correlation, aiInsights, dailyTirBars]);
@@ -707,13 +710,13 @@ export default function InsightsPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: '10px', gap: '12px', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-                Insights · {getDateRange(period)}
+                {t.insightsPage.kicker} · {getDateRange(period, language)}
               </div>
               <h1 className="font-serif-italic" style={{ fontSize: '28px', color: '#012374', lineHeight: 1.05, marginTop: '5px' }}>
-                Gentle patterns worth noticing.
+                {t.insightsPage.heading}
               </h1>
               <p style={{ fontSize: '14px', color: 'rgba(22,24,42,0.62)', marginTop: '4px', lineHeight: 1.5 }}>
-                Connections across your week — offered as observations, never scores.
+                {t.insightsPage.subtitle}
               </p>
             </div>
             {correlation && (
@@ -743,13 +746,13 @@ export default function InsightsPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', gap: '16px', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: '12px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-                Insights · {getDateRange(period)}
+                {t.insightsPage.kicker} · {getDateRange(period, language)}
               </div>
               <h1 className="font-serif-italic" style={{ fontSize: '38px', color: '#012374', lineHeight: 1.05, marginTop: '6px' }}>
-                Gentle patterns worth noticing.
+                {t.insightsPage.heading}
               </h1>
               <p style={{ fontSize: '16px', color: 'rgba(22,24,42,0.65)', marginTop: '4px', lineHeight: 1.5 }}>
-                Connections across your week — offered as observations, never scores.
+                {t.insightsPage.subtitle}
               </p>
             </div>
             {correlation && (

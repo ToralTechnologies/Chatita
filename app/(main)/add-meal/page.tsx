@@ -7,6 +7,7 @@ import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
 import type { MealGuidance } from '@/lib/ai/meal-analyzer';
 import { compressImage } from '@/lib/compress-image';
+import { useTranslation } from '@/lib/i18n/context';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -216,6 +217,7 @@ function ScanningBox({ label }: { label: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AddMealPage() {
+  const { t } = useTranslation();
   const [state, setState] = useState<PageState>({
     phase: 'idle',
     imagePreview: null,
@@ -529,8 +531,8 @@ export default function AddMealPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <BackButton href="/meal-history" />
           <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Meal log · Add</div>
-            <h1 className="font-serif-italic" style={{ fontSize: 26, color: '#012374', lineHeight: 1.05 }}>What are you having?</h1>
+            <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>{t.addMealPage.kicker}</div>
+            <h1 className="font-serif-italic" style={{ fontSize: 26, color: '#012374', lineHeight: 1.05 }}>{t.addMealPage.heading}</h1>
           </div>
         </div>
       </div>
@@ -546,7 +548,7 @@ export default function AddMealPage() {
           <>
             <PhotoZone />
             <button onClick={() => update({ phase: 'manual', error: null })} style={{ fontSize: '13px', color: '#012374', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textAlign: 'left' as const, padding: 0 }}>
-              Or add meal details manually →
+              {t.addMealPage.manualLink}
             </button>
           </>
         )}
@@ -565,7 +567,7 @@ export default function AddMealPage() {
         )}
 
         {state.phase === 'scanning' && (
-          <ScanningBox label={state.imagePreview ? 'Analyzing your plate…' : 'Getting your eating plan…'} />
+          <ScanningBox label={state.imagePreview ? t.addMealPage.analyzing : t.addMealPage.gettingPlan} />
         )}
 
         {state.phase === 'detected' && (
@@ -638,7 +640,7 @@ export default function AddMealPage() {
 
         <div style={{ background: 'rgba(200,147,43,0.12)', borderRadius: '14px', padding: '13px 14px' }}>
           <p style={{ fontSize: '12.5px', color: '#9A6F18', lineHeight: 1.5 }}>
-            Tracking what you eat helps you spot patterns in how your body responds to different meals.
+            {t.addMealPage.tip}
           </p>
         </div>
       </div>
@@ -655,9 +657,9 @@ export default function AddMealPage() {
       <WebNav />
 
       <main style={{ flex: 1, padding: '34px 44px', overflowY: 'auto' }}>
-        <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>Meal log · Add a meal</div>
-        <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', marginTop: 6, lineHeight: 1.05 }}>Snap your plate, eat with a plan.</h1>
-        <p style={{ fontSize: 16, color: 'rgba(22,24,42,0.65)', marginTop: 4 }}>Take a photo and Chatita will read your plate and build a gentle eating order.</p>
+        <div style={{ fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase' as const, color: '#C8932B', fontWeight: 700 }}>{t.addMealPage.kickerWeb}</div>
+        <h1 className="font-serif-italic" style={{ fontSize: 38, color: '#012374', marginTop: 6, lineHeight: 1.05 }}>{t.addMealPage.headingWeb}</h1>
+        <p style={{ fontSize: 16, color: 'rgba(22,24,42,0.65)', marginTop: 4 }}>{t.addMealPage.subtitleWeb}</p>
 
         {state.error && (
           <div style={{ marginTop: '16px', background: 'rgba(181,86,46,0.10)', border: '1px solid rgba(181,86,46,0.22)', borderRadius: '12px', padding: '12px 16px' }}>
@@ -672,19 +674,19 @@ export default function AddMealPage() {
               <>
                 <PhotoZone />
                 <button onClick={() => update({ phase: 'manual', error: null })} style={{ fontSize: '13px', color: '#012374', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textAlign: 'left' as const, padding: 0 }}>
-                  Or add meal details manually →
+                  {t.addMealPage.manualLink}
                 </button>
               </>
             )}
-            {state.phase === 'scanning' && <ScanningBox label={state.imagePreview ? 'Analyzing your plate…' : 'Getting your eating plan…'} />}
+            {state.phase === 'scanning' && <ScanningBox label={state.imagePreview ? t.addMealPage.analyzing : t.addMealPage.gettingPlan} />}
             {state.phase === 'manual' && (
               <>
                 {renderFoodEditor("#F7EFE1")}
                 <button onClick={handleGetGuidance} disabled={state.foods.length === 0} style={{ padding: '12px', borderRadius: '999px', background: state.foods.length > 0 ? '#012374' : 'rgba(1,35,116,0.3)', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: state.foods.length > 0 ? 'pointer' : 'not-allowed' }}>
-                  Get eating guidance →
+                  {t.addMealPage.getGuidance}
                 </button>
                 <button onClick={() => update({ phase: 'idle', error: null })} style={{ fontSize: '13px', color: 'rgba(1,35,116,0.5)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' as const, padding: 0 }}>
-                  ← Take a photo instead
+                  {t.addMealPage.backToPhoto}
                 </button>
               </>
             )}

@@ -69,6 +69,7 @@ export async function GET(request: Request) {
           diabetesType: true,
           targetGlucoseMin: true,
           targetGlucoseMax: true,
+          preferredLanguage: true,
         },
       }),
       prisma.healthDailySummary.findMany({
@@ -303,7 +304,10 @@ Focus on:
 4. Positive reinforcement for good behaviors
 5. Gentle suggestions for improvement
 
-Be warm, supportive, and specific. Use the data to give personalized advice.`;
+Be warm, supportive, and specific. Use the data to give personalized advice.
+${userData?.preferredLanguage === 'es'
+    ? 'LANGUAGE: Write ALL titles, messages, and actions in warm, informal Mexican Spanish (tuteo — "tú", never "usted"). Natural, caring, never stiff or machine-translated.'
+    : 'LANGUAGE: Write all titles, messages, and actions in English.'}`;
 
   const message = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',

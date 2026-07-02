@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface MealCardProps {
   meal: {
@@ -43,12 +44,12 @@ interface MealCardProps {
   onDelete?: (id: string) => void;
 }
 
-const IMPACT_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  minimal:     { label: 'Minimal impact',     color: '#1C7A4F', bg: 'rgba(28,122,79,0.10)' },
-  moderate:    { label: 'Moderate impact',    color: '#9A6F18', bg: 'rgba(200,147,43,0.13)' },
-  significant: { label: 'Significant impact', color: '#B5562E', bg: 'rgba(181,86,46,0.10)' },
-  high:        { label: 'High impact',        color: '#D0021B', bg: 'rgba(208,2,27,0.08)' },
-  unknown:     { label: 'Logged',             color: '#012374', bg: 'rgba(1,35,116,0.07)' },
+const IMPACT_STYLE: Record<string, { labelKey: string; color: string; bg: string }> = {
+  minimal:     { labelKey: 'impactMinimal',     color: '#1C7A4F', bg: 'rgba(28,122,79,0.10)' },
+  moderate:    { labelKey: 'impactModerate',    color: '#9A6F18', bg: 'rgba(200,147,43,0.13)' },
+  significant: { labelKey: 'impactSignificant', color: '#B5562E', bg: 'rgba(181,86,46,0.10)' },
+  high:        { labelKey: 'impactHigh',        color: '#D0021B', bg: 'rgba(208,2,27,0.08)' },
+  unknown:     { labelKey: 'impactLogged',      color: '#012374', bg: 'rgba(1,35,116,0.07)' },
 };
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -59,6 +60,7 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 export default function MealCard({ meal, onDelete }: MealCardProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [showFeeling, setShowFeeling] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -100,7 +102,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {meal.mealType && (
               <span style={{ background: typeColor.bg, color: typeColor.text, borderRadius: 99, padding: '4px 10px', fontSize: 11.5, fontWeight: 700, textTransform: 'capitalize' }}>
-                {meal.mealType}
+                {(t.mealCard.mealTypes as Record<string, string>)[typeKey] ?? meal.mealType}
               </span>
             )}
             <span style={{ fontSize: 12, color: 'rgba(22,24,42,0.45)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -118,13 +120,13 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
                   disabled={deleting}
                   style={{ padding: '5px 12px', borderRadius: 10, background: '#D0021B', color: '#FFFDF9', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                 >
-                  Delete
+                  {t.mealCard.delete}
                 </button>
                 <button
                   onClick={() => setConfirmingDelete(false)}
                   style={{ padding: '5px 12px', borderRadius: 10, background: 'rgba(22,24,42,0.08)', color: 'rgba(22,24,42,0.7)', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
               </>
             ) : (
@@ -132,14 +134,14 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
                 <button
                   onClick={() => router.push(`/meals/${meal.id}/edit`)}
                   style={{ width: 44, height: 44, margin: -6, borderRadius: 10, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(1,35,116,0.4)' }}
-                  aria-label="Edit meal"
+                  aria-label={t.mealCard.editMeal}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
                 <button
                   onClick={() => setConfirmingDelete(true)}
                   style={{ width: 44, height: 44, margin: -6, borderRadius: 10, background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(208,2,27,0.55)' }}
-                  aria-label="Delete meal"
+                  aria-label={t.mealCard.deleteMeal}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
@@ -211,7 +213,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: s.color }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 13h4l2-6 4 12 2-6h6" stroke={s.color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Blood sugar · {s.label}
+                  {t.mealCard.bloodSugar} · {(t.mealCard as any)[s.labelKey]}
                 </span>
                 {gi.glucoseRise != null && (
                   <span style={{ fontSize: 13, fontWeight: 700, color: s.color }}>{gi.glucoseRise >= 0 ? '+' : ''}{gi.glucoseRise} mg/dL</span>
@@ -219,10 +221,10 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
               </div>
               {(gi.preMealGlucose != null || gi.peakPostMeal != null) && (
                 <div style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.6)', marginTop: 4 }}>
-                  {gi.preMealGlucose != null && <>before {gi.preMealGlucose}</>}
+                  {gi.preMealGlucose != null && <>{t.mealCard.before} {gi.preMealGlucose}</>}
                   {gi.preMealGlucose != null && gi.peakPostMeal != null && ' → '}
-                  {gi.peakPostMeal != null && <>peak {gi.peakPostMeal}</>}
-                  {gi.timeToSpike != null && <> · {gi.timeToSpike} min to peak</>}
+                  {gi.peakPostMeal != null && <>{t.mealCard.peak} {gi.peakPostMeal}</>}
+                  {gi.timeToSpike != null && <> · {gi.timeToSpike} {t.mealCard.minToPeak}</>}
                 </div>
               )}
             </div>
@@ -237,7 +239,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
               style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'rgba(1,35,116,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              {showFeeling ? 'Hide note' : 'View note'}
+              {showFeeling ? t.mealCard.hideNote : t.mealCard.viewNote}
             </button>
             {showFeeling && (
               <p style={{ marginTop: 8, fontSize: 13, color: 'rgba(22,24,42,0.65)', fontStyle: 'italic', background: 'rgba(1,35,116,0.05)', borderRadius: 10, padding: '9px 12px', lineHeight: 1.55 }}>

@@ -2,19 +2,16 @@
 
 import { useState } from 'react';
 import { UserContext } from '@/types';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface ContextTagsProps {
   onSave?: (context: UserContext) => void;
 }
 
-const TAGS: { key: keyof UserContext; label: string }[] = [
-  { key: 'notFeelingWell', label: 'Not feeling well' },
-  { key: 'onPeriod', label: 'On my period' },
-  { key: 'feelingOverwhelmed', label: 'Feeling overwhelmed' },
-  { key: 'havingCravings', label: 'Having cravings' },
-];
+const TAG_KEYS = ['notFeelingWell', 'onPeriod', 'feelingOverwhelmed', 'havingCravings'] as const;
 
 export default function ContextTags({ onSave }: ContextTagsProps) {
+  const { t } = useTranslation();
   const [context, setContext] = useState<UserContext>({
     notFeelingWell: false,
     onPeriod: false,
@@ -32,17 +29,17 @@ export default function ContextTags({ onSave }: ContextTagsProps) {
     <div>
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="font-serif-italic" style={{ fontSize: '20px', color: '#012374', lineHeight: '1.1' }}>
-          Anything else?
+          {t.contextTags.heading}
         </h2>
-        <span style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700 }}>Quick context</span>
+        <span style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700 }}>{t.contextTags.kicker}</span>
       </div>
       <div className="flex flex-wrap gap-[6px]">
-        {TAGS.map((tag) => {
-          const active = !!context[tag.key];
+        {TAG_KEYS.map((tagKey) => {
+          const active = !!context[tagKey];
           return (
             <button
-              key={tag.key}
-              onClick={() => toggle(tag.key)}
+              key={tagKey}
+              onClick={() => toggle(tagKey)}
               className="transition-all active:scale-95"
               style={{
                 padding: '7px 13px',
@@ -54,7 +51,7 @@ export default function ContextTags({ onSave }: ContextTagsProps) {
                 border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.25)',
               }}
             >
-              {tag.label}
+              {t.contextTags[tagKey]}
             </button>
           );
         })}
