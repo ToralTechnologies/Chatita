@@ -17,8 +17,8 @@
  *   npx tsx scripts/migrations/2026-07-02-repair-libre-timestamps.ts            # DRY RUN (read-only, default)
  *   npx tsx scripts/migrations/2026-07-02-repair-libre-timestamps.ts --execute  # apply the repair
  */
-import { prisma } from '../lib/prisma';
-import { computeCompactImpact } from '../lib/glucose-impact';
+import { prisma } from '../../lib/prisma';
+import { computeCompactImpact } from '../../lib/glucose-impact';
 
 const H = 60 * 60 * 1000;
 const SHIFT_MS = 4 * H; // EDT offset
