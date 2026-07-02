@@ -6,10 +6,11 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ChatInterface from '@/components/chat-interface';
+import { useTranslation } from '@/lib/i18n/context';
 
 const NAV = [
   {
-    href: '/home', label: 'Home',
+    href: '/home', labelKey: 'home' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M4 12l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1v-8z" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -17,7 +18,7 @@ const NAV = [
     ),
   },
   {
-    href: '/meal-history', label: 'Meal history',
+    href: '/meal-history', labelKey: 'mealHistory' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="9" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -26,7 +27,7 @@ const NAV = [
     ),
   },
   {
-    href: '/recipes', label: 'Recipes',
+    href: '/recipes', labelKey: 'recipes' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -35,7 +36,7 @@ const NAV = [
     ),
   },
   {
-    href: '/saved-recipes', label: 'Saved recipes',
+    href: '/saved-recipes', labelKey: 'savedRecipes' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="#FFFDF9" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity={op}/>
@@ -43,7 +44,7 @@ const NAV = [
     ),
   },
   {
-    href: '/menu-scanner', label: 'Scan a menu',
+    href: '/menu-scanner', labelKey: 'scanMenu' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="6" width="18" height="13" rx="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -53,7 +54,7 @@ const NAV = [
     ),
   },
   {
-    href: '/meal-plan', label: 'Meal plan',
+    href: '/meal-plan', labelKey: 'mealPlan' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="4" width="18" height="18" rx="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -62,7 +63,7 @@ const NAV = [
     ),
   },
   {
-    href: '/grocery-list', label: 'Grocery',
+    href: '/grocery-list', labelKey: 'grocery' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M5 7h14l-1.2 10a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -71,7 +72,7 @@ const NAV = [
     ),
   },
   {
-    href: '/restaurant-finder', label: 'Restaurants',
+    href: '/restaurant-finder', labelKey: 'restaurants' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -80,7 +81,7 @@ const NAV = [
     ),
   },
   {
-    href: '/insights', label: 'Insights',
+    href: '/insights', labelKey: 'insights' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <path d="M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5" stroke="#FFFDF9" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity={op}/>
@@ -88,7 +89,7 @@ const NAV = [
     ),
   },
   {
-    href: '/mood-log', label: 'Mood journal',
+    href: '/mood-log', labelKey: 'moodJournal' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="9" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -97,7 +98,7 @@ const NAV = [
     ),
   },
   {
-    href: '/settings', label: 'Settings',
+    href: '/settings', labelKey: 'settings' as const,
     icon: (op: number) => (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="2.5" stroke="#FFFDF9" strokeWidth="1.6" opacity={op}/>
@@ -109,6 +110,7 @@ const NAV = [
 
 export default function WebNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const firstName = (session?.user?.name ?? '').split(' ')[0] || 'you';
   const [showChat, setShowChat] = useState(false);
@@ -138,7 +140,7 @@ export default function WebNav() {
 
       {/* Nav items */}
       <div style={{ marginTop: '34px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-        {NAV.map(({ href, label, icon }) => {
+        {NAV.map(({ href, labelKey, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
@@ -159,7 +161,7 @@ export default function WebNav() {
               }}
             >
               {icon(active ? 1 : 0.75)}
-              {label}
+              {(t.nav as any)[labelKey]}
             </Link>
           );
         })}
@@ -177,7 +179,7 @@ export default function WebNav() {
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
             <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" stroke="#012374" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          Chat with Chatita
+          {t.nav.chatWithChatita}
         </button>
       </div>
 
@@ -197,7 +199,7 @@ export default function WebNav() {
         </div>
         <div style={{ lineHeight: 1.2, overflow: 'hidden' }}>
           <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{firstName}</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,253,249,0.62)' }}>Tu compañera de salud</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,253,249,0.62)' }}>{t.nav.tagline}</div>
         </div>
       </div>
     </nav>

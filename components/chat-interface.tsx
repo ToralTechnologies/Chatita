@@ -32,45 +32,31 @@ interface Message {
   error?: boolean;
 }
 
-function getGreeting(ctx?: UserContext): string {
-  if (ctx?.feelingOverwhelmed) {
-    return "Hi. I can see you're feeling a bit overwhelmed — that's okay. Let's take it one step at a time. How can I help you right now?";
-  }
-  if (ctx?.notFeelingWell) {
-    return "I see you're not feeling well today. I'm here to help — take things easy. What do you need?";
-  }
-  if (ctx?.mood === 'anxious') {
-    return "I can see you're feeling anxious today. That's okay — let's take things slow. Would you like some calming meal ideas, or just someone to talk with?";
-  }
-  if (ctx?.mood === 'sad') {
-    return "I'm sorry you're feeling down today. I'm right here. Sometimes a good meal can help a little — want me to suggest something comforting?";
-  }
-  if (ctx?.mood === 'tired') {
-    return "I see you're feeling tired today. Let's keep things easy and simple. Want me to suggest some no-fuss meal ideas?";
-  }
-  if (ctx?.onPeriod || ctx?.havingCravings) {
-    return "I see you've got some cravings going on. Let's find something satisfying that's also kind to your blood sugar. What sounds good?";
-  }
-  if (ctx?.mood === 'grateful') {
-    return "Glad you're feeling grateful today — that positive energy helps everything. What can I help you with?";
-  }
-  if (ctx?.mood === 'calm') {
-    return "Glad you're feeling calm today. Let's keep that good energy going. What can I help you with?";
-  }
-  if (ctx?.mood === 'happy') {
-    return "Great to see you're in a good mood today. Let's keep it going — what can I help you with?";
-  }
-  return "Hello, I'm Chatita.\n\nI'm here to help you understand your food, blood sugar, and daily choices. What would you like to talk about today?";
+type ChatT = ReturnType<typeof useTranslation>['t'];
+
+function getGreeting(t: ChatT, ctx?: UserContext): string {
+  const c = t.chatUi;
+  if (ctx?.feelingOverwhelmed) return c.greetOverwhelmed;
+  if (ctx?.notFeelingWell) return c.greetNotWell;
+  if (ctx?.mood === 'anxious') return c.greetAnxious;
+  if (ctx?.mood === 'sad') return c.greetSad;
+  if (ctx?.mood === 'tired') return c.greetTired;
+  if (ctx?.onPeriod || ctx?.havingCravings) return c.greetCravings;
+  if (ctx?.mood === 'grateful') return c.greetGrateful;
+  if (ctx?.mood === 'calm') return c.greetCalm;
+  if (ctx?.mood === 'happy') return c.greetHappy;
+  return c.greetDefault;
 }
 
-function getInitialSuggestions(ctx?: UserContext): string[] {
-  if (ctx?.feelingOverwhelmed) return ['Something quick at home', 'Find a restaurant', 'I need encouragement'];
-  if (ctx?.notFeelingWell) return ['Yes, please', 'I need something warm', 'Just water for now'];
-  if (ctx?.mood === 'anxious') return ['Something calm to eat', 'I need encouragement', 'What should I eat?'];
-  if (ctx?.mood === 'sad') return ['Comfort food', 'I need encouragement', 'What should I eat?'];
-  if (ctx?.mood === 'tired') return ['Something quick', 'Need something quick', 'What should I eat?'];
-  if (ctx?.onPeriod || ctx?.havingCravings) return ['Something sweet', 'Something salty', 'Comfort food'];
-  return ['What should I eat?', 'I feel overwhelmed', 'Restaurant tips'];
+function getInitialSuggestions(t: ChatT, ctx?: UserContext): string[] {
+  const c = t.chatUi;
+  if (ctx?.feelingOverwhelmed) return [c.sugQuickHome, c.sugFindRestaurant, c.sugEncouragement];
+  if (ctx?.notFeelingWell) return [c.sugYesPlease, c.sugWarm, c.sugJustWater];
+  if (ctx?.mood === 'anxious') return [c.sugCalmEat, c.sugEncouragement, c.sugWhatToEat];
+  if (ctx?.mood === 'sad') return [c.sugComfort, c.sugEncouragement, c.sugWhatToEat];
+  if (ctx?.mood === 'tired') return [c.sugQuick, c.sugComfort, c.sugWhatToEat];
+  if (ctx?.onPeriod || ctx?.havingCravings) return [c.sugSweet, c.sugSalty, c.sugComfort];
+  return [c.sugWhatToEat, c.sugOverwhelmed, c.sugRestaurantTips];
 }
 
 function ContextChip({ label }: { label: string }) {
@@ -95,14 +81,14 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
   const { t, language } = useTranslation();
   const initialMessage: Message = {
     role: 'assistant',
-    content: getGreeting(userContext),
+    content: getGreeting(t, userContext),
     timestamp: new Date(),
   };
 
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(() => getInitialSuggestions(userContext));
+  const [suggestions, setSuggestions] = useState<string[]>(() => getInitialSuggestions(t, userContext));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   // Location consent flow: message waiting on the user's location decision.
@@ -163,7 +149,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
       setSuggestions(data.suggestions || []);
     } catch (error) {
       console.error('Failed to send message:', error);
-      setErrorMessage("I couldn't send that message. Please try again.");
+      setErrorMessage(t.chatUi.sendError);
       setLastFailedMessage(messageText);
       // Remove the user message we optimistically added
       setMessages((prev) => prev.slice(0, -1));
@@ -255,7 +241,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
     try {
       await fetch('/api/chat', { method: 'DELETE' });
       setMessages([{ ...initialMessage, timestamp: new Date() }]);
-      setSuggestions(getInitialSuggestions(userContext));
+      setSuggestions(getInitialSuggestions(t, userContext));
       setErrorMessage(null);
       setLastFailedMessage(null);
     } catch (error) {
@@ -267,7 +253,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
     const text = messages
       .map((m) => {
         const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const sender = m.role === 'user' ? 'You' : 'Chatita';
+        const sender = m.role === 'user' ? t.chatUi.you : 'Chatita';
         return `[${time}] ${sender}: ${m.content}`;
       })
       .join('\n\n');
@@ -286,7 +272,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
 
   const handleNewChat = () => {
     setMessages([{ ...initialMessage, timestamp: new Date() }]);
-    setSuggestions(getInitialSuggestions(userContext));
+    setSuggestions(getInitialSuggestions(t, userContext));
     setErrorMessage(null);
     setLastFailedMessage(null);
   };
@@ -309,8 +295,8 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
             <img src="/logo-icon.svg" alt="Chatita" className="w-5 h-5" style={{ filter: 'brightness(0) invert(1)' }} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Chatita</h3>
-            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Your caring companion</p>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t.chatUi.headerName}</h3>
+            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{t.chatUi.headerTagline}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -324,7 +310,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
               onClick={onClose}
               className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
               style={{ background: 'var(--bg-card-alt)' }}
-              aria-label="Close chat"
+              aria-label={t.chatUi.closeChat}
             >
               <X className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
             </button>
@@ -338,16 +324,16 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           className="px-4 py-2 flex flex-wrap gap-1.5"
           style={{ borderBottom: '1px solid rgba(1,35,116,0.08)', background: 'rgba(1,35,116,0.04)' }}
         >
-          {userContext.mood === 'happy' && <ContextChip label="Feeling great" />}
-          {userContext.mood === 'grateful' && <ContextChip label="Grateful" />}
-          {userContext.mood === 'calm' && <ContextChip label="Feeling calm" />}
-          {userContext.mood === 'tired' && <ContextChip label="Feeling tired" />}
-          {userContext.mood === 'anxious' && <ContextChip label="Feeling anxious" />}
-          {userContext.mood === 'sad' && <ContextChip label="Feeling down" />}
-          {userContext.notFeelingWell && <ContextChip label="Not feeling well" />}
-          {userContext.onPeriod && <ContextChip label="On my period" />}
-          {userContext.feelingOverwhelmed && <ContextChip label="Overwhelmed" />}
-          {userContext.havingCravings && <ContextChip label="Having cravings" />}
+          {userContext.mood === 'happy' && <ContextChip label={t.chatUi.chipFeelingGreat} />}
+          {userContext.mood === 'grateful' && <ContextChip label={t.chatUi.chipGrateful} />}
+          {userContext.mood === 'calm' && <ContextChip label={t.chatUi.chipCalm} />}
+          {userContext.mood === 'tired' && <ContextChip label={t.chatUi.chipTired} />}
+          {userContext.mood === 'anxious' && <ContextChip label={t.chatUi.chipAnxious} />}
+          {userContext.mood === 'sad' && <ContextChip label={t.chatUi.chipDown} />}
+          {userContext.notFeelingWell && <ContextChip label={t.chatUi.chipNotWell} />}
+          {userContext.onPeriod && <ContextChip label={t.chatUi.chipPeriod} />}
+          {userContext.feelingOverwhelmed && <ContextChip label={t.chatUi.chipOverwhelmed} />}
+          {userContext.havingCravings && <ContextChip label={t.chatUi.chipCravings} />}
         </div>
       )}
 
@@ -459,7 +445,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
                 className="flex items-center gap-1 text-xs font-semibold underline shrink-0"
               >
                 <RefreshCw className="w-3 h-3" />
-                Retry
+                {t.chatUi.retry}
               </button>
             )}
           </div>
@@ -513,7 +499,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message…"
+            placeholder={t.chatUi.inputPlaceholder}
             disabled={loading}
             className="flex-1 px-3 py-2 text-sm bg-transparent focus:outline-none disabled:opacity-50"
             style={{ color: 'var(--text-primary)' }}
@@ -528,7 +514,7 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
           </button>
         </div>
         <p className="text-[10px] text-center mt-2" style={{ color: 'var(--text-muted)' }}>
-          Chatita provides general guidance. Always consult your doctor for medical advice.
+          {t.chatUi.disclaimer}
         </p>
       </form>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface BackButtonProps {
   href?: string;
@@ -8,8 +9,10 @@ interface BackButtonProps {
   light?: boolean; // white text, for dark backgrounds
 }
 
-export default function BackButton({ href, label = 'Back', light = false }: BackButtonProps) {
+export default function BackButton({ href, label, light = false }: BackButtonProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const text = label ?? t.common.back;
 
   const handleClick = () => {
     if (href) {
@@ -43,7 +46,7 @@ export default function BackButton({ href, label = 'Back', light = false }: Back
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
-      {label}
+      {text}
     </button>
   );
 }

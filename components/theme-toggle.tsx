@@ -1,9 +1,11 @@
 'use client';
 
 import { useTheme } from '@/lib/theme-context';
+import { useTranslation } from '@/lib/i18n/context';
 import { Sun, Moon } from 'lucide-react';
 
 export default function ThemeToggle({ onDark = false }: { onDark?: boolean }) {
+  const { t } = useTranslation();
   const { theme, toggle } = useTheme();
 
   return (
@@ -22,8 +24,8 @@ export default function ThemeToggle({ onDark = false }: { onDark?: boolean }) {
       }}
     >
       {theme === 'dark'
-        ? <><Sun className="w-3 h-3" /> Light</>
-        : <><Moon className="w-3 h-3" /> Dark</>
+        ? <><Sun className="w-3 h-3" /> {t.nav.themeLight}</>
+        : <><Moon className="w-3 h-3" /> {t.nav.themeDark}</>
       }
     </button>
   );

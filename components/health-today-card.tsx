@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/i18n/context';
 
 type DailySummary = {
   provider: string;
@@ -39,6 +40,7 @@ function fmt(min: number): string {
 }
 
 export default function HealthTodayCard() {
+  const { t, language } = useTranslation();
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [isToday, setIsToday] = useState(true);
@@ -95,33 +97,33 @@ export default function HealthTodayCard() {
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 8 }}>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#012374', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          {isToday ? `Today from ${providerLabel}` : `Latest from ${providerLabel}`}
+          {(isToday ? t.healthToday.todayFrom : t.healthToday.latestFrom).replace('{provider}', providerLabel)}
         </span>
         <span style={{ fontSize: 11, color: 'rgba(22,24,42,0.4)', flexShrink: 0 }}>
           {!isToday && summary.date
-            ? new Date(summary.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-            : `Updated ${new Date(summary.importedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+            ? new Date(summary.date).toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : t.healthToday.updatedAt.replace('{time}', new Date(summary.importedAt).toLocaleTimeString(language === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' }))}
         </span>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px' }}>
         {summary.steps != null && (
-          <Metric label="Steps" value={summary.steps.toLocaleString()} />
+          <Metric label={t.healthToday.steps} value={summary.steps.toLocaleString()} />
         )}
         {summary.activeMinutes != null && (
-          <Metric label="Active minutes" value={String(summary.activeMinutes)} />
+          <Metric label={t.healthToday.activeMinutes} value={String(summary.activeMinutes)} />
         )}
         {summary.exerciseMinutes != null && summary.exerciseMinutes !== summary.activeMinutes && (
-          <Metric label="Exercise" value={`${summary.exerciseMinutes} min`} />
+          <Metric label={t.healthToday.exercise} value={`${summary.exerciseMinutes} min`} />
         )}
         {summary.sleepMinutes != null && (
-          <Metric label="Sleep" value={fmt(summary.sleepMinutes)} />
+          <Metric label={t.healthToday.sleep} value={fmt(summary.sleepMinutes)} />
         )}
         {summary.restingHeartRate != null && (
-          <Metric label="Resting HR" value={`${summary.restingHeartRate} bpm`} />
+          <Metric label={t.healthToday.restingHr} value={`${summary.restingHeartRate} bpm`} />
         )}
         {summary.activeCalories != null && (
-          <Metric label="Active cal" value={String(Math.round(summary.activeCalories))} />
+          <Metric label={t.healthToday.activeCal} value={String(Math.round(summary.activeCalories))} />
         )}
       </div>
 
@@ -139,9 +141,9 @@ export default function HealthTodayCard() {
           }}
         >
           <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.6)', lineHeight: 1.5 }}>
-            <span style={{ fontWeight: 700, color: '#012374' }}>{overview.totalDays.toLocaleString()} days</span> imported
-            {overview.avgSteps != null && <> · avg {overview.avgSteps.toLocaleString()} steps</>}
-            {overview.avgSleepMinutes != null && <> · avg {fmt(overview.avgSleepMinutes)} sleep</>}
+            <span style={{ fontWeight: 700, color: '#012374' }}>{t.healthToday.daysImported.replace('{days}', overview.totalDays.toLocaleString())}</span> {t.healthToday.imported}
+            {overview.avgSteps != null && <> · {t.healthToday.avgSteps.replace('{steps}', overview.avgSteps.toLocaleString())}</>}
+            {overview.avgSleepMinutes != null && <> · {t.healthToday.avgSleep.replace('{sleep}', fmt(overview.avgSleepMinutes))}</>}
           </div>
           <a
             href="/insights"
@@ -158,7 +160,7 @@ export default function HealthTodayCard() {
               margin: '-13px -10px',
             }}
           >
-            View trends
+            {t.healthToday.viewTrends}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -167,7 +169,7 @@ export default function HealthTodayCard() {
       )}
 
       <p style={{ fontSize: 11.5, color: 'rgba(22,24,42,0.35)', marginTop: 10, lineHeight: 1.5 }}>
-        Connected data may be incomplete. Log manually anytime to add more detail.
+        {t.healthToday.incompleteNote}
       </p>
     </div>
   );

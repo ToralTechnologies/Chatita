@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Trash2, Download, RefreshCw, Settings } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
 
 interface ChatOptionsMenuProps {
   onClearChat: () => void;
@@ -16,6 +17,7 @@ export default function ChatOptionsMenu({
   onNewChat,
   onSettings,
 }: ChatOptionsMenuProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -32,14 +34,14 @@ export default function ChatOptionsMenu({
 
   const handleClearChat = () => {
     setIsOpen(false);
-    if (confirm('Clear all chat history? This cannot be undone.')) {
+    if (confirm(t.chatUi.clearConfirm)) {
       onClearChat();
     }
   };
 
   const options = [
     {
-      label: 'New conversation',
+      label: t.chatUi.newConversation,
       icon: RefreshCw,
       onClick: () => {
         setIsOpen(false);
@@ -47,7 +49,7 @@ export default function ChatOptionsMenu({
       },
     },
     {
-      label: 'Export chat',
+      label: t.chatUi.exportChat,
       icon: Download,
       onClick: () => {
         setIsOpen(false);
@@ -57,7 +59,7 @@ export default function ChatOptionsMenu({
     ...(onSettings
       ? [
           {
-            label: 'Chat settings',
+            label: t.chatUi.chatSettings,
             icon: Settings,
             onClick: () => {
               setIsOpen(false);
@@ -67,7 +69,7 @@ export default function ChatOptionsMenu({
         ]
       : []),
     {
-      label: 'Clear history',
+      label: t.chatUi.clearHistory,
       icon: Trash2,
       onClick: handleClearChat,
       destructive: true,
@@ -79,7 +81,7 @@ export default function ChatOptionsMenu({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        aria-label="Chat options"
+        aria-label={t.chatUi.chatOptions}
       >
         <MoreVertical className="w-5 h-5 text-gray-600" />
       </button>

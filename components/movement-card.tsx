@@ -1,29 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n/context';
 
-const ACTIVITY_TYPES = [
-  { value: 'walking',          label: 'Walking' },
-  { value: 'chores',           label: 'Chores' },
-  { value: 'dancing',          label: 'Dancing' },
-  { value: 'gym',              label: 'Gym' },
-  { value: 'strength_training',label: 'Strength' },
-  { value: 'sports',           label: 'Sports' },
-  { value: 'physical_work',    label: 'Physical work' },
-  { value: 'chair_exercises',  label: 'Chair exercises' },
-  { value: 'stretching_yoga',  label: 'Stretching / yoga' },
-  { value: 'biking',           label: 'Biking' },
-  { value: 'swimming',         label: 'Swimming' },
-  { value: 'not_active',       label: 'Not active today' },
-  { value: 'other',            label: 'Other' },
-];
+const ACTIVITY_TYPE_VALUES = [
+  'walking', 'chores', 'dancing', 'gym', 'strength_training', 'sports',
+  'physical_work', 'chair_exercises', 'stretching_yoga', 'biking', 'swimming',
+  'not_active', 'other',
+] as const;
 
-const INTENSITY = [
-  { value: 'light',     label: 'Light' },
-  { value: 'moderate',  label: 'Moderate' },
-  { value: 'vigorous',  label: 'Vigorous' },
-  { value: 'not_sure',  label: 'Not sure' },
-];
+const INTENSITY_VALUES = ['light', 'moderate', 'vigorous', 'not_sure'] as const;
 
 interface MovementSummary {
   steps?: number;
@@ -49,6 +35,7 @@ function DancerIcon({ color = '#2A8A8A' }: { color?: string }) {
 }
 
 export default function MovementCard({ lastMealId, defaultOpen = false }: Props) {
+  const { t, language } = useTranslation();
   const [summary, setSummary]   = useState<MovementSummary | null>(null);
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(defaultOpen);
@@ -75,11 +62,11 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
           const steps = logs.reduce((s: number, l: any) => s + (l.steps || 0), 0);
           const activeMin = logs.reduce((s: number, l: any) => s + (l.activityMinutes || 0), 0);
           const last = logs[0];
-          const lastTime = last.date ? new Date(last.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : undefined;
+          const lastTime = last.date ? new Date(last.date).toLocaleTimeString(language === 'es' ? 'es-MX' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : undefined;
           setSummary({
             steps: steps || undefined,
             activeMinutes: activeMin || undefined,
-            lastActivityLabel: ACTIVITY_TYPES.find(a => a.value === last.activityType)?.label ?? last.activityType,
+            lastActivityLabel: (t.movement.types as Record<string, string>)[last.activityType] ?? last.activityType,
             lastActivityTime: lastTime,
             lastActivityNotes: last.notes,
           });
@@ -132,12 +119,12 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
             <DancerIcon />
           </span>
           <div style={{ flex: 1 }}>
-            <div className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', lineHeight: 1 }}>Movement today</div>
+            <div className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', lineHeight: 1 }}>{t.movement.title}</div>
             {!loading && (
-              <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>Context, not pressure</div>
+              <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>{t.movement.subtitle}</div>
             )}
           </div>
-          {saved && <span style={{ fontSize: '11.5px', color: '#2A8A8A', fontWeight: 600 }}>Saved ✓</span>}
+          {saved && <span style={{ fontSize: '11.5px', color: '#2A8A8A', fontWeight: 600 }}>{t.movement.savedCheck}</span>}
         </div>
       </div>
 
@@ -151,7 +138,7 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
                 <div style={{ display: 'flex', gap: '9px', marginBottom: '10px' }}>
                   {summary.steps !== undefined && (
                     <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px 12px' }}>
-                      <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Steps</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>{t.movement.steps}</div>
                       <div style={{ marginTop: '2px' }}>
                         <span className="font-serif-italic" style={{ fontSize: '22px', color: '#2A8A8A' }}>
                           {summary.steps.toLocaleString()}
@@ -161,7 +148,7 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
                   )}
                   {summary.activeMinutes !== undefined && summary.activeMinutes > 0 && (
                     <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px 12px' }}>
-                      <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Active min</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>{t.movement.activeMin}</div>
                       <div style={{ marginTop: '2px' }}>
                         <span className="font-serif-italic" style={{ fontSize: '22px', color: '#2A8A8A' }}>
                           {summary.activeMinutes}
@@ -180,7 +167,7 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#16182A' }}>{summary.lastActivityLabel}</div>
                     <div style={{ fontSize: '12px', color: 'rgba(22,24,42,0.55)' }}>
-                      Last logged{summary.lastActivityTime ? ` · ${summary.lastActivityTime}` : ''}
+                      {t.movement.lastLogged}{summary.lastActivityTime ? ` · ${summary.lastActivityTime}` : ''}
                       {summary.lastActivityNotes ? ` · ${summary.lastActivityNotes}` : ''}
                     </div>
                   </div>
@@ -189,9 +176,9 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
             </>
           ) : (
             <div style={{ background: '#F7EFE1', borderRadius: '13px', padding: '15px 16px', marginBottom: '10px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374' }}>Nothing logged yet — and that&apos;s okay.</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374' }}>{t.movement.emptyTitle}</div>
               <div style={{ fontSize: '13px', color: 'rgba(22,24,42,0.68)', marginTop: '5px', lineHeight: 1.5 }}>
-                Chores, a short walk, stretching, dancing or physical work can all count as movement.
+                {t.movement.emptyBody}
               </div>
             </div>
           )}
@@ -209,7 +196,7 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/>
             </svg>
-            Add movement
+            {t.movement.addButton}
           </button>
         </div>
       )}
@@ -218,49 +205,49 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
       {showForm && (
         <div style={{ padding: '14px 16px 16px', borderTop: '1px solid rgba(42,138,138,0.12)' }}>
           <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.55)', lineHeight: 1.5, marginBottom: '12px' }}>
-            No pressure to move after every meal — this helps Chatita notice patterns.
+            {t.movement.formIntro}
           </p>
 
           {/* Activity chips */}
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', marginBottom: '8px' }}>What kind?</p>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', marginBottom: '8px' }}>{t.movement.whatKind}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-            {ACTIVITY_TYPES.map((t) => (
+            {ACTIVITY_TYPE_VALUES.map((value) => (
               <button
-                key={t.value}
+                key={value}
                 type="button"
-                onClick={() => setForm(f => ({ ...f, activityType: f.activityType === t.value ? '' : t.value }))}
+                onClick={() => setForm(f => ({ ...f, activityType: f.activityType === value ? '' : value }))}
                 style={{
                   padding: '6px 13px', borderRadius: '999px', fontSize: '12.5px',
-                  border: form.activityType === t.value ? '1.5px solid #2A8A8A' : '1.5px solid rgba(1,35,116,0.18)',
-                  background: form.activityType === t.value ? '#2A8A8A' : 'transparent',
-                  color: form.activityType === t.value ? '#FFFDF9' : '#012374',
+                  border: form.activityType === value ? '1.5px solid #2A8A8A' : '1.5px solid rgba(1,35,116,0.18)',
+                  background: form.activityType === value ? '#2A8A8A' : 'transparent',
+                  color: form.activityType === value ? '#FFFDF9' : '#012374',
                   cursor: 'pointer',
                 }}
-              >{t.label}</button>
+              >{t.movement.types[value]}</button>
             ))}
           </div>
 
           {/* Minutes + intensity */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Minutes</label>
-              <input type="number" min={1} max={480} value={form.activityMinutes} onChange={e => setForm(f => ({ ...f, activityMinutes: e.target.value }))} placeholder="e.g. 20"
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.movement.minutes}</label>
+              <input type="number" min={1} max={480} value={form.activityMinutes} onChange={e => setForm(f => ({ ...f, activityMinutes: e.target.value }))} placeholder={t.movement.minutesPlaceholder}
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>How did it feel?</label>
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.movement.feel}</label>
               <select value={form.activityIntensity} onChange={e => setForm(f => ({ ...f, activityIntensity: e.target.value }))}
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}>
-                <option value="">— Feel —</option>
-                {INTENSITY.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                <option value="">{t.movement.feelPlaceholder}</option>
+                {INTENSITY_VALUES.map(v => <option key={v} value={v}>{t.movement.intensity[v]}</option>)}
               </select>
             </div>
           </div>
 
           {/* Steps */}
           <div style={{ marginBottom: '10px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Steps <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <input type="number" min={0} value={form.steps} onChange={e => setForm(f => ({ ...f, steps: e.target.value }))} placeholder="e.g. 3,000"
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.movement.steps} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t.movement.optional}</span></label>
+            <input type="number" min={0} value={form.steps} onChange={e => setForm(f => ({ ...f, steps: e.target.value }))} placeholder={t.movement.stepsPlaceholder}
               style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
           </div>
 
@@ -268,25 +255,25 @@ export default function MovementCard({ lastMealId, defaultOpen = false }: Props)
           {lastMealId && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '10px' }}>
               <input type="checkbox" checked={form.relatedToMeal} onChange={e => setForm(f => ({ ...f, relatedToMeal: e.target.checked }))} />
-              <span style={{ fontSize: '13px', color: '#16182A' }}>This was after my last meal</span>
+              <span style={{ fontSize: '13px', color: '#16182A' }}>{t.movement.afterMeal}</span>
             </label>
           )}
 
           {/* Notes */}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Notes <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="How did it feel? Any observations…" rows={2}
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.movement.notes} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t.movement.optional}</span></label>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder={t.movement.notesPlaceholder} rows={2}
               style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" onClick={() => setShowForm(false)}
               style={{ flex: 1, padding: '11px', borderRadius: '12px', background: '#F7EFE1', color: '#012374', fontSize: '14px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
-              Cancel
+              {t.common.cancel}
             </button>
             <button type="button" onClick={handleSave} disabled={saving || (!form.activityType && !form.activityMinutes && !form.steps)}
               style={{ flex: 2, padding: '11px', borderRadius: '12px', background: saving ? 'rgba(42,138,138,0.5)' : '#2A8A8A', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: saving ? 'default' : 'pointer' }}>
-              {saving ? 'Saving…' : 'Save movement'}
+              {saving ? t.movement.saving : t.movement.save}
             </button>
           </div>
         </div>

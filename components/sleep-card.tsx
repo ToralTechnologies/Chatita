@@ -1,18 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n/context';
 
-const QUALITY_OPTIONS = [
-  { value: 'great', label: 'Great' },
-  { value: 'good',  label: 'Good' },
-  { value: 'fair',  label: 'Fair' },
-  { value: 'poor',  label: 'Poor' },
-  { value: 'not_sure', label: 'Not sure' },
-];
-
-const QUALITY_LABEL: Record<string, string> = {
-  great: 'Great', good: 'Good', fair: 'Fair', poor: 'Poor', not_sure: 'Not sure',
-};
+const QUALITY_VALUES = ['great', 'good', 'fair', 'poor', 'not_sure'] as const;
 
 interface SleepSummary {
   durationLabel?: string;
@@ -38,6 +29,7 @@ function formatDuration(start: string, end: string): string {
 }
 
 export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
+  const { t } = useTranslation();
   const [summary, setSummary]   = useState<SleepSummary | null>(null);
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(defaultOpen);
@@ -118,10 +110,10 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
             <MoonIcon />
           </span>
           <div style={{ flex: 1 }}>
-            <div className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', lineHeight: 1 }}>Sleep</div>
-            <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>Last night</div>
+            <div className="font-serif-italic" style={{ fontSize: '18px', color: '#012374', lineHeight: 1 }}>{t.sleepCard.title}</div>
+            <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)', marginTop: '2px' }}>{t.sleepCard.subtitle}</div>
           </div>
-          {saved && <span style={{ fontSize: '11.5px', color: '#4A5578', fontWeight: 600 }}>Saved ✓</span>}
+          {saved && <span style={{ fontSize: '11.5px', color: '#4A5578', fontWeight: 600 }}>{t.sleepCard.savedCheck}</span>}
         </div>
       </div>
 
@@ -133,7 +125,7 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
               <div style={{ display: 'flex', gap: '9px', marginBottom: '10px' }}>
                 {summary.durationLabel && (
                   <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Slept</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>{t.sleepCard.slept}</div>
                     <div style={{ marginTop: '2px' }}>
                       <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{summary.durationLabel}</span>
                     </div>
@@ -141,15 +133,15 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
                 )}
                 {summary.quality && (
                   <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>Quality</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>{t.sleepCard.quality}</div>
                     <div style={{ marginTop: '2px' }}>
-                      <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{QUALITY_LABEL[summary.quality] ?? summary.quality}</span>
+                      <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{(t.sleepCard.qualityOptions as Record<string, string>)[summary.quality] ?? summary.quality}</span>
                     </div>
                   </div>
                 )}
                 {summary.wakeEnergy !== undefined && summary.wakeEnergy > 0 && (
                   <div style={{ flex: 1, background: '#F7EFE1', borderRadius: '12px', padding: '11px' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>AM energy</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(22,24,42,0.55)', fontWeight: 600 }}>{t.sleepCard.amEnergy}</div>
                     <div style={{ marginTop: '2px' }}>
                       <span className="font-serif-italic" style={{ fontSize: '20px', color: '#4A5578' }}>{summary.wakeEnergy}</span>
                       <span style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)' }}>/10</span>
@@ -161,7 +153,7 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
           ) : (
             <div style={{ background: '#F7EFE1', borderRadius: '13px', padding: '14px 15px', marginBottom: '10px' }}>
               <div style={{ fontSize: '13.5px', color: '#012374', lineHeight: 1.5 }}>
-                No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.
+                {t.sleepCard.emptyBody}
               </div>
             </div>
           )}
@@ -179,7 +171,7 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <path d="M12 5v14M5 12h14" stroke="#4A5578" strokeWidth="2.2" strokeLinecap="round"/>
             </svg>
-            Log sleep
+            {t.sleepCard.logButton}
           </button>
         </div>
       )}
@@ -188,18 +180,18 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
       {showForm && (
         <div style={{ padding: '14px 16px 16px', borderTop: '1px solid rgba(74,85,120,0.12)' }}>
           <p style={{ fontSize: '12px', color: 'rgba(22,24,42,0.55)', lineHeight: 1.5, marginBottom: '12px' }}>
-            Sleep can affect hunger, cravings, energy, mood, and glucose. This helps Chatita notice patterns over time.
+            {t.sleepCard.formIntro}
           </p>
 
           {/* Times */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Bedtime</label>
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.sleepCard.bedtime}</label>
               <input type="time" value={form.sleepStart} onChange={e => set('sleepStart', e.target.value)}
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Wake time</label>
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.sleepCard.wakeTime}</label>
               <input type="time" value={form.wakeTime} onChange={e => set('wakeTime', e.target.value)}
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
@@ -207,17 +199,17 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
 
           {/* Quality chips */}
           <div style={{ marginBottom: '10px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '8px' }}>Sleep quality</label>
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '8px' }}>{t.sleepCard.sleepQuality}</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {QUALITY_OPTIONS.map(q => (
-                <button key={q.value} type="button" onClick={() => set('sleepQuality', form.sleepQuality === q.value ? '' : q.value)}
+              {QUALITY_VALUES.map(q => (
+                <button key={q} type="button" onClick={() => set('sleepQuality', form.sleepQuality === q ? '' : q)}
                   style={{
                     padding: '6px 13px', borderRadius: '999px', fontSize: '12.5px',
-                    border: form.sleepQuality === q.value ? '1.5px solid #4A5578' : '1.5px solid rgba(1,35,116,0.18)',
-                    background: form.sleepQuality === q.value ? '#4A5578' : 'transparent',
-                    color: form.sleepQuality === q.value ? '#FFFDF9' : '#012374',
+                    border: form.sleepQuality === q ? '1.5px solid #4A5578' : '1.5px solid rgba(1,35,116,0.18)',
+                    background: form.sleepQuality === q ? '#4A5578' : 'transparent',
+                    color: form.sleepQuality === q ? '#FFFDF9' : '#012374',
                     cursor: 'pointer',
-                  }}>{q.label}</button>
+                  }}>{t.sleepCard.qualityOptions[q]}</button>
               ))}
             </div>
           </div>
@@ -225,7 +217,7 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
           {/* Wake energy */}
           <div style={{ marginBottom: '10px' }}>
             <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '7px' }}>
-              Wake-up energy (1–10)
+              {t.sleepCard.wakeEnergy}
             </label>
             <div style={{ display: 'flex', gap: '4px' }}>
               {[1,2,3,4,5,6,7,8,9,10].map(n => (
@@ -244,15 +236,15 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
           {/* Night wakeups */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Night wakeups</label>
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.sleepCard.nightWakeups}</label>
               <input type="number" min={0} max={20} value={form.nighttimeWakeups} onChange={e => set('nighttimeWakeups', e.target.value)} placeholder="0"
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '7px' }}>Stress before bed</label>
+              <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '7px' }}>{t.sleepCard.stressBeforeBed}</label>
               <select value={form.stressBeforeBed} onChange={e => set('stressBeforeBed', Number(e.target.value))}
                 style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none' }}>
-                {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n === 0 ? 'None' : n}</option>)}
+                {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n === 0 ? t.sleepCard.none : n}</option>)}
               </select>
             </div>
           </div>
@@ -260,24 +252,24 @@ export default function SleepCard({ defaultOpen = false }: { defaultOpen?: boole
           {/* Caffeine */}
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '10px' }}>
             <input type="checkbox" checked={form.caffeineLaterInDay} onChange={e => set('caffeineLaterInDay', e.target.checked)} />
-            <span style={{ fontSize: '13px', color: '#16182A' }}>Had caffeine later in the day</span>
+            <span style={{ fontSize: '13px', color: '#16182A' }}>{t.sleepCard.caffeine}</span>
           </label>
 
           {/* Notes */}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>Notes <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Anything else about your sleep…" rows={2}
+            <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.45)', display: 'block', marginBottom: '5px' }}>{t.sleepCard.notes} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t.sleepCard.optional}</span></label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder={t.sleepCard.notesPlaceholder} rows={2}
               style={{ width: '100%', padding: '9px 11px', borderRadius: '10px', border: '1px solid rgba(1,35,116,0.18)', background: 'rgba(1,35,116,0.03)', fontSize: '13px', color: '#16182A', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" onClick={() => setShowForm(false)}
               style={{ flex: 1, padding: '11px', borderRadius: '12px', background: '#F7EFE1', color: '#012374', fontSize: '14px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
-              Cancel
+              {t.common.cancel}
             </button>
             <button type="button" onClick={handleSave} disabled={saving || (!form.sleepQuality && !form.sleepStart && !form.wakeEnergy)}
               style={{ flex: 2, padding: '11px', borderRadius: '12px', background: saving ? 'rgba(74,85,120,0.5)' : '#4A5578', color: '#FFFDF9', fontSize: '14px', fontWeight: 600, border: 'none', cursor: saving ? 'default' : 'pointer' }}>
-              {saving ? 'Saving…' : 'Save sleep log'}
+              {saving ? t.sleepCard.saving : t.sleepCard.save}
             </button>
           </div>
         </div>

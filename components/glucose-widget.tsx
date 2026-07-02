@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n/context';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
 
@@ -19,19 +20,14 @@ interface GlucoseWidgetProps {
   onUpdate?: (value: number, context?: GlucoseContext, relatedMealId?: string, notes?: string) => void;
 }
 
-const CONTEXT_LABELS: Record<GlucoseContext, string> = {
-  fasting:    'Fasting',
-  'pre-meal': 'Before meal',
-  'post-meal':'After meal',
-  bedtime:    'Bedtime',
-  random:     'Random',
-};
+const CONTEXT_VALUES: GlucoseContext[] = ['fasting', 'pre-meal', 'post-meal', 'bedtime', 'random'];
 
 function getTimeString() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpdate }: GlucoseWidgetProps) {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [context, setContext] = useState<GlucoseContext>('random');
@@ -43,9 +39,9 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
 
   const getStatus = (v?: number) => {
     if (!v) return null;
-    if (v < minRange) return { label: 'Below range', color: '#D0021B', bg: 'rgba(208,2,27,0.12)' };
-    if (v > maxRange) return { label: 'A bit above range · that\'s okay', color: '#9A6F18', bg: 'rgba(200,147,43,0.16)' };
-    return { label: 'In range', color: '#4A8C00', bg: 'rgba(126,211,33,0.15)' };
+    if (v < minRange) return { label: t.glucoseWidget.belowRange, color: '#D0021B', bg: 'rgba(208,2,27,0.12)' };
+    if (v > maxRange) return { label: t.glucoseWidget.aboveRange, color: '#9A6F18', bg: 'rgba(200,147,43,0.16)' };
+    return { label: t.glucoseWidget.inRange, color: '#4A8C00', bg: 'rgba(126,211,33,0.15)' };
   };
 
   const status = getStatus(currentValue);
@@ -93,7 +89,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
   const getTimeAgo = (d: string) => {
     const diff = Date.now() - new Date(d).getTime();
     const m = Math.floor(diff / 60000);
-    return m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
+    return m < 60 ? t.glucoseWidget.minAgoShort.replace('{m}', String(m)) : t.glucoseWidget.hourAgoShort.replace('{h}', String(Math.floor(m / 60)));
   };
 
   return (
@@ -114,14 +110,14 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
             <label
               style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, display: 'block', marginBottom: '8px' }}
             >
-              Blood Glucose (mg/dL)
+              {t.glucoseWidget.inputLabel}
             </label>
             <input
               type="number"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               autoFocus
-              placeholder="e.g. 120"
+              placeholder={t.glucoseWidget.inputPlaceholder}
               className="w-full focus:outline-none"
               style={{
                 padding: '12px 14px',
@@ -137,10 +133,10 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
           {/* Context pills */}
           <div>
             <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
-              When?
+              {t.glucoseWidget.when}
             </p>
             <div className="flex flex-wrap gap-2">
-              {(Object.entries(CONTEXT_LABELS) as [GlucoseContext, string][]).map(([ctx, label]) => (
+              {CONTEXT_VALUES.map((ctx) => (
                 <button
                   key={ctx}
                   onClick={() => setContext(ctx)}
@@ -154,7 +150,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                     border: `1px solid ${context === ctx ? '#012374' : 'rgba(1,35,116,0.22)'}`,
                   }}
                 >
-                  {label}
+                  {t.glucoseWidget.contexts[ctx]}
                 </button>
               ))}
             </div>
@@ -164,10 +160,10 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
           {context === 'post-meal' && (
             <div>
               <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
-                Link to meal (optional)
+                {t.glucoseWidget.linkToMeal}
               </p>
               {loadingMeals ? (
-                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>Loading…</p>
+                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>{t.glucoseWidget.loadingMeals}</p>
               ) : recentMeals.length > 0 ? (
                 <div className="space-y-1.5">
                   {recentMeals.slice(0, 5).map(meal => (
@@ -193,7 +189,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                   ))}
                 </div>
               ) : (
-                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>No recent meals found</p>
+                <p style={{ fontSize: '12px', color: 'rgba(1,35,116,0.4)' }}>{t.glucoseWidget.noRecentMeals}</p>
               )}
             </div>
           )}
@@ -201,12 +197,12 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
           {/* Notes */}
           <div>
             <p style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(1,35,116,0.6)', fontWeight: 600, marginBottom: '8px' }}>
-              Notes (optional)
+              {t.glucoseWidget.notesLabel}
             </p>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="How are you feeling? Any symptoms?"
+              placeholder={t.glucoseWidget.notesPlaceholder}
               rows={2}
               className="w-full resize-none focus:outline-none"
               style={{
@@ -236,7 +232,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 boxShadow: '0 10px 22px -10px rgba(1,35,116,0.5)',
               }}
             >
-              Save Reading
+              {t.glucoseWidget.saveReading}
             </button>
             <button
               onClick={() => { setIsEditing(false); setInputValue(''); setContext('random'); setNotes(''); setSelectedMealId(undefined); setRecentMeals([]); }}
@@ -251,7 +247,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </div>
@@ -261,13 +257,13 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
           {/* Header row */}
           <div className="flex items-baseline justify-between">
             <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#001A4D', opacity: 0.6, fontWeight: 600 }}>
-              Today&apos;s Glucose
+              {t.glucoseWidget.title}
             </span>
             <button
               onClick={() => setIsEditing(true)}
               style={{ fontSize: '11px', color: '#C8932B', fontWeight: 700, padding: '14px 10px', margin: '-14px -10px' }}
             >
-              + {currentValue ? 'Update' : 'Add reading'}
+              + {currentValue ? t.glucoseWidget.update : t.glucoseWidget.addReading}
             </button>
           </div>
 
@@ -280,7 +276,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
               {currentValue ?? '—'}
             </span>
             <span style={{ fontSize: '14px', color: '#16182A', opacity: 0.55, paddingBottom: '8px' }}>
-              {currentValue ? 'mg/dL' : 'mg/dL · no data yet'}
+              {currentValue ? 'mg/dL' : t.glucoseWidget.noData}
             </span>
           </div>
 
@@ -337,9 +333,9 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
             className="flex justify-between"
             style={{ marginTop: '6px', fontSize: '11px', color: '#16182A', opacity: 0.65 }}
           >
-            <span>Low</span>
+            <span>{t.glucoseWidget.low}</span>
             <span>{minRange} – {maxRange} mg/dL</span>
-            <span>High</span>
+            <span>{t.glucoseWidget.high}</span>
           </div>
 
           {/* ADA-aligned clinical safety banners — non-dismissible */}
@@ -356,7 +352,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ Very low — treat immediately. If you feel confused or cannot swallow safely, call 911.
+              {t.glucoseWidget.veryLowBanner}
             </div>
           )}
           {currentValue !== undefined && currentValue >= 54 && currentValue < 70 && (
@@ -372,7 +368,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ Low — treat now with 15g fast-acting carbs. Recheck in 15 minutes.
+              {t.glucoseWidget.lowBanner}
             </div>
           )}
           {currentValue !== undefined && currentValue >= 240 && currentValue < 300 && (
@@ -388,7 +384,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ High — check ketones if you have strips. Follow your care plan or contact your care team.
+              {t.glucoseWidget.highBanner}
             </div>
           )}
           {currentValue !== undefined && currentValue >= 300 && (
@@ -404,7 +400,7 @@ export default function GlucoseWidget({ currentValue, minRange, maxRange, onUpda
                 fontWeight: 600,
               }}
             >
-              ⚠️ Very high — please contact your care team or seek urgent care.
+              {t.glucoseWidget.veryHighBanner}
             </div>
           )}
         </>

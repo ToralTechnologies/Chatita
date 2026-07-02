@@ -25,71 +25,73 @@ import { useTheme } from '@/lib/theme-context';
 const QUICK_ACTIONS = [
   {
     href: '/add-meal',
-    label: 'Log meal',
+    labelKey: 'qaLogMeal' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#012374" strokeWidth="1.6"/><path d="M3 19h18" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/><path d="M12 4v4" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
   {
     href: null,  // opens modal
-    label: 'Movement',
+    labelKey: 'qaMovement' as const,
     bg: 'rgba(42,138,138,0.1)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="14.5" cy="5" r="1.8" stroke="#2A8A8A" strokeWidth="1.6"/><path d="M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4" stroke="#2A8A8A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
   {
     href: null,  // opens mood modal
-    label: 'Mood',
+    labelKey: 'qaMood' as const,
     bg: 'rgba(200,147,43,0.1)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C8932B" strokeWidth="1.6"/><path d="M8.5 14c1 1.3 5 1.3 6 0M9 9.5v.5M15 9.5v.5" stroke="#C8932B" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
   {
     href: '/meal-history',
-    label: 'Meal history',
+    labelKey: 'qaMealHistory' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#012374" strokeWidth="1.6"/><path d="M12 7v5l3.5 2" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
   {
     href: '/insights',
-    label: 'Insights',
+    labelKey: 'qaInsights' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 19V5m0 14h16M4 15l4-4 3 3 5-6 4 5" stroke="#012374" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
   {
     href: '/restaurant-finder',
-    label: 'Restaurants',
+    labelKey: 'qaRestaurants' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z" stroke="#012374" strokeWidth="1.6"/><circle cx="12" cy="10" r="2.5" stroke="#012374" strokeWidth="1.6"/></svg>,
   },
   {
     href: '/grocery-list',
-    label: 'Grocery list',
+    labelKey: 'qaGroceryList' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14l-1.2 10a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z" stroke="#012374" strokeWidth="1.6"/><path d="M9 7a3 3 0 0 1 6 0" stroke="#012374" strokeWidth="1.6"/></svg>,
   },
   {
     href: '/recipes',
-    label: 'Recipes',
+    labelKey: 'qaRecipes' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1z" stroke="#012374" strokeWidth="1.6"/><path d="M3 19h18" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
   {
     href: '/meal-plan',
-    label: 'Meal plan',
+    labelKey: 'qaMealPlan' as const,
     bg: 'rgba(1,35,116,0.08)',
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2.5" stroke="#012374" strokeWidth="1.6"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#012374" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   },
 ];
 
-function getDayLabel() {
+function getDayLabel(language: string) {
+  // Locale-aware date, styled "Thursday · 2 July" / "jueves · 2 de julio"
   const now = new Date();
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${days[now.getDay()]} · ${now.getDate()} ${months[now.getMonth()]}`;
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
+  const weekday = now.toLocaleDateString(locale, { weekday: 'long' });
+  const dayMonth = now.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  return `${weekday} · ${dayMonth}`;
 }
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { theme } = useTheme();
   const [userData, setUserData] = useState<any>(null);
   const [currentGlucose, setCurrentGlucose] = useState<number | undefined>(undefined);
@@ -249,7 +251,7 @@ export default function HomePage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7EFE1' }}>
-        <div style={{ color: 'rgba(1,35,116,0.4)', fontSize: '13px' }}>Loading…</div>
+        <div style={{ color: 'rgba(1,35,116,0.4)', fontSize: '13px' }}>{t.home.loading}</div>
       </div>
     );
   }
@@ -280,7 +282,7 @@ export default function HomePage() {
       <div style={{ padding: 'max(16px, env(safe-area-inset-top, 0px)) 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>{getDayLabel()}</div>
+            <div style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>{getDayLabel(language)}</div>
             <h1 className="font-serif-italic" style={{ fontSize: '30px', lineHeight: 1, color: '#012374', marginTop: '5px' }}>
               Hola, {firstName}.
             </h1>
@@ -327,8 +329,8 @@ export default function HomePage() {
               </svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '16px', fontWeight: 600 }}>Log a meal</div>
-              <div style={{ fontSize: '12.5px', opacity: 0.82, marginTop: '1px' }}>Snap your plate — Chatita reads it.</div>
+              <div style={{ fontSize: '16px', fontWeight: 600 }}>{t.home.logMealCta}</div>
+              <div style={{ fontSize: '12.5px', opacity: 0.82, marginTop: '1px' }}>{t.home.logMealSub}</div>
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#FFFDF9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </div>
@@ -365,9 +367,9 @@ export default function HomePage() {
                 <path d="M8.5 14c1 1.3 5 1.3 6 0M9 9.5v.5M15 9.5v.5" stroke="#C8932B" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
             </span>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374', marginTop: '10px' }}>Mood check-in</div>
-            <div style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)', marginTop: '2px', lineHeight: 1.4 }}>How are you, really?</div>
-            <div style={{ marginTop: '11px', fontSize: '12.5px', fontWeight: 600, color: '#9A6F18' }}>Tap to check in →</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374', marginTop: '10px' }}>{t.home.moodCheckIn}</div>
+            <div style={{ fontSize: '12px', color: 'rgba(22,24,42,0.6)', marginTop: '2px', lineHeight: 1.4 }}>{t.home.moodPrompt}</div>
+            <div style={{ marginTop: '11px', fontSize: '12.5px', fontWeight: 600, color: '#9A6F18' }}>{t.home.tapToCheckIn}</div>
           </button>
 
           {/* Hydration card */}
@@ -377,7 +379,7 @@ export default function HomePage() {
                 <path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" stroke="#2A6FA8" strokeWidth="1.7" strokeLinejoin="round"/>
               </svg>
             </span>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374', marginTop: '10px' }}>Water</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#012374', marginTop: '10px' }}>{t.home.water}</div>
             <div style={{ marginTop: '4px' }}>
               <span className="font-serif-italic" style={{ fontSize: '20px', color: '#2A6FA8' }}>{waterOz}</span>
               <span style={{ fontSize: '11px', color: 'rgba(22,24,42,0.5)' }}> / 64 oz</span>
@@ -404,31 +406,31 @@ export default function HomePage() {
         {/* ── Gentle insight ── */}
         {gentleInsight ? (
           <div style={{ marginTop: '11px', background: 'rgba(28,122,79,0.08)', border: '1px solid rgba(28,122,79,0.2)', borderRadius: '18px', padding: '17px' }}>
-            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>A gentle pattern</div>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>{t.home.gentlePattern}</div>
             <div className="font-serif-italic" style={{ fontSize: '16px', color: '#16182A', lineHeight: 1.3, marginTop: '6px' }}>
               {gentleInsight.message}
             </div>
             {gentleInsight.reason && (
               <div style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.65)', marginTop: '5px', lineHeight: 1.45 }}>
-                {gentleInsight.reason} — Discuss with your care team.
+                {gentleInsight.reason} — {t.home.discussCareTeam}
               </div>
             )}
           </div>
         ) : (
           <div style={{ marginTop: '11px', background: 'rgba(28,122,79,0.08)', border: '1px solid rgba(28,122,79,0.2)', borderRadius: '18px', padding: '17px' }}>
-            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>A gentle pattern</div>
+            <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1C7A4F', fontWeight: 700 }}>{t.home.gentlePattern}</div>
             <div className="font-serif-italic" style={{ fontSize: '16px', color: '#16182A', lineHeight: 1.3, marginTop: '6px' }}>
-              Keep logging — your patterns will show up here after a few days.
+              {t.home.keepLogging}
             </div>
             <div style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.65)', marginTop: '5px', lineHeight: 1.45 }}>
-              No judgment, just gentle context. Discuss anything notable with your care team.
+              {t.home.noJudgment}
             </div>
           </div>
         )}
 
         {/* ── Quick actions ── */}
         <div style={{ marginTop: '18px' }}>
-          <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: '10px' }}>Quick actions</div>
+          <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: '10px' }}>{t.home.quickActionsTitle}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>
             {QUICK_ACTIONS.map((a) => {
               const inner = (
@@ -436,19 +438,19 @@ export default function HomePage() {
                   <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: a.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {a.icon}
                   </span>
-                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#16182A' }}>{a.label}</span>
+                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#16182A' }}>{(t.home as any)[a.labelKey]}</span>
                 </div>
               );
-              if (a.href === null && a.label === 'Movement') {
+              if (a.href === null && a.labelKey === 'qaMovement') {
                 return (
-                  <button key={a.label} type="button" onClick={() => setShowMovementModal(true)} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                  <button key={a.labelKey} type="button" onClick={() => setShowMovementModal(true)} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                     {inner}
                   </button>
                 );
               }
-              if (a.href === null && a.label === 'Mood') {
+              if (a.href === null && a.labelKey === 'qaMood') {
                 return (
-                  <button key={a.label} type="button" onClick={() => setShowMoodModal(true)} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                  <button key={a.labelKey} type="button" onClick={() => setShowMoodModal(true)} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                     {inner}
                   </button>
                 );
@@ -482,7 +484,7 @@ export default function HomePage() {
             style={{ background: '#F7EFE1', borderRadius: '26px 26px 0 0', maxHeight: '90vh', padding: '20px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Check in</span>
+              <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>{t.home.checkInKicker}</span>
               <button type="button" onClick={() => setShowMoodModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
             <MoodSelector onSave={(data) => { handleMoodSave(data); setShowMoodModal(false); }} />
@@ -502,7 +504,7 @@ export default function HomePage() {
             style={{ background: '#F7EFE1', borderRadius: '26px 26px 0 0', maxHeight: '90vh', padding: '20px 20px calc(20px + env(safe-area-inset-bottom, 0px))' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#2A8A8A', fontWeight: 700 }}>Log movement</span>
+              <span style={{ fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#2A8A8A', fontWeight: 700 }}>{t.home.logMovementKicker}</span>
               <button type="button" onClick={() => setShowMovementModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', color: 'rgba(22,24,42,0.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
             <MovementCard defaultOpen />
@@ -551,6 +553,7 @@ const TREND_ARROW: Record<string, string> = {
 function CgmPill({ reading }: {
   reading: { value: number; measuredAt: string; trend: string | null; provider: string }
 }) {
+  const { t } = useTranslation();
   const minutesAgo = Math.round((Date.now() - new Date(reading.measuredAt).getTime()) / 60000);
   const isStale = minutesAgo > 20;
   const arrow = reading.trend ? (TREND_ARROW[reading.trend.toLowerCase()] ?? '') : '';
@@ -595,8 +598,8 @@ function CgmPill({ reading }: {
       </div>
 
       <div style={{ fontSize: '11px', color: isStale ? '#B5562E' : 'rgba(22,24,42,0.4)', textAlign: 'right', flexShrink: 0 }}>
-        {minutesAgo < 1 ? 'Just now' : `${minutesAgo} min ago`}
-        {isStale && <div style={{ fontSize: '10px', color: '#B5562E' }}>Needs sync</div>}
+        {minutesAgo < 1 ? t.home.justNow : t.home.minAgo.replace('{minutes}', String(minutesAgo))}
+        {isStale && <div style={{ fontSize: '10px', color: '#B5562E' }}>{t.home.needsSync}</div>}
       </div>
     </div>
   );
