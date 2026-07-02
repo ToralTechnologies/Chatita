@@ -25,7 +25,13 @@ export async function GET(request: Request) {
     const days = parseInt(searchParams.get('days') || '30');
     const refresh = searchParams.get('refresh') === '1';
 
-    const cacheKey = `${session.user.id}:${days}`;
+    // Include language in the key so switching app language doesn't serve
+    // cached insights in the other language until expiry.
+    const langRow = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { preferredLanguage: true },
+    });
+    const cacheKey = `${session.user.id}:${days}:${langRow?.preferredLanguage ?? 'en'}`;
     if (!refresh) {
       const cached = insightsCache.get(cacheKey);
       if (cached && cached.expires > Date.now()) {

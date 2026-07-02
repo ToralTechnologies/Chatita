@@ -123,7 +123,7 @@ const ES_VOCAB: Record<string, string> = {
   'Half full': 'Medio llena', 'Present': 'Presente', 'Relieved': 'Aliviada',
   'Restless': 'Inquieta', 'Thrilled': 'Encantada', 'Uncertain': 'Insegura',
   'Very full': 'Muy llena', 'Very hungry': 'Con mucha hambre', 'Very low': 'Muy baja',
-  'Diarrhea': 'Diarrea', 'High': 'Alta', 'Low': 'Baja',
+  'Diarrhea': 'Diarrea', 'High': 'Alta', 'Low': 'Baja', 'In range': 'En rango',
   'Check-in saved ✓': 'Chequeo guardado ✓', 'Saved ✓': 'Guardado ✓',
   'Energy level': 'Nivel de energía',
   'Hunger level': 'Nivel de hambre',

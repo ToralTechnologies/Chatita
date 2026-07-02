@@ -8,6 +8,7 @@ import ExportButton from '@/components/export-button';
 import { exportAnalyticsToPDF, exportAnalyticsToCSV } from '@/lib/export-utils';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 const GlucoseTrendChart = dynamic(() => import('@/components/charts/glucose-trend-chart'), { ssr: false });
 const MealComparisonChart = dynamic(() => import('@/components/charts/meal-comparison-chart'), { ssr: false });
@@ -84,13 +85,17 @@ function glucoseStatusLabel(v: number, min: number, max: number) {
   return 'In range';
 }
 
-function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay', axisLabels }: {
+function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay', axisLabels, minWidth }: {
   dots: GlucoseDot[];
   targetMin?: number;
   targetMax?: number;
   mode?: 'timeline' | 'timeOfDay';
   axisLabels?: string[];
+  /** Widen the chart beyond its container (px) so dense CGM traces stay
+   *  explorable by touch — the wrapper scrolls horizontally. */
+  minWidth?: number;
 }) {
+  const { language } = useTranslation();
   const [tooltip, setTooltip] = useState<{ dot: GlucoseDot } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -112,7 +117,8 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay
   const pxY  = (svgY: number) => `${(svgY / 240) * 180}px`;
 
   return (
-    <div ref={containerRef} style={{ overflowX: 'auto', position: 'relative' }}>
+    <div ref={containerRef} style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+     <div style={{ position: 'relative', minWidth: minWidth ? `${minWidth}px` : undefined }}>
       <svg
         viewBox="0 0 1000 240"
         preserveAspectRatio="none"
@@ -170,7 +176,7 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay
           <span style={{ fontSize: '15px', fontWeight: 700, color: tooltip.dot.color }}>{tooltip.dot.v}</span>
           <span style={{ opacity: 0.75 }}> mg/dL</span>
           <div style={{ opacity: 0.65, fontSize: '11px', marginTop: '2px' }}>
-            {glucoseStatusLabel(tooltip.dot.v, targetMin, targetMax)} · {tooltip.dot.label}
+            {vocab(glucoseStatusLabel(tooltip.dot.v, targetMin, targetMax), language)} · {tooltip.dot.label}
           </div>
           <div style={{
             position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)',
@@ -183,6 +189,86 @@ function ScatterChart({ dots, targetMin = 70, targetMax = 180, mode = 'timeOfDay
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(22,24,42,0.45)', marginTop: '4px', padding: '0 4px' }}>
         {labels.map((l, i) => <span key={i}>{l}</span>)}
+      </div>
+     </div>
+    </div>
+  );
+}
+
+
+// ── Individual readings browser (mobile-first) ────────────────────────────────
+// Dense CGM traces are unreadable point-by-point on a phone, so this gives a
+// tappable day-by-day list of every reading in the selected period.
+
+function ReadingsBrowser({ dots, targetMin, targetMax }: {
+  dots: GlucoseDot[]; targetMin: number; targetMax: number;
+}) {
+  const { t, language } = useTranslation();
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
+
+  const days = useMemo(() => {
+    const map = new Map<string, GlucoseDot[]>();
+    for (const d of dots) {
+      const key = new Date(d.t).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    }
+    return [...map.entries()]
+      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+      .map(([key, ds]) => ({ key, dots: [...ds].sort((a, b) => b.t - a.t) }));
+  }, [dots]);
+
+  const [selected, setSelected] = useState(0);
+  useEffect(() => { setSelected(0); }, [days.length]);
+  const day = days[Math.min(selected, Math.max(0, days.length - 1))];
+  if (!day) return null;
+
+  const values = day.dots.map(d => d.v);
+  const avg = Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  const dayLabel = (key: string) =>
+    new Date(key).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }).replace('.', '');
+
+  return (
+    <div style={{ marginTop: '20px', background: '#FFFDF9', borderRadius: '18px', border: '1px solid rgba(1,35,116,0.07)', padding: '20px', boxShadow: '0 14px 30px -26px rgba(1,35,116,.3)' }}>
+      <h3 className="font-serif-italic" style={{ fontSize: '18px', color: '#012374' }}>{t.insightsPage.browseTitle}</h3>
+      <p style={{ fontSize: '12.5px', color: 'rgba(22,24,42,0.55)', marginTop: '3px', lineHeight: 1.45 }}>{t.insightsPage.browseSubtitle}</p>
+
+      {/* Day picker — horizontal scroll, newest first */}
+      <div style={{ display: 'flex', gap: '7px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 2px 4px', margin: '0 -2px' }}>
+        {days.map((d, i) => (
+          <button key={d.key} onClick={() => setSelected(i)} style={{
+            flexShrink: 0, padding: '11px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 600,
+            border: 'none', fontFamily: 'inherit', cursor: 'pointer', minHeight: 44,
+            background: i === selected ? '#012374' : '#F7EFE1',
+            color: i === selected ? '#FFFDF9' : '#012374',
+          }}>{dayLabel(d.key)}</button>
+        ))}
+      </div>
+
+      {/* Day summary */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '12px', color: 'rgba(22,24,42,0.6)', margin: '8px 2px 10px' }}>
+        <span style={{ fontWeight: 700, color: '#012374' }}>
+          {day.dots.length === 1 ? t.insightsPage.dayReading : t.insightsPage.dayReadings.replace('{n}', String(day.dots.length))}
+        </span>
+        <span>{t.insightsPage.dayAvg.replace('{v}', String(avg))} mg/dL</span>
+        <span>{t.insightsPage.dayRange.replace('{min}', String(min)).replace('{max}', String(max))}</span>
+      </div>
+
+      {/* Readings list — newest first, capped height so the page stays light */}
+      <div style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {day.dots.map((d, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '11px', background: '#F7EFE1', borderRadius: '11px', padding: '10px 13px' }}>
+            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+            <span className="font-serif-italic" style={{ fontSize: '19px', color: '#012374', lineHeight: 1, minWidth: '46px' }}>{d.v}</span>
+            <span style={{ fontSize: '11.5px', color: 'rgba(22,24,42,0.45)' }}>mg/dL</span>
+            <span style={{ flex: 1, textAlign: 'right', fontSize: '12.5px', color: 'rgba(22,24,42,0.6)' }}>
+              {vocab(glucoseStatusLabel(d.v, targetMin, targetMax), language)} · {new Date(d.t).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -396,13 +482,21 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
         {/* Scatter chart */}
         <div style={{ marginTop: '18px' }}>
           {scatterDots.length > 0 ? (
-            <ScatterChart
-              dots={scatterDots}
-              targetMin={correlation?.targetGlucoseMin ?? 70}
-              targetMax={correlation?.targetGlucoseMax ?? 180}
-              mode={chartMode}
-              axisLabels={axisLabels}
-            />
+            <>
+              <ScatterChart
+                dots={scatterDots}
+                targetMin={correlation?.targetGlucoseMin ?? 70}
+                targetMax={correlation?.targetGlucoseMax ?? 180}
+                mode={chartMode}
+                axisLabels={axisLabels}
+                // On mobile a 7/30/90-day trace crushes into ~390px; widen so
+                // individual readings stay distinguishable and tappable.
+                minWidth={!isWeb && chartMode === 'timeline' ? Math.min(2600, period * (period <= 7 ? 110 : period <= 30 ? 60 : 28)) : undefined}
+              />
+              {!isWeb && chartMode === 'timeline' && (
+                <p style={{ fontSize: '11px', color: 'rgba(22,24,42,0.45)', marginTop: '6px' }}>{t.insightsPage.scrollHint}</p>
+              )}
+            </>
           ) : correlation?.chartData?.trendData ? (
             <GlucoseTrendChart data={correlation.chartData.trendData} />
           ) : (
@@ -422,6 +516,15 @@ function InsightsContent({ correlation, aiInsights, scatterDots, allCards, perio
           </div>
         )}
       </div>
+
+      {/* ── Individual readings browser (mobile) ── */}
+      {!isWeb && scatterDots.length > 0 && (
+        <ReadingsBrowser
+          dots={scatterDots}
+          targetMin={correlation?.targetGlucoseMin ?? 70}
+          targetMax={correlation?.targetGlucoseMax ?? 180}
+        />
+      )}
 
       {/* ── Featured insight (navy) ── */}
       {featuredCard && (
