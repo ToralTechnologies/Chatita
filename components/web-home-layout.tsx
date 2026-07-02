@@ -8,6 +8,8 @@ import MovementCard from '@/components/movement-card';
 import SleepCard from '@/components/sleep-card';
 import ChatInterface from '@/components/chat-interface';
 import { Mood, UserContext, MoodCheckInData } from '@/types';
+import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 type GlucoseContext = 'fasting' | 'pre-meal' | 'post-meal' | 'bedtime' | 'random';
 
@@ -28,16 +30,17 @@ interface GlucoseEntry {
   context?: string;
 }
 
-function getDayLabel() {
+function getDayLabel(language: string = 'en') {
   const now = new Date();
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${days[now.getDay()]} · ${now.getDate()} ${months[now.getMonth()]}`;
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
+  const weekday = now.toLocaleDateString(locale, { weekday: 'long' });
+  const dayMonth = now.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  return `${weekday} · ${dayMonth}`;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, language: string = 'en') {
   const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return d.toLocaleTimeString(language === 'es' ? 'es-MX' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 function isToday(iso: string) {
@@ -153,6 +156,7 @@ export default function WebHomeLayout({
   onMoodSave,
   onContextSave,
 }: WebHomeLayoutProps) {
+  const { t, language } = useTranslation();
   const [showAddReading, setShowAddReading] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [showSleepModal, setShowSleepModal] = useState(false);
@@ -231,9 +235,9 @@ export default function WebHomeLayout({
 
   const getStatus = (v?: number) => {
     if (!v) return null;
-    if (v < 70) return { label: 'A little low — be gentle', color: '#012374', bg: 'rgba(1,35,116,0.12)' };
+    if (v < 70) return { label: vocab('A little low — be gentle', language), color: '#012374', bg: 'rgba(1,35,116,0.12)' };
     if (v > 180) return { label: "A bit above range — that's okay", color: '#9A6F18', bg: 'rgba(200,147,43,0.16)' };
-    return { label: 'Right in your range', color: '#001A4D', bg: 'rgba(1,35,116,0.10)' };
+    return { label: vocab('Right in your range', language), color: '#001A4D', bg: 'rgba(1,35,116,0.10)' };
   };
   const status = getStatus(displayGlucose);
 
@@ -399,7 +403,7 @@ export default function WebHomeLayout({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>
-              {getDayLabel()}
+              {getDayLabel(language)}
             </div>
             <h1
               className="font-serif-italic"
@@ -408,7 +412,7 @@ export default function WebHomeLayout({
               Hola, {firstName}.
             </h1>
             <p style={{ fontSize: 16, color: '#16182A', opacity: 0.72, marginTop: 8, lineHeight: 1.55 }}>
-              Here&apos;s how your day is going. No scores, no judgment.
+              {vocab("Here's how your day is going. No scores, no judgment.", language)}
             </p>
           </div>
           <button
@@ -423,7 +427,7 @@ export default function WebHomeLayout({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/>
             </svg>
-            Add a reading
+            {vocab('Add a reading', language)}
           </button>
         </div>
 
@@ -433,9 +437,9 @@ export default function WebHomeLayout({
           {/* LEFT: Glucose Overview Card */}
           <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '26px 28px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.6)', fontWeight: 700 }}>Latest reading</span>
+              <span style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.6)', fontWeight: 700 }}>{vocab('Latest reading', language)}</span>
               {latestReading && (
-                <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.55)' }}>{formatTime(latestReading.measuredAt)}</span>
+                <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.55)' }}>{formatTime(latestReading.measuredAt, language)}</span>
               )}
             </div>
 
@@ -478,9 +482,9 @@ export default function WebHomeLayout({
             {/* 3 stat boxes */}
             <div style={{ display: 'flex', gap: 14, marginTop: 22 }}>
               {[
-                { label: 'Time in range', value: timeInRange != null ? `${timeInRange}%` : '—' },
-                { label: 'Readings today', value: todayReadings.length || '—' },
-                { label: 'Gentle avg · 7 days', value: gentleAverage ? `${gentleAverage}` : '—' },
+                { label: vocab('Time in range', language), value: timeInRange != null ? `${timeInRange}%` : '—' },
+                { label: vocab('Readings today', language), value: todayReadings.length || '—' },
+                { label: vocab('Gentle avg · 7 days', language), value: gentleAverage ? `${gentleAverage}` : '—' },
               ].map(stat => (
                 <div key={stat.label} style={{ flex: 1, background: '#F7EFE1', borderRadius: 15, padding: '15px 16px' }}>
                   <div
@@ -497,7 +501,7 @@ export default function WebHomeLayout({
             {/* Today's readings list */}
             {todayReadings.length > 0 && (
               <div style={{ marginTop: 22 }}>
-                <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 12 }}>Today&apos;s readings</div>
+                <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 12 }}>{vocab("Today's readings", language)}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {todayReadings.slice(0, 5).map((r, i) => (
                     <div key={i} style={{ background: '#F7EFE1', borderRadius: 13, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -509,7 +513,7 @@ export default function WebHomeLayout({
                         {r.value}
                       </span>
                       <span style={{ fontSize: 13, color: 'rgba(22,24,42,0.6)', flex: 1 }}>{r.context || 'mg/dL'}</span>
-                      <span style={{ fontSize: 12, color: 'rgba(22,24,42,0.45)' }}>{formatTime(r.measuredAt)}</span>
+                      <span style={{ fontSize: 12, color: 'rgba(22,24,42,0.45)' }}>{formatTime(r.measuredAt, language)}</span>
                     </div>
                   ))}
                 </div>
@@ -522,15 +526,15 @@ export default function WebHomeLayout({
 
             {/* Check-in card */}
             <div style={{ background: '#012374', borderRadius: 22, padding: 24 }}>
-              <div style={{ fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>Check in</div>
+              <div style={{ fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C8932B', fontWeight: 700 }}>{vocab('Check in', language)}</div>
               <h2
                 className="font-serif-italic"
                 style={{ fontSize: 24, color: '#FFFDF9', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.25, marginTop: 10 }}
               >
-                How are you feeling right now?
+                {vocab('How are you feeling right now?', language)}
               </h2>
               <p style={{ fontSize: 14, color: 'rgba(255,253,249,0.72)', lineHeight: 1.5, marginTop: 10 }}>
-                Log your mood, how your body feels, and your latest glucose — all in one gentle flow.
+                {vocab('Log your mood, how your body feels, and your latest glucose — all in one gentle flow.', language)}
               </p>
               <button
                 onClick={openCheckin}
@@ -541,7 +545,7 @@ export default function WebHomeLayout({
                   cursor: 'pointer',
                 }}
               >
-                Start a check-in
+                {vocab('Start a check-in', language)}
               </button>
             </div>
 
@@ -552,17 +556,17 @@ export default function WebHomeLayout({
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="14.5" cy="5" r="1.8" stroke="#2A8A8A" strokeWidth="1.7"/><path d="M14 7l-2 6M14.5 8l3-3M13.5 9l-3 1M12 13l-3 6M12 13l3 4" stroke="#2A8A8A" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Movement today</div>
-                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>Context for your glucose — never a target.</div>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>{vocab('Movement today', language)}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>{vocab('Context for your glucose — never a target.', language)}</div>
                 </div>
                 <button onClick={() => setShowMovementModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#2A8A8A', color: '#FFFDF9', borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFDF9" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                  Add movement
+                  {vocab('Add movement', language)}
                 </button>
               </div>
               <div style={{ marginTop: 14, background: '#F7EFE1', borderRadius: 13, padding: '14px 16px' }}>
-                <div style={{ fontSize: 13.5, color: '#012374', fontWeight: 600 }}>Nothing logged yet — and that&apos;s okay.</div>
-                <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.68)', marginTop: 4, lineHeight: 1.5 }}>Chores, a short walk, stretching, dancing or physical work all count.</div>
+                <div style={{ fontSize: 13.5, color: '#012374', fontWeight: 600 }}>{vocab("Nothing logged yet — and that's okay.", language)}</div>
+                <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.68)', marginTop: 4, lineHeight: 1.5 }}>{vocab('Chores, a short walk, stretching, dancing or physical work all count.', language)}</div>
               </div>
             </div>
 
@@ -573,16 +577,16 @@ export default function WebHomeLayout({
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14a8 8 0 1 1-9.5-9 6.5 6.5 0 0 0 9.5 9z" stroke="#4A5578" strokeWidth="1.6" strokeLinejoin="round"/></svg>
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Sleep</div>
-                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 3 }}>Last night</div>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>{vocab('Sleep', language)}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 3 }}>{vocab('Last night', language)}</div>
                 </div>
               </div>
               <div style={{ background: '#F7EFE1', borderRadius: 13, padding: '13px 15px', fontSize: 13, color: '#012374', lineHeight: 1.5 }}>
-                No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.
+                {vocab('No sleep logged yet. Sleep can affect energy, appetite, mood, and glucose patterns.', language)}
               </div>
               <button onClick={() => setShowSleepModal(true)} style={{ width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#F7EFE1', color: '#4A5578', borderRadius: 11, padding: '11px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4A5578" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                Log sleep
+                {vocab('Log sleep', language)}
               </button>
             </div>
 
@@ -593,7 +597,7 @@ export default function WebHomeLayout({
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" stroke="#2A6FA8" strokeWidth="1.7" strokeLinejoin="round"/></svg>
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>Water today</div>
+                  <div className="font-serif-italic" style={{ fontSize: 20, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1 }}>{vocab('Water today', language)}</div>
                   <div style={{ fontSize: 12, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>
                     <span className="font-serif-italic" style={{ fontSize: 18, color: '#2A6FA8' }}>{waterOz}</span> oz so far
                   </div>
@@ -613,14 +617,14 @@ export default function WebHomeLayout({
 
             {/* This week */}
             <div style={{ background: '#FFFDF9', borderRadius: 22, padding: '22px 24px', border: '1px solid rgba(1,35,116,0.07)', boxShadow: '0 14px 30px -22px rgba(1,35,116,.3)' }}>
-              <div style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700 }}>This week</div>
+              <div style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700 }}>{vocab('This week', language)}</div>
               <p
                 className="font-serif-italic"
                 style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic', lineHeight: 1.35, marginTop: 10 }}
               >
                 {gentleAverage
                   ? `Your gentle average is ${gentleAverage} mg/dL — keep going.`
-                  : 'Start logging to see your weekly picture.'}
+                  : vocab('Start logging to see your weekly picture.', language)}
               </p>
 
               {/* Bar chart */}
@@ -663,8 +667,8 @@ export default function WebHomeLayout({
                 cursor: 'pointer',
               }}>
                 {action.icon}
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#012374', marginTop: 12 }}>{action.title}</div>
-                <div style={{ fontSize: 13, color: '#16182A', opacity: 0.6, marginTop: 4 }}>{action.subtitle}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#012374', marginTop: 12 }}>{vocab(action.title, language)}</div>
+                <div style={{ fontSize: 13, color: '#16182A', opacity: 0.6, marginTop: 4 }}>{vocab(action.subtitle, language)}</div>
               </div>
             </Link>
           ))}
@@ -757,7 +761,7 @@ export default function WebHomeLayout({
                           transition: 'all 0.15s',
                         }}
                       >
-                        {t === 'now' ? 'Right now' : 'Overall today'}
+                        {t === 'now' ? vocab('Right now', language) : vocab('Overall today', language)}
                       </button>
                     ))}
                   </div>
@@ -770,7 +774,7 @@ export default function WebHomeLayout({
                       transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     }} />
                     <div style={{ textAlign: 'center' }}>
-                      <div className="font-serif-italic" style={{ fontSize: 20, fontWeight: 700, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{bucket.label}</div>
+                      <div className="font-serif-italic" style={{ fontSize: 20, fontWeight: 700, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{vocab(bucket.label, language)}</div>
                       <div style={{ fontSize: 14, color: 'rgba(22,24,42,0.55)', marginTop: 3 }}>{bucket.es}</div>
                     </div>
                   </div>
@@ -782,7 +786,7 @@ export default function WebHomeLayout({
                       style={{ width: '100%', accentColor: '#012374', cursor: 'pointer' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 4 }}>
-                      <span>Very unpleasant</span><span>Neutral</span><span>Very pleasant</span>
+                      <span>{vocab('Very unpleasant', language)}</span><span>{vocab('Neutral', language)}</span><span>{vocab('Very pleasant', language)}</span>
                     </div>
                   </div>
 
@@ -795,7 +799,7 @@ export default function WebHomeLayout({
                         color: moodWords.includes(w) ? '#FFFDF9' : '#012374',
                         border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)',
                         transition: 'all 0.15s',
-                      }}>{w}</button>
+                      }}>{vocab(w, language)}</button>
                     ))}
                   </div>
 
@@ -812,7 +816,7 @@ export default function WebHomeLayout({
                           color: '#012374',
                           border: factors.includes(f) ? '1px solid rgba(1,35,116,0.3)' : '1px solid rgba(1,35,116,0.15)',
                           transition: 'all 0.15s',
-                        }}>{f}</button>
+                        }}>{vocab(f, language)}</button>
                       ))}
                     </div>
                   </div>
@@ -854,9 +858,9 @@ export default function WebHomeLayout({
                       {/* Scales */}
                       <div style={{ background: '#FFFDF9', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(1,35,116,0.07)' }}>
                         {[
-                          { label: 'Energy level', val: moodEnergyLevel, set: setMoodEnergyLevel },
-                          { label: 'Hunger level', val: moodHungerLevel, set: setMoodHungerLevel },
-                          { label: 'Fullness', val: moodFullness, set: setMoodFullness },
+                          { label: vocab('Energy level', language), val: moodEnergyLevel, set: setMoodEnergyLevel },
+                          { label: vocab('Hunger level', language), val: moodHungerLevel, set: setMoodHungerLevel },
+                          { label: vocab('Fullness', language), val: moodFullness, set: setMoodFullness },
                         ].map(({ label, val, set }) => (
                           <div key={label} style={{ marginBottom: 14 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>{label}</p>
@@ -927,9 +931,9 @@ export default function WebHomeLayout({
                       {/* Free text */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {[
-                          { label: "What's going on in your own words?", value: moodUserWords, onChange: setMoodUserWords, placeholder: 'e.g. I feel overwhelmed and ate late because I had a long day.' },
-                          { label: 'What affected your glucose, food, or mood today?', value: moodFoodMood, onChange: setMoodFoodMood, placeholder: "e.g. I didn't drink much water and skipped breakfast." },
-                          { label: 'What kind of support would feel helpful right now?', value: moodSupportWanted, onChange: setMoodSupportWanted, placeholder: 'e.g. Give me a quick snack idea. / I just want to log it.' },
+                          { label: vocab("What's going on in your own words?", language), value: moodUserWords, onChange: setMoodUserWords, placeholder: 'e.g. I feel overwhelmed and ate late because I had a long day.' },
+                          { label: vocab('What affected your glucose, food, or mood today?', language), value: moodFoodMood, onChange: setMoodFoodMood, placeholder: "e.g. I didn't drink much water and skipped breakfast." },
+                          { label: vocab('What kind of support would feel helpful right now?', language), value: moodSupportWanted, onChange: setMoodSupportWanted, placeholder: 'e.g. Give me a quick snack idea. / I just want to log it.' },
                         ].map(({ label, value, onChange, placeholder }) => (
                           <div key={label}>
                             <p style={{ fontSize: 12, fontWeight: 600, color: '#012374', marginBottom: 6 }}>{label}</p>
@@ -966,7 +970,7 @@ export default function WebHomeLayout({
                         color: body.includes(chip) ? '#FFFDF9' : '#012374',
                         border: body.includes(chip) ? 'none' : '1px solid rgba(1,35,116,0.2)',
                         transition: 'all 0.15s',
-                      }}>{chip}</button>
+                      }}>{vocab(chip, language)}</button>
                     ))}
                   </div>
                 </div>
@@ -987,7 +991,7 @@ export default function WebHomeLayout({
                         color: meal === chip ? '#FFFDF9' : '#012374',
                         border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)',
                         transition: 'all 0.15s',
-                      }}>{chip}</button>
+                      }}>{vocab(chip, language)}</button>
                     ))}
                   </div>
                 </div>
@@ -1109,7 +1113,7 @@ export default function WebHomeLayout({
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {MEAL_CHIPS.map(chip => (
-                      <button key={chip} onClick={() => setMeal(chip)} style={{ padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', background: meal === chip ? '#012374' : '#FFFDF9', color: meal === chip ? '#FFFDF9' : '#012374', border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{chip}</button>
+                      <button key={chip} onClick={() => setMeal(chip)} style={{ padding: '10px 18px', borderRadius: 999, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', background: meal === chip ? '#012374' : '#FFFDF9', color: meal === chip ? '#FFFDF9' : '#012374', border: meal === chip ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{vocab(chip, language)}</button>
                     ))}
                   </div>
                 </div>
@@ -1144,7 +1148,7 @@ export default function WebHomeLayout({
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                         <div style={{ width: 110, height: 110, borderRadius: '50%', background: `radial-gradient(circle at 38% 38%, ${bucket.glow}, ${bucket.color})`, boxShadow: `0 16px 40px -12px ${bucket.color}99`, transition: 'all 0.3s ease' }} />
                         <div style={{ textAlign: 'center' }}>
-                          <div className="font-serif-italic" style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{bucket.label}</div>
+                          <div className="font-serif-italic" style={{ fontSize: 18, color: '#012374', fontFamily: 'DM Serif Display, Georgia, serif', fontStyle: 'italic' }}>{vocab(bucket.label, language)}</div>
                           <div style={{ fontSize: 13, color: 'rgba(22,24,42,0.5)', marginTop: 2 }}>{bucket.es}</div>
                         </div>
                       </div>
@@ -1153,11 +1157,11 @@ export default function WebHomeLayout({
                         style={{ width: '100%', accentColor: '#012374', cursor: 'pointer', marginBottom: 6 }}
                       />
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(22,24,42,0.5)', marginBottom: 16 }}>
-                        <span>Very unpleasant</span><span>Neutral</span><span>Very pleasant</span>
+                        <span>{vocab('Very unpleasant', language)}</span><span>{vocab('Neutral', language)}</span><span>{vocab('Very pleasant', language)}</span>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                         {bucket.words.slice(0, 6).map(w => (
-                          <button key={w} onClick={() => toggleMoodWord(w)} style={{ padding: '8px 14px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: moodWords.includes(w) ? '#012374' : '#FFFDF9', color: moodWords.includes(w) ? '#FFFDF9' : '#012374', border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{w}</button>
+                          <button key={w} onClick={() => toggleMoodWord(w)} style={{ padding: '8px 14px', borderRadius: 999, fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: moodWords.includes(w) ? '#012374' : '#FFFDF9', color: moodWords.includes(w) ? '#FFFDF9' : '#012374', border: moodWords.includes(w) ? 'none' : '1px solid rgba(1,35,116,0.2)', transition: 'all 0.15s' }}>{vocab(w, language)}</button>
                         ))}
                       </div>
                       <button
@@ -1188,32 +1192,32 @@ export default function WebHomeLayout({
                     Saved with care.
                   </h2>
                   <p style={{ fontSize: 15, color: 'rgba(22,24,42,0.65)', lineHeight: 1.6, maxWidth: 380, margin: '0 auto 28px' }}>
-                    Thank you for checking in. Your mood, how your body feels, and your reading are all logged — no judgment, just care.
+                    {vocab('Thank you for checking in. Your mood, how your body feels, and your reading are all logged — no judgment, just care.', language)}
                   </p>
                   <div style={{ background: '#FFFDF9', borderRadius: 18, padding: '20px 24px', textAlign: 'left', border: '1px solid rgba(1,35,116,0.08)' }}>
-                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 14 }}>Your check-in summary</div>
+                    <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,26,77,0.5)', fontWeight: 700, marginBottom: 14 }}>{vocab('Your check-in summary', language)}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {moodWords.length > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>State of mind</span>
-                          <span style={{ fontWeight: 500 }}>{bucket.label} · {moodWords.join(', ')}</span>
+                          <span style={{ opacity: 0.6 }}>{vocab('State of mind', language)}</span>
+                          <span style={{ fontWeight: 500 }}>{vocab(bucket.label, language)} · {moodWords.map(w => vocab(w, language)).join(', ')}</span>
                         </div>
                       )}
                       {body.length > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>Body</span>
+                          <span style={{ opacity: 0.6 }}>{vocab('Body', language)}</span>
                           <span style={{ fontWeight: 500 }}>{body.join(', ')}</span>
                         </div>
                       )}
                       {meal && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>Timing</span>
+                          <span style={{ opacity: 0.6 }}>{vocab('Timing', language)}</span>
                           <span style={{ fontWeight: 500 }}>{meal}</span>
                         </div>
                       )}
                       {glucose && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#16182A' }}>
-                          <span style={{ opacity: 0.6 }}>Glucose</span>
+                          <span style={{ opacity: 0.6 }}>{vocab('Glucose', language)}</span>
                           <span style={{ fontWeight: 600, color: '#012374' }}>{glucose} mg/dL</span>
                         </div>
                       )}

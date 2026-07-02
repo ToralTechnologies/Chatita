@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Save, Check } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 const card = {
   background: '#FFFDF9',
@@ -142,6 +144,7 @@ const EMPTY: CulturalProfile = {
 };
 
 export default function CulturalFoodProfileCard() {
+  const { language } = useTranslation();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<CulturalProfile>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -230,7 +233,7 @@ export default function CulturalFoodProfileCard() {
             Cultural Food Profile
           </div>
           <p style={{ fontSize: 13.5, color: '#16182A', fontWeight: 600 }}>
-            {hasProfile ? 'Your food context is set' : 'Tell us about your everyday foods'}
+            {vocab(hasProfile ? 'Your food context is set' : 'Tell us about your everyday foods', language)}
           </p>
           <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginTop: 2 }}>
             Helps Chatita give guidance that fits your real life — not generic food assumptions.

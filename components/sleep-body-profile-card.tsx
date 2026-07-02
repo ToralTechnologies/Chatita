@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Check, Pencil, X } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 const CYCLE_LENGTH_MIN = 15;
 const CYCLE_LENGTH_MAX = 60;
@@ -47,6 +49,7 @@ function profileToForm(p: SleepBodyProfile): FormState {
 }
 
 export default function SleepBodyProfileCard() {
+  const { language } = useTranslation();
   const [profile, setProfile] = useState<SleepBodyProfile>({});
   const [form, setForm] = useState<FormState>(profileToForm({}));
   const [editing, setEditing] = useState(false);
@@ -143,8 +146,8 @@ export default function SleepBodyProfileCard() {
     <div className="rounded-card shadow-card p-6" style={{ background: 'var(--bg-card)', border: 'var(--border-card)' }}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>Sleep & Body Patterns</h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Sleep tracking and optional cycle patterns</p>
+          <h3 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>{vocab('Sleep & Body Patterns', language)}</h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{vocab('Sleep tracking and optional cycle patterns', language)}</p>
         </div>
         {saved && <Check className="w-4 h-4 text-green-500" />}
         {!editing ? (
@@ -160,19 +163,19 @@ export default function SleepBodyProfileCard() {
 
       {!editing ? (
         <div className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-          <p>Sleep tracking: <span className="font-medium">{profile.tracksSleep !== false ? 'Enabled' : 'Disabled'}</span></p>
-          {profile.sleepGoalHours && <p>Sleep goal: <span className="font-medium">{profile.sleepGoalHours}h/night</span></p>}
-          {profile.typicalBedtime && <p>Typical bedtime: <span className="font-medium">{profile.typicalBedtime}</span></p>}
-          {profile.typicalWakeTime && <p>Typical wake time: <span className="font-medium">{profile.typicalWakeTime}</span></p>}
-          {profile.sleepTrackingNotes && <p>Notes: <span className="font-medium">{profile.sleepTrackingNotes}</span></p>}
+          <p>{vocab('Sleep tracking', language)}: <span className="font-medium">{vocab(profile.tracksSleep !== false ? 'Enabled' : 'Disabled', language)}</span></p>
+          {profile.sleepGoalHours && <p>{vocab('Sleep goal', language)}: <span className="font-medium">{profile.sleepGoalHours}h/night</span></p>}
+          {profile.typicalBedtime && <p>{vocab('Typical bedtime', language)}: <span className="font-medium">{profile.typicalBedtime}</span></p>}
+          {profile.typicalWakeTime && <p>{vocab('Typical wake time', language)}: <span className="font-medium">{profile.typicalWakeTime}</span></p>}
+          {profile.sleepTrackingNotes && <p>{vocab('Notes', language)}: <span className="font-medium">{profile.sleepTrackingNotes}</span></p>}
 
           <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border-card)' }}>
-            <p>Cycle tracking: <span className="font-medium">{profile.tracksMenstrualCycle ? 'Enabled' : 'Not enabled'}</span></p>
+            <p>{vocab('Cycle tracking', language)}: <span className="font-medium">{vocab(profile.tracksMenstrualCycle ? 'Enabled' : 'Not enabled', language)}</span></p>
             {profile.tracksMenstrualCycle && profile.typicalCycleLength && (
-              <p>Typical cycle length: <span className="font-medium">{profile.typicalCycleLength} days</span></p>
+              <p>{vocab('Typical cycle length', language)}: <span className="font-medium">{profile.typicalCycleLength} days</span></p>
             )}
             {profile.tracksMenstrualCycle && profile.typicalPeriodLength && (
-              <p>Typical period length: <span className="font-medium">{profile.typicalPeriodLength} days</span></p>
+              <p>{vocab('Typical period length', language)}: <span className="font-medium">{profile.typicalPeriodLength} days</span></p>
             )}
           </div>
 

@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, RefreshCw, Upload, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { streamAppleHealthFile } from '@/lib/health/apple-health-parser';
+import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 const card = {
   background: '#FFFDF9',
@@ -43,6 +45,7 @@ type Import = {
 };
 
 export default function ConnectedHealthCard() {
+  const { language } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [googleConn, setGoogleConn] = useState<Connection | null>(null);
   const [recentImports, setRecentImports] = useState<Import[]>([]);
@@ -234,7 +237,7 @@ export default function ConnectedHealthCard() {
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#16182A' }}>Google Health / Fitbit</div>
             <div style={{ fontSize: 12.5, color: 'rgba(22,24,42,0.5)', marginTop: 1 }}>
-              Steps · Active minutes · Sleep · Heart rate
+              {vocab('Steps · Active minutes · Sleep · Heart rate', language)}
             </div>
           </div>
           {googleConnected && (
@@ -258,7 +261,7 @@ export default function ConnectedHealthCard() {
             )}
             {googleConn?.lastSyncedAt && (
               <p style={{ fontSize: 12, color: 'rgba(22,24,42,0.5)', marginBottom: 12 }}>
-                Last synced: {new Date(googleConn.lastSyncedAt).toLocaleString()}
+                {vocab('Last synced', language)}: {new Date(googleConn.lastSyncedAt).toLocaleString()}
               </p>
             )}
             <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
@@ -322,7 +325,7 @@ export default function ConnectedHealthCard() {
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#16182A' }}>Apple Health</div>
             <div style={{ fontSize: 12.5, color: 'rgba(22,24,42,0.5)', marginTop: 1 }}>
-              Manual export upload · Future: iOS companion app
+              {vocab('Manual export upload · Future: iOS companion app', language)}
             </div>
           </div>
           {appleImports.length > 0 && appleImports[0].status === 'completed' && (
@@ -349,7 +352,7 @@ export default function ConnectedHealthCard() {
             style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, background: '#FF2D55', color: '#fff', border: 'none', padding: '12px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 18px -8px #FF2D5566' }}
           >
             <Upload className="w-4 h-4" />
-            Upload Apple Health export
+            {vocab('Upload Apple Health export', language)}
           </button>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

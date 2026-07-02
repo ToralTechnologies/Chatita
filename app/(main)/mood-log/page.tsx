@@ -7,6 +7,7 @@ import BottomNav from '@/components/bottom-nav';
 import WebNav from '@/components/web-nav';
 import BackButton from '@/components/back-button';
 import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 interface MoodEntry {
   id: string;
@@ -160,8 +161,8 @@ function EntryCard({ entry, web }: { entry: MoodEntry; web?: boolean }) {
           const allTags = [...cravings, ...symptoms, ...ctags];
           return allTags.length > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-              {allTags.map((t: string) => (
-                <span key={t} style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, background: 'rgba(1,35,116,0.06)', color: 'rgba(22,24,42,0.65)' }}>{t}</span>
+              {allTags.map((tag: string) => (
+                <span key={tag} style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, background: 'rgba(1,35,116,0.06)', color: 'rgba(22,24,42,0.65)' }}>{vocab(tag, language)}</span>
               ))}
             </div>
           ) : null;
