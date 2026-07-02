@@ -287,3 +287,23 @@ User-Agent: iOS 17.0
 ```
 
 This configuration is working as of February 2025. If it stops working, check for updates to Chatita or community API documentation.
+
+### Timestamp handling + one-time repair (July 2026)
+
+Readings must be imported from `FactoryTimestamp` (UTC) via
+`parseLibreUtcTimestamp` — never from `Timestamp`, which is the patient's
+local wall-clock with no offset and gets misread as UTC on the server,
+landing readings hours in the past (and starving imports behind the
+last-sync watermark).
+
+Readings imported before this fix (commit 9d72f4c, June 29 2026) were stored
+exactly 4 h early (EDT offset), which broke per-meal blood-sugar impact for
+older meals. A one-time data repair —
+`scripts/migrations/2026-07-02-repair-libre-timestamps.ts` — detected the
+affected sync runs by their newest-reading lag signature (~4.3 h instead of
+~0.3 h) and shifted 547 readings to their true UTC instants (applied to
+production July 2 2026; dry-run is the default mode).
+
+Note: LibreLinkUp only serves ~12 h of history, so windows that were never
+captured while the bug was live cannot be backfilled from the API. A LibreView
+CSV export could fill such gaps if ever needed.

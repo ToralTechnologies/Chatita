@@ -302,7 +302,7 @@ vercel
 3. Add:
    - `DATABASE_URL` - Your Neon connection string
    - `NEXTAUTH_SECRET` - Generate new one for production
-   - `NEXTAUTH_URL` - Your Vercel domain (e.g., https://chatita.vercel.app)
+   - `NEXTAUTH_URL` - Your Vercel domain (e.g., https://chatita.app)
 
 ### Deploy:
 
@@ -345,7 +345,7 @@ npm run build
 1. Go to http://localhost:3000
 2. Click "Sign up"
 3. Enter:
-   - Email: test@chatita.com
+   - Email: test@chatita.app
    - Password: password123
    - Name: Test User
 4. Complete onboarding:

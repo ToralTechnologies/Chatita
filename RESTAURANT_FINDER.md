@@ -13,7 +13,15 @@ The Restaurant Finder helps users discover nearby diabetes-friendly restaurants 
 3. **Diabetes-Friendly Recommendations**: Suggests specific meals to order at each restaurant
 4. **Health Tips**: Provides ordering tips for managing blood sugar
 5. **Cuisine-Based Suggestions**: Tailored recommendations for 10+ cuisine types
-6. **Distance & Ratings**: Shows how far restaurants are and their ratings
+6. **Distance & Ratings**: Straight-line distance (computed from Google Places
+   geometry) and ratings for every result
+7. **Chat integration (July 2026)**: asking Chatita "what can I eat near me"
+   triggers an in-the-moment location consent bubble in the chat; if granted,
+   the same `/api/restaurants/nearby` lookup runs once and Chatita recommends
+   2–4 specific nearby places with distance and a health-fit reason.
+   Coordinates are never stored or logged — only place names/distances reach
+   the AI. Denying falls back to general guidance. All consent strings exist
+   in English and Spanish.
 
 ### 🎯 Supported Cuisines
 

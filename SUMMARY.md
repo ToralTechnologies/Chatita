@@ -196,7 +196,7 @@ Open: http://localhost:3000
 ## 🧪 Test the App
 
 1. **Register**: http://localhost:3000/register
-   - Email: test@chatita.com
+   - Email: test@chatita.app
    - Password: password123
    - Name: Test User
 

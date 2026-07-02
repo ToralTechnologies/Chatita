@@ -14,7 +14,8 @@ Chatita now supports both English and Spanish! Users can switch between language
 ✅ **Instant Language Switching**
 - Toggle between English 🇺🇸 and Español 🇲🇽
 - Changes apply immediately (no page refresh)
-- Preference saved to localStorage
+- Preference saved to localStorage AND to the user profile (`User.preferredLanguage`);
+  the database preference wins across devices
 
 ✅ **Cultural Awareness**
 - Spanish translations use authentic Latino phrasing
@@ -363,3 +364,27 @@ Spanish text is ~20-30% longer than English:
 ✅ **Extensible** - Easy to add more languages
 
 **Your app is now accessible to millions of Spanish speakers!** 🎉
+
+
+## Architecture (updated July 2026)
+
+- `lib/i18n/translations.ts` — keyed translation groups for both languages
+  (`TranslationKeys` derives from the English tree, so a missing Spanish key is
+  a type error). Accessed via `useTranslation()` from `lib/i18n/context.tsx`.
+- `lib/i18n/vocab.ts` — a shared EN→ES vocabulary for label-heavy surfaces
+  (mood words, body symptoms, cravings, timing chips, check-in phrases).
+  Values stored in the database in English (e.g. mood tags) are translated at
+  display time through `vocab(label, language)`.
+- Dates/times are locale-aware (`es-MX` / `en-US`), not just translated —
+  including date-fns groupings (`{ locale: es }`).
+- AI content follows the language: chat replies get the app language as a
+  prompt hint, and `/api/analytics/insights` generates titles/messages in
+  warm tuteo Spanish when `preferredLanguage === 'es'`.
+
+## Contributor rule
+
+**Every new user-facing string must ship in BOTH English and Spanish** — warm,
+informal Mexican Spanish (tuteo — "tú", never "usted"). Avoid stiff or
+machine-sounding translations; use words people actually say. This includes
+errors, toasts, empty states, placeholders, chart labels, aria-labels, and
+API-generated text.

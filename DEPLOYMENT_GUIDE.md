@@ -196,7 +196,7 @@ Click **"Environment Variables"** and add each of these:
 
 ## Part 4: Custom Domain (Optional)
 
-If you want to use your own domain (e.g., `chatita.com`):
+If you want to use your own domain (e.g., `chatita.app`):
 
 ### Step 1: Purchase Domain
 
@@ -206,7 +206,7 @@ If you want to use your own domain (e.g., `chatita.com`):
 
 1. Go to your Vercel project
 2. Click **"Settings"** → **"Domains"**
-3. Enter your domain (e.g., `chatita.com`)
+3. Enter your domain (e.g., `chatita.app`)
 4. Click **"Add"**
 5. Vercel will show DNS records you need to add
 
@@ -220,7 +220,7 @@ If you want to use your own domain (e.g., `chatita.com`):
 
 1. Go to **"Settings"** → **"Environment Variables"**
 2. Edit `NEXTAUTH_URL`
-3. Change to: `https://chatita.com` (your domain)
+3. Change to: `https://chatita.app` (your domain)
 4. Save and redeploy
 
 ---
@@ -238,7 +238,7 @@ If you want "Sign in with Google":
 5. Select **"Web application"**
 6. Add authorized redirect URIs:
    - `https://chatita-webapp.vercel.app/api/auth/callback/google`
-   - Or your custom domain: `https://chatita.com/api/auth/callback/google`
+   - Or your custom domain: `https://chatita.app/api/auth/callback/google`
 7. Click **"Create"**
 8. Copy the **Client ID** and **Client Secret**
 
