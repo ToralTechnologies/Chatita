@@ -107,7 +107,8 @@ export function exportMealsToCSV(meals: Meal[], dateRange?: { start: string; end
   }));
 
   const csv = Papa.unparse(csvData);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // UTF-8 BOM so Excel (which otherwise assumes CP-1252) decodes accents/emoji correctly.
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
 
   const filename = dateRange
@@ -190,7 +191,8 @@ export function exportGlucoseToCSV(
   }));
 
   const csv = Papa.unparse(csvData);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // UTF-8 BOM so Excel (which otherwise assumes CP-1252) decodes accents/emoji correctly.
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
 
   const filename = dateRange
@@ -331,7 +333,8 @@ export function exportAnalyticsToCSV(analyticsData: any, period: number) {
   }
 
   const csv = Papa.unparse(csvData);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // UTF-8 BOM so Excel (which otherwise assumes CP-1252) decodes accents/emoji correctly.
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
 
   const filename = `chatita-analytics-${period}days-${new Date().toISOString().split('T')[0]}.csv`;

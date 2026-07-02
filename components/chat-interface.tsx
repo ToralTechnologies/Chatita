@@ -184,7 +184,10 @@ export default function ChatInterface({ userContext, onClose }: ChatInterfacePro
       })
       .join('\n\n');
 
-    const blob = new Blob([text], { type: 'text/plain' });
+    // UTF-8 BOM + explicit charset: without them, Windows apps (Notepad, Excel)
+    // guess CP-1252 and render apostrophes/emoji/Spanish accents as mojibake
+    // (â€™, ðŸ’™, Ã©). The BOM makes the encoding unambiguous.
+    const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
