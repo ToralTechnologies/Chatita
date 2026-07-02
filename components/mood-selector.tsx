@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Mood, MoodCheckInData } from '@/types';
+import { useTranslation } from '@/lib/i18n/context';
+import { vocab } from '@/lib/i18n/vocab';
 
 interface MoodSelectorProps {
   onSave?: (data: MoodCheckInData) => void;
@@ -160,6 +162,7 @@ const SCALE_LABELS: Record<string, string[]> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MoodSelector({ onSave }: MoodSelectorProps) {
+  const { language } = useTranslation();
   const [sliderValue, setSliderValue]     = useState(50);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [selectedMood, setSelectedMood]   = useState<Mood | null>(null);
@@ -291,7 +294,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
               border: 'none', cursor: 'pointer', transition: 'all 0.2s',
             }}
           >
-            {t === 'now' ? 'Right now' : 'Overall today'}
+            {t === 'now' ? vocab('Right now', language) : vocab('Overall today', language)}
           </button>
         ))}
       </div>
@@ -312,7 +315,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
           {selectedLabel ? zone.sublabel : zone.sublabel}
         </p>
         {saved && (
-          <p style={{ fontSize: 11, color: '#7ED321', fontWeight: 600, marginTop: 4 }}>Saved ✓</p>
+          <p style={{ fontSize: 11, color: '#7ED321', fontWeight: 600, marginTop: 4 }}>{vocab('Saved ✓', language)}</p>
         )}
       </div>
 
@@ -327,9 +330,9 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
           className="mood-slider"
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>Very unpleasant</span>
-          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>Neutral</span>
-          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>Very pleasant</span>
+          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>{vocab('Very unpleasant', language)}</span>
+          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>{vocab('Neutral', language)}</span>
+          <span style={{ fontSize: 11, color: 'rgba(1,35,116,0.45)' }}>{vocab('Very pleasant', language)}</span>
         </div>
       </div>
 
@@ -354,7 +357,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                   cursor: 'pointer', transition: 'all 0.18s',
                 }}
               >
-                {w.label}
+                {vocab(w.label, language)}
               </button>
             );
           })}
@@ -382,7 +385,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                   cursor: 'pointer', transition: 'all 0.18s',
                 }}
               >
-                {item}
+                {vocab(item, language)}
               </button>
             );
           })}
@@ -391,7 +394,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
 
       {/* Stress */}
       <div style={{ background: 'var(--bg-card)', borderRadius: 18, padding: '14px 16px', border: '1px solid rgba(1,35,116,0.06)', marginBottom: 14 }}>
-        <p className="font-serif-italic" style={{ fontSize: 16, color: '#012374' }}>Stress today is</p>
+        <p className="font-serif-italic" style={{ fontSize: 16, color: '#012374' }}>{vocab('Stress today is', language)}</p>
         <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
           {STRESS_LEVELS.map((level) => {
             const isSelected = selectedStress === level;
@@ -403,7 +406,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                 color: isSelected ? '#FFFDF9' : '#012374',
                 border: isSelected ? '1px solid #012374' : '1px solid rgba(1,35,116,0.18)',
                 cursor: 'pointer',
-              }}>{level}</button>
+              }}>{vocab(level, language)}</button>
             );
           })}
         </div>
@@ -434,7 +437,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
 
           {/* Cravings */}
           <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>Any cravings?</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>{vocab('Any cravings?', language)}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {CRAVING_OPTIONS.map((c) => {
                 const active = selectedCravings.includes(c);
@@ -446,7 +449,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                     color: active ? '#FFFDF9' : '#012374',
                     border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
                     cursor: 'pointer',
-                  }}>{c}</button>
+                  }}>{vocab(c, language)}</button>
                 );
               })}
             </div>
@@ -454,7 +457,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
 
           {/* Body symptoms */}
           <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>Body symptoms?</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>{vocab('Body symptoms?', language)}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {SYMPTOM_OPTIONS.map((s) => {
                 const active = selectedSymptoms.includes(s);
@@ -466,7 +469,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                     color: active ? '#FFFDF9' : '#012374',
                     border: active ? '1px solid #E3171A' : '1px solid rgba(1,35,116,0.2)',
                     cursor: 'pointer',
-                  }}>{s}</button>
+                  }}>{vocab(s, language)}</button>
                 );
               })}
             </div>
@@ -474,7 +477,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
 
           {/* Context tags */}
           <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>What else is going on?</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#012374', marginBottom: 8 }}>{vocab('What else is going on?', language)}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {CONTEXT_TAG_OPTIONS.map((t) => {
                 const active = selectedContextTags.includes(t);
@@ -486,7 +489,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
                     color: active ? '#FFFDF9' : '#012374',
                     border: active ? '1px solid #012374' : '1px solid rgba(1,35,116,0.2)',
                     cursor: 'pointer',
-                  }}>{t}</button>
+                  }}>{vocab(t, language)}</button>
                 );
               })}
             </div>
@@ -533,7 +536,7 @@ export default function MoodSelector({ onSave }: MoodSelectorProps) {
           marginTop: 6,
         }}
       >
-        {saved ? 'Check-in saved ✓' : 'Save reading'}
+        {saved ? vocab('Check-in saved ✓', language) : vocab('Save reading', language)}
       </button>
     </div>
   );
